@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Tabular.c,v 1.22 2004/03/03 10:16:24 lecoanet Exp $
+ * $Id: Tabular.c,v 1.24 2004/05/07 09:37:42 lecoanet Exp $
  */
 
 /*
@@ -37,7 +37,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Tabular.c,v 1.22 2004/03/03 10:16:24 lecoanet Exp $";
+static const char rcsid[] = "$Id: Tabular.c,v 1.24 2004/05/07 09:37:42 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -211,7 +211,7 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(item->connected_item->class->has_anchors &&
+	(ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
 	 (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
@@ -236,7 +236,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, tabular_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, tabular_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }
 
@@ -466,8 +466,8 @@ GetClipVertices(ZnItem		item,
   
   if (field_set->label_format) {
     ZnFIELD.GetLabelBBox(field_set, &width, &height);
-    ZnListAssertSize(item->wi->work_pts, 2);
-    points = (ZnPoint *) ZnListArray(item->wi->work_pts);
+    ZnListAssertSize(ZnWorkPoints, 2);
+    points = (ZnPoint *) ZnListArray(ZnWorkPoints);
     ZnTriStrip1(tristrip, points, 2, False);
     points[0] = field_set->label_pos;
     points[1].x = points[0].x + width;
@@ -670,11 +670,11 @@ Selection(ZnItem	item,
  **********************************************************************************
  */
 static ZnItemClassStruct TABULAR_ITEM_CLASS = {
-  sizeof(TabularItemStruct),
-  0,			/* num_parts */
-  True,			/* has_anchors */
   "tabular",
+  sizeof(TabularItemStruct),
   tabular_attrs,
+  0,
+  ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   Tk_Offset(TabularItemStruct, pos),
   Init,
   Clone,

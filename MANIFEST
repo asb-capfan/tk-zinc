@@ -3,6 +3,8 @@ Attrs.c
 Attrs.h
 COPYRIGHT
 Changes
+CharsetISO8859-15.h
+CharsetUTF8.h
 Color.c
 Color.h
 Curve.c

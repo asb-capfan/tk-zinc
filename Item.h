@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Item.h,v 1.47 2004/03/24 15:06:44 lecoanet Exp $
+ * $Id: Item.h,v 1.48 2004/04/30 14:22:03 lecoanet Exp $
  */
 
 /*
@@ -257,13 +257,16 @@ typedef void (*ZnItemPostScriptMethod)(ZnItem item, ZnBool prepass);
 
 typedef void	*ZnItemClassId;
 
+#define ZN_CLASS_HAS_ANCHORS	(1<<0)
+#define ZN_CLASS_ONE_COORD	(1<<1)
+
 typedef struct _ZnItemClassStruct {
+  char				*name;
   unsigned int			size;
+  ZnAttrConfig			*attr_desc;
   unsigned int			num_parts;	/* 0 if no special parts, else
 						 * gives how many parts exist. */
-  ZnBool			has_anchors;	/* 1 if anchors are supported */
-  char				*name;
-  ZnAttrConfig			*attr_desc;
+  int				flags;		/* HAS_ANCHORS, ONE_COORD */
   int				pos_offset;	/* Offset of -position attrib, */
 						/* if any, -1 otherwise. */
   ZnItemInitMethod		Init;
@@ -345,9 +348,9 @@ ZnList ZnItemClassList();
 int ZnConfigureAttributes(struct _ZnWInfo *wi, ZnItem item, void *record,
 			  ZnAttrConfig *attr_desc, int argc, Tcl_Obj *CONST args[],
 			  int *flags);
-int ZnAttributesInfo(struct _ZnWInfo *wi, void *record,
+int ZnAttributesInfo(Tcl_Interp *interp, void *record,
 		     ZnAttrConfig *attr_desc, int argc, Tcl_Obj *CONST args[]);
-int ZnQueryAttribute(struct _ZnWInfo *wi, void *record, ZnAttrConfig *attr_desc,
+int ZnQueryAttribute(Tcl_Interp *interp, void *record, ZnAttrConfig *attr_desc,
 		     Tcl_Obj *attr_name);
 void ZnInitTransformStack(struct _ZnWInfo *wi);
 void ZnFreeTransformStack(struct _ZnWInfo *wi);

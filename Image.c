@@ -39,9 +39,8 @@
 #include <stdlib.h>
 #endif
 
-#include <tkFont.h>
 
-static const char rcsid[] = "$Id: Image.c,v 1.39 2004/03/23 14:53:45 lecoanet Exp $";
+static const char rcsid[] = "$Id: Image.c,v 1.43 2004/05/14 09:08:36 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -182,9 +181,10 @@ InvalidateImage(ClientData	client_data,
 #ifdef GL
     if (this->for_gl) {
       if (this->i.texobj) {
-	ZnGLMakeCurrent(this->dpy, 0);
+	ZnGLContextEntry *ce;
+	ce = ZnGLMakeCurrent(this->dpy, 0);
 	glDeleteTextures(1, &this->i.texobj);
-	/*ZnGLRelease(this->wi);*/
+	ZnGLReleaseContext(ce);
 	this->i.texobj = 0;
       }
     }
@@ -512,12 +512,13 @@ ZnFreeImage(ZnImage	image,
   if (this->for_gl) {
 #ifdef GL
     if (this->i.texobj) {
-      ZnGLMakeCurrent(this->dpy, 0);
-      /*      printf("%d Libération de la texture %d pour l'image %s\n",
+      ZnGLContextEntry *ce;
+      ce = ZnGLMakeCurrent(this->dpy, 0);
+      /*      printf("%d Liberation de la texture %d pour l'image %s\n",
 	      wi, this->i.texobj, ZnNameOfImage(image));*/
       glDeleteTextures(1, &this->i.texobj);
       this->i.texobj = 0;
-      /*ZnGLRelease(wi);*/
+      ZnGLReleaseContext(ce);
     }
 #endif
   }
@@ -543,7 +544,7 @@ ZnFreeImage(ZnImage	image,
    * No clients for this image, it can be freed.
    */
   if (bits->images == NULL) {
-    /*printf("destruction complète de l'image %s\n", ZnNameOfImage(this));*/
+    /*printf("destruction complÃ¨te de l'image %s\n", ZnNameOfImage(this));*/
 #ifdef GL
     if (bits->t_bits) {
       ZnFree(bits->t_bits);
@@ -950,7 +951,7 @@ ZnImageTex(ZnImage	image,
   unsigned int	t_size, width, height;
 
   if (!this->for_gl) {
-    printf("Bogus use of an image, it was created for X11 and used in a GL context\n");
+    fprintf(stderr, "Bogus use of an image, it was created for X11 and used in a GL context\n");
     return 0;
   }
   ZnSizeOfImage(image, &width, &height);
@@ -1082,233 +1083,176 @@ ZnImageTex(ZnImage	image,
 
 
 #ifdef GL
-/* This code is adapted from a work Copyright (c) Mark J. Kilgard, 1997. */
 
-/* This program is freely distributable without licensing fees  and is
-   provided without guarantee or warrantee expressed or  implied. This
-   program is -not- in the public domain. */
-
-#define MAX_CHAR 255
-#define MIN_CHAR 32
 #define MAX_GLYPHS_PER_GRAB 256
-
-typedef struct {
-  unsigned char c;
-  char		dummy;	/* Space holder for alignment reasons. */
-  short		width;
-  short		 height;
-  short		xoffset;
-  short		yoffset;
-  short		advance;
-  short		x;
-  short		y;
-} TexGlyphInfo;
 
 typedef struct _TexFontInfo {
   struct _TexFont *txf;
   GLuint	texobj;
-  ZnWInfo	*wi;
+  Display	*dpy;
   unsigned int	refcount;
   struct _TexFontInfo *next;
 } TexFontInfo;
 
+typedef struct {
+  short		width;
+} PerGlyphInfo, *PerGlyphInfoPtr;
+
 typedef struct _TexFont {
   TexFontInfo	*tfi;
   Tk_Font	tkfont;
-  int		tex_width;
-  int		tex_height;
+  unsigned int	tex_width;
+  unsigned int	tex_height;
   int		ascent;
   int		descent;
-  unsigned int	num_glyphs;
-  unsigned int	min_glyph;
-  unsigned int	range;
+  unsigned int	max_char_width;
   unsigned char *teximage;
-  TexGlyphInfo	*tgi;
+  unsigned int	num_glyphs;
+  PerGlyphInfo	*glyph;
   ZnTexGVI	*tgvi;
-  ZnTexGVI	**lut;
-#ifndef PTK_800
-  Tcl_Encoding	enc;
-#endif
   Tcl_HashEntry	*hash;
 } TexFont;
 
-typedef struct {
-  short		width;
-  short		height;
-  short		xoffset;
-  short		yoffset;
-  short		advance;
-  unsigned char	*bitmap;
-} PerGlyphInfo, *PerGlyphInfoPtr;
+typedef struct _DeferredGLGlyphs {
+  ZnWInfo	*wi;
+  TexFont	*txf;
+} DeferredGLGlyphsStruct;
 
-typedef struct {
-  int		min_char;
-  int		max_char;
-  int		ascent;
-  int		descent;
-  unsigned int	num_glyphs;
-  PerGlyphInfo	glyph[1];
-} FontInfo, *FontInfoPtr;
+ZnList DeferredGLGlyphs;
 
-static FontInfoPtr	fontinfo;
 
-void
-getMetric(FontInfoPtr	font,
-	  int		c,
-	  TexGlyphInfo	*tgi)
-{
-  PerGlyphInfoPtr	glyph;
-  unsigned char		*bitmapData;
-
-  tgi->c = c;
-  if ((c < font->min_char) || (c > font->max_char)) {
-    tgi->width = 0;
-    tgi->height = 0;
-    tgi->xoffset = 0;
-    tgi->yoffset = 0;
-    tgi->dummy = 0;
-    tgi->advance = 0;
-    return;
-  }
-  glyph = &font->glyph[c - font->min_char];
-  bitmapData = glyph->bitmap;
-  if (bitmapData) {
-    tgi->width = glyph->width;
-    tgi->height = glyph->height;
-    tgi->xoffset = glyph->xoffset;
-    tgi->yoffset = glyph->yoffset;
-  }
-  else {
-    tgi->width = 0;
-    tgi->height = 0;
-    tgi->xoffset = 0;
-    tgi->yoffset = 0;
-  }
-  tgi->dummy = 0;
-  /*printf("\'%c\' %X %d\n", c, c, glyph->advance);*/
-  tgi->advance = glyph->advance;
-}
-
-int
-glyphCompare(const void	*a,
-	     const void	*b)
-{
-  unsigned char *c1 = (unsigned char *) a;
-  unsigned char	*c2 = (unsigned char *) b;
-  TexGlyphInfo	tgi1;
-  TexGlyphInfo	tgi2;
-
-  getMetric(fontinfo, *c1, &tgi1);
-  getMetric(fontinfo, *c2, &tgi2);
-  return tgi2.height - tgi1.height;
-}
-
-void
-placeGlyph(FontInfoPtr	font,
-	   int		c,
-	   unsigned char *texarea,
-	   unsigned int	stride,
-	   int		x,
-	   int		y)
-{
-  PerGlyphInfoPtr	glyph;
-  unsigned char		*bitmapData;
-  int			width, height, spanLength;
-  int			i, j;
-
-  /*printf("x: %d, y: %d, c: %d, texarea: 0x%X, stride: %d\n",
-    x, y, c, texarea, stride);*/
-  if ((c < font->min_char) || (c > font->max_char)) {
-    return;
-  }
-  glyph = &font->glyph[c - font->min_char];
-  bitmapData = glyph->bitmap;
-  if (bitmapData) {
-    width = glyph->width;
-    spanLength = (width + 7) / 8;
-    height = glyph->height;
-    for (i = 0; i < height; i++) {
-      for (j = 0; j < width; j++) {
-	texarea[stride * (y+i) + x + j] = (bitmapData[i*spanLength + j/8] & (1<<(j&7))) ? 255 : 0;
-      }
-    }
-  }
-}
-
-#ifdef PTK_800
-FontInfoPtr
-SuckGlyphsFromServer(ZnWInfo	*wi,
-		     Tk_Font	font)
+#ifndef PTK_800
+#include "CharsetUTF8.h"
 #else
-FontInfoPtr
-SuckGlyphsFromServer(ZnWInfo	*wi,
-		     Tk_Font	font,
-		     Tcl_Encoding enc)
+#include "CharsetISO8859-15.h"
 #endif
+
+
+static void
+SuckGlyphsFromServer(ZnWInfo	*wi,
+		     TexFont	*txf)
 {
   Pixmap	offscreen = 0;
   XImage	*image = NULL;
   GC		xgc = 0;
-  XGCValues	values;
-  unsigned int	width, height, length, pixwidth;
-  unsigned int	i, j;
-  char		str_from[] = " ";
-#ifndef PTK_800
-  char		str_utf[8];
-#endif
-  unsigned char	*bitmapData = NULL;
+  unsigned int	height, length, pixwidth;
+  unsigned int	i, j, use_max_width;
+  unsigned int	wgap=2, hgap=2, tex_width, tex_height;
+  unsigned char	*to;
   unsigned int	x, y;
-  int		num_chars, written, spanLength=0;
-  unsigned int	charWidth=0, maxSpanLength;
+  unsigned int	width=0, maxSpanLength;
   int		grabList[MAX_GLYPHS_PER_GRAB];
   unsigned int	glyphsPerGrab = MAX_GLYPHS_PER_GRAB;
-  unsigned int	numToGrab, thisglyph;
-  FontInfoPtr	myfontinfo = NULL;
+  unsigned int	numToGrab, glyph;
+  ZnTexGVI	*tgvip;
   Tk_FontMetrics fm;
+  CONST char	*cur, *next;
+#ifndef PTK_800
+  Tcl_UniChar	uni_ch;
+#endif
+  ZnGLContextEntry *ce = ZnGetGLContext(wi->dpy);
 
-  Tk_GetFontMetrics(font, &fm);
-  num_chars = (MAX_CHAR-MIN_CHAR)+1;
-  myfontinfo = ZnMalloc(sizeof(FontInfo) + num_chars * sizeof(PerGlyphInfo));
-  if (!myfontinfo) {
-    ZnWarning("Out of memory, ");
-    return NULL;
+  /*printf("loading a font \n");*/
+  Tk_GetFontMetrics(txf->tkfont, &fm);
+#ifndef PTK_800
+  txf->num_glyphs = Tcl_NumUtfChars(ZnDefaultCharset, strlen(ZnDefaultCharset));
+#else
+  txf->num_glyphs = strlen(ZnDefaultCharset);
+#endif
+  txf->glyph = ZnMalloc(txf->num_glyphs * sizeof(PerGlyphInfo));
+  if (!txf->glyph) {
+    goto FreeAndReturn;
   }
-
-  myfontinfo->min_char = MIN_CHAR;
-  myfontinfo->max_char = MAX_CHAR;
-  myfontinfo->num_glyphs = num_chars;
-  myfontinfo->ascent = fm.ascent;
-  myfontinfo->descent = fm.descent;
+  txf->tgvi = ZnMalloc(txf->num_glyphs * sizeof(ZnTexGVI));
+  if (!txf->tgvi) {
+    goto FreeAndReturn;
+  }
+  
+  txf->ascent = fm.ascent;
+  txf->descent = fm.descent;
+  txf->max_char_width = 0;
+  tex_width = tex_height = 0;
+  use_max_width = 0;
+  height = txf->ascent + txf->descent;
+  tgvip = txf->tgvi;
 
   /*
    * Compute the max character size in the font. This may be
    * a bit heavy hammer style but it avoid guessing on characters
    * not available in the font.
    */
-  width = 0;
-  for (i = 0; i < myfontinfo->num_glyphs; i++) {
-    *str_from = i + myfontinfo->min_char;
-#ifdef PTK_800
-    Tk_MeasureChars(font, str_from, 1, 0, TK_AT_LEAST_ONE, &length);
+  cur = ZnDefaultCharset;
+  i = 0;
+  while (*cur) {
+#ifndef PTK_800
+    next = Tcl_UtfNext(cur);
 #else
-    Tcl_ExternalToUtf(wi->interp, enc, str_from, 1,
-		      TCL_ENCODING_START|TCL_ENCODING_END,
-		      NULL, str_utf, 8, NULL, &written, NULL);
-    Tk_MeasureChars(font, str_utf, written, 0, TK_AT_LEAST_ONE, &length);
+    next = cur + 1;
 #endif
-    width = MAX(width, length);
+    Tk_MeasureChars(txf->tkfont, cur, next - cur, 0, TK_AT_LEAST_ONE, &length);
+    txf->glyph[i].width = length;
+    txf->max_char_width = MAX(txf->max_char_width, length);
+    
+    if (tex_width + length + wgap > ce->max_tex_size) {
+      tex_width = 0;
+      use_max_width = 1;
+      tex_height += height + hgap;
+      if ((tex_height > ce->max_tex_size) || (length > ce->max_tex_size)) {
+	goto FreeAndReturn;
+      }
+    }
+
+    tgvip->v0x = 0;
+    tgvip->v0y = txf->descent - height;
+    tgvip->v1x = length;
+    tgvip->v1y = txf->descent;
+    tgvip->t0x = tex_width;
+    tgvip->t0y = tex_height;
+    tgvip->t1x = tgvip->t0x + length;
+    tgvip->t1y = tgvip->t0y + height;
+    tgvip->advance = length;
+#ifndef PTK_800
+    Tcl_UtfToUniChar(cur, &uni_ch);
+    tgvip->code = uni_ch;
+#else
+    tgvip->code = *cur;
+#endif 
+    tex_width += length + wgap;
+
+    cur = next;
+    i++;
+    tgvip++;
   }
 
-  if (width == 0) {
-    /*
-     * Something weird with the font, abort!
-     */
-    ZnWarning("NULL character width, ");
-    goto FreeFontInfoAndReturn;
+  if (use_max_width) {
+    tex_width = ce->max_tex_size;
   }
-  height = myfontinfo->ascent + myfontinfo->descent;
+  tex_height += height;
 
-  maxSpanLength = (width + 7) / 8;
+  /*
+   * Round the texture size to the next power of two.
+   */
+  tex_height = To2Power(tex_height);
+  tex_width = To2Power(tex_width);
+  if ((tex_height > ce->max_tex_size) || (tex_width > ce->max_tex_size)) {
+    fprintf(stderr, "Font doesn't fit into a texture\n");
+    goto FreeAndReturn;
+  } 
+  txf->tex_width = tex_width;
+  txf->tex_height = tex_height;
+  /*printf("(%s) Texture size is %d x %d for %d chars (max size: %d)\n",
+    Tk_NameOfFont(font), txf->tex_width, txf->tex_height, txf->num_glyphs, ce->max_tex_size);*/
+
+  /*
+   * Now render the font bits into the texture.
+   */
+  txf->teximage = ZnMalloc(tex_height * tex_width);
+  if (!txf->teximage) {
+    goto FreeAndReturn;
+  }
+  memset(txf->teximage, 0, tex_height * tex_width);
+
+  maxSpanLength = (txf->max_char_width + 7) / 8;
   /* Be careful determining the width of the pixmap; the X protocol allows
      pixmaps of width 2^16-1 (unsigned short size) but drawing coordinates
      max out at 2^15-1 (signed short size).  If the width is too large, we
@@ -1320,60 +1264,44 @@ SuckGlyphsFromServer(ZnWInfo	*wi,
   offscreen = Tk_GetPixmap(wi->dpy, RootWindowOfScreen(wi->screen),
 			   (int) pixwidth, (int) height, 1);
   
-  values.background = WhitePixelOfScreen(wi->screen);
-  values.foreground = WhitePixelOfScreen(wi->screen);
-  values.font = Tk_FontId(font);
-  xgc = XCreateGC(wi->dpy, offscreen, GCBackground|GCForeground|GCFont, &values);
+  xgc = XCreateGC(wi->dpy, offscreen, 0, NULL);
+  XSetForeground(wi->dpy, xgc, WhitePixelOfScreen(wi->screen));
+  XSetBackground(wi->dpy, xgc, WhitePixelOfScreen(wi->screen));
   XFillRectangle(wi->dpy, offscreen, xgc, 0, 0, pixwidth, height);
-  values.foreground = BlackPixelOfScreen(wi->screen);
-  XChangeGC(wi->dpy, xgc, GCForeground, &values);
+  XSetForeground(wi->dpy, xgc, BlackPixelOfScreen(wi->screen));
+  XSetFont(wi->dpy, xgc, Tk_FontId(txf->tkfont));
 
   numToGrab = 0;
-  for (i = 0; i < myfontinfo->num_glyphs; i++) {
-    *str_from = i + myfontinfo->min_char;
-#ifdef PTK_800
-    Tk_MeasureChars(font, str_from, 1, 0, TK_AT_LEAST_ONE, &charWidth);
-#else
-    Tcl_ExternalToUtf(wi->interp, enc, str_from, 1,
-		      TCL_ENCODING_START|TCL_ENCODING_END,
-		      NULL, str_utf, 8, NULL, &written, NULL);
-    Tk_MeasureChars(font, str_utf, written, 0, TK_AT_LEAST_ONE, &charWidth);
-#endif
+  cur = ZnDefaultCharset;
+  i = 0;
 
-    myfontinfo->glyph[i].width = charWidth;
-    myfontinfo->glyph[i].height = height;
-    myfontinfo->glyph[i].xoffset = 0;
-    myfontinfo->glyph[i].yoffset = myfontinfo->descent;
-    myfontinfo->glyph[i].advance = charWidth;
-    myfontinfo->glyph[i].bitmap = NULL;
-    if (charWidth != 0) {
-#ifdef PTK_800
-      Tk_DrawChars(wi->dpy, offscreen, xgc, font, str_from, 1, 
-		   (int) (8*maxSpanLength*numToGrab), myfontinfo->ascent);
+  while (*cur) {
+#ifndef PTK_800
+    next = Tcl_UtfNext(cur);
 #else
-      Tk_DrawChars(wi->dpy, offscreen, xgc, font, str_utf, written, 
-		   (int) (8*maxSpanLength*numToGrab), myfontinfo->ascent);
+    next = cur + 1;
 #endif
+    if (txf->glyph[i].width != 0) {
+      Tk_DrawChars(wi->dpy, offscreen, xgc, txf->tkfont, cur, next - cur, 
+		   (int) (8*maxSpanLength*numToGrab), txf->ascent);
       grabList[numToGrab] = i;    
       numToGrab++;
     }
 
-    if ((numToGrab >= glyphsPerGrab) || (i == myfontinfo->num_glyphs - 1)) {
+    if ((numToGrab >= glyphsPerGrab) || (i == txf->num_glyphs - 1)) {
       image = XGetImage(wi->dpy, offscreen, 0, 0, pixwidth, height, 1, XYPixmap);
 
       for (j = 0; j < numToGrab; j++) {
-	thisglyph = grabList[j];
-	charWidth = myfontinfo->glyph[thisglyph].width;
-	spanLength = (charWidth + 7) / 8;
-	bitmapData = ZnMalloc(height * spanLength * sizeof(char));
-	if (bitmapData == NULL) {
-	  ZnWarning("Out of memory, ");
-	  goto FreeFontAndReturn;
-	}
-	memset(bitmapData, 0, height * spanLength * sizeof(char));
-	myfontinfo->glyph[thisglyph].bitmap = bitmapData;
+	glyph = grabList[j];
+	width = txf->glyph[glyph].width;
+	tgvip = &txf->tgvi[glyph];
+	to = txf->teximage + (int) (tgvip->t0y * tex_width) + (int) tgvip->t0x;
+	tgvip->t0x = tgvip->t0x / (GLfloat) tex_width;
+	tgvip->t0y = tgvip->t0y / (GLfloat) tex_height;
+	tgvip->t1x = tgvip->t1x / (GLfloat) tex_width;
+	tgvip->t1y = tgvip->t1y / (GLfloat) tex_height;
 	for (y = 0; y < height; y++) {
-	  for (x = 0; x < charWidth; x++) {
+	  for (x = 0; x < width; x++, to++) {
 	    /* XXX The algorithm used to suck across the font ensures that
 	       each glyph begins on a byte boundary.  In theory this would
 	       make it convienent to copy the glyph into a byte oriented
@@ -1382,97 +1310,106 @@ SuckGlyphsFromServer(ZnWInfo	*wi,
 	       could either do tighter packing in the pixmap or more
 	       efficient extraction from the image.  Oh well.  */
 	    if (XGetPixel(image, (int) (j*maxSpanLength*8) + x, y) == BlackPixelOfScreen(wi->screen)) {
-	      bitmapData[y * spanLength + x / 8] |= (1 << (x & 7));
-	    }
+	      *to = 255;
+	      }
 	  }
+	  to += tex_width - width;
 	}
       }
       XDestroyImage(image);
+      image = NULL;
       numToGrab = 0;
       /* do we need to clear the offscreen pixmap to get more? */
-      if (i < myfontinfo->num_glyphs - 1) {
-	values.foreground = WhitePixelOfScreen(wi->screen);
-	XChangeGC(wi->dpy, xgc, GCForeground, &values);
+      if (i < txf->num_glyphs - 1) {
+	XSetForeground(wi->dpy, xgc, WhitePixelOfScreen(wi->screen));
 	XFillRectangle(wi->dpy, offscreen, xgc, 0, 0,
 		       8 * maxSpanLength * glyphsPerGrab, height);
-	values.foreground = BlackPixelOfScreen(wi->screen);
-	XChangeGC(wi->dpy, xgc, GCForeground, &values);
+	XSetForeground(wi->dpy, xgc, BlackPixelOfScreen(wi->screen));
       }
     }
+    
+    cur = next;
+    i++;
   }
 
   XFreeGC(wi->dpy, xgc);
   Tk_FreePixmap(wi->dpy, offscreen);
-  return myfontinfo;
+  return;
 
- FreeFontAndReturn:
-  XDestroyImage(image);
-  XFreeGC(wi->dpy, xgc);
-  Tk_FreePixmap(wi->dpy, offscreen);
-  for (i = 0; i < myfontinfo->num_glyphs; i++) {
-    if (myfontinfo->glyph[i].bitmap)
-      ZnFree(myfontinfo->glyph[i].bitmap);
+ FreeAndReturn:
+  if (txf->glyph) {
+    ZnFree(txf->glyph);
+    txf->glyph = NULL;
   }
- FreeFontInfoAndReturn:
-  ZnFree(myfontinfo);
-  return NULL;
+  if (txf->tgvi) {
+    ZnFree(txf->tgvi);
+    txf->tgvi = NULL;    
+  }
+  if (txf->teximage) {
+    ZnFree(txf->teximage);
+    txf->teximage = NULL;    
+  }
+  ZnWarning("Cannot load font texture for font ");
+  ZnWarning(Tk_NameOfFont(txf->tkfont));
+  ZnWarning("\n");
 }
 
-#ifndef PTK_800
-Tcl_Encoding
-ZnGetFontEncoding(ZnWInfo	*wi,
-		  Tk_Font	tkfont)
+static void
+ZnNeedToGetGLGlyphs(ZnWInfo	*wi,
+		    TexFont	*txf)
 {
-#ifdef WIN
-  return Tcl_GetEncoding(wi->interp, "unicode");
-#else
-  Tcl_Encoding	enc;
-  XFontStruct	*fs;
-  int		count;
-  unsigned long	prop;
-  char	CONST	*xlfd;
-  char		*charset_lc=NULL;
-  char		*charset, *charset_def = "iso8859-1";
+  DeferredGLGlyphsStruct dgg, *dggp;
+  int			 i, num;
 
-  fs = XQueryFont(wi->dpy, Tk_FontId(tkfont));
+  if (!DeferredGLGlyphs) {
+    DeferredGLGlyphs = ZnListNew(4, sizeof(DeferredGLGlyphsStruct));
+  }
+  dggp = ZnListArray(DeferredGLGlyphs);
+  num = ZnListSize(DeferredGLGlyphs);
+  for (i = 0; i < num; i++, dggp++) {
+    if (dggp->txf == txf) {
+      return;
+    }
+  }
   
-  charset = charset_def;
-  xlfd = Tk_NameOfFont(tkfont);
-  if (XGetFontProperty(fs, XInternAtom(wi->dpy, "FONT", 0), &prop) != False) {
-    xlfd = charset = XGetAtomName(wi->dpy, prop);
-    for (count = 0; count < 13; count++) {
-      charset = strchr(charset, '-');
-      if (!charset) {
-	charset = charset_def;
-	goto getenc;
-      }
-      charset++;
-    }
-    /* Get a lower case string */
-    count = strlen(charset);
-    charset_lc = ZnMalloc(count+1);
-    charset_lc[count] = '\000';
-    for (count--; count >= 0; count--) {
-      charset_lc[count] = tolower(charset[count]);
-    }
-    charset = charset_lc;
-  }
-
- getenc:
-  enc = Tcl_GetEncoding(wi->interp, charset);
-  if (charset_lc) {
-    ZnFree(charset_lc);
-  }
-  if (!enc) {
-    ZnWarning("Unable to find encoding for font ");
-    ZnWarning(xlfd);
-    ZnWarning("\n");
-  }
-
-  return enc;
-#endif
+  dgg.wi = wi;
+  dgg.txf = txf;
+  ZnListAdd(DeferredGLGlyphs, &dgg, ZnListTail);
+  /*printf("adding a font to load\n");*/
 }
-#endif
+
+void
+ZnGetDeferredGLGlyphs(void)
+{
+  DeferredGLGlyphsStruct *dggp;
+  int			 i, num = ZnListSize(DeferredGLGlyphs);
+
+  if (!num) {
+    return;
+  }
+  dggp = ZnListArray(DeferredGLGlyphs);
+  for (i = 0; i < num; i++, dggp++) {
+    SuckGlyphsFromServer(dggp->wi, dggp->txf);
+  }
+  ZnListEmpty(DeferredGLGlyphs);
+}
+
+static void
+ZnRemovedDeferredGLGlyph(TexFont	*txf)
+{
+  DeferredGLGlyphsStruct *dggp;
+  int			 i, num;
+
+  dggp = ZnListArray(DeferredGLGlyphs);
+  num = ZnListSize(DeferredGLGlyphs);
+  for (i = 0; i < num; i++, dggp++) {
+    if (dggp->txf == txf) {
+      ZnListDelete(DeferredGLGlyphs, i);
+      return;
+    }
+  }
+}
+
 
 /*
  **********************************************************************************
@@ -1490,19 +1427,9 @@ ZnGetTexFont(ZnWInfo	*wi,
   static int	inited = 0;
   Tcl_HashEntry	*entry;
   int		new;
-  unsigned char *glist=NULL, *glist2=NULL;
-  TexGlyphInfo	*tgi;
-  unsigned int	i, j;
-  int		min_glyph, max_glyph;
-  int		gap = 1; /* gap between glyphs */
-  int		px, py, maxheight;
-  int		width, height;
-  unsigned int	texw, texh;
-  GLfloat	xstep, ystep;
-  ZnGLContextEntry *ce = ZnGetGLContext(wi->dpy);
 
   if (!inited) {
-    Tcl_InitHashTable(&font_textures, TCL_ONE_WORD_KEYS);
+    Tcl_InitHashTable(&font_textures, TCL_STRING_KEYS);
     inited = 1;
   }
 
@@ -1510,282 +1437,30 @@ ZnGetTexFont(ZnWInfo	*wi,
 	 tft->fa.family, tft->fa.size, tft->fa.weight, tft->fa.slant, tft->fa.underline,
 	 tft->fa.overstrike);
   */
-  entry = Tcl_FindHashEntry(&font_textures, (char *) font);
+  entry = Tcl_FindHashEntry(&font_textures, Tk_NameOfFont(font));
   if (entry != NULL) {
+    /*printf("Found an already created font %s\n", Tk_NameOfFont(font));*/
     txf = (TexFont *) Tcl_GetHashValue(entry);
   }
   else {
-    /*printf("Loading a new texture font for %s\n", Tk_NameOfFont(font));*/
+    /*printf("Creating a new texture font for %s\n", Tk_NameOfFont(font));*/
     txf = ZnMalloc(sizeof(TexFont));
     if (txf == NULL) {
       return NULL;
     }
     txf->tfi = NULL;
-    txf->tgi = NULL;
     txf->tgvi = NULL;
-    txf->lut = NULL;
+    txf->glyph = NULL;
+    txf->teximage = NULL;
+
     /* Get a local reference to the font, it will be deallocated
      * when no further references on this TexFont exist. */
     txf->tkfont = Tk_GetFont(wi->interp, wi->win, Tk_NameOfFont(font));
-#ifndef PTK_800
-    txf->enc = ZnGetFontEncoding(wi, txf->tkfont);
-#endif
 
-    /*printf("Chargement de la texture pour la fonte %s\n",
-      ZnNameOfTexFont(tfi));*/
-#ifdef PTK_800
-    fontinfo = SuckGlyphsFromServer(wi, txf->tkfont);
-#else
-    fontinfo = SuckGlyphsFromServer(wi, txf->tkfont, txf->enc);
-#endif
-    if (fontinfo == NULL) {
-      goto error;
-    }
-    txf->ascent = fontinfo->ascent;
-    txf->descent = fontinfo->descent;
-    /*
-     * Try to use all glyphs in a font except the first 32
-     * control chars.
-     */
-    txf->num_glyphs = MAX_CHAR-MIN_CHAR+1;
+    /*printf("Scheduling glyph loading for font %s\n", ZnNameOfTexFont(tfi));*/
+    ZnNeedToGetGLGlyphs(wi, txf);
 
-    /*
-     * Initial size of texture.
-     */
-    texw = ce->max_tex_size;
-    texh = 64;
-    while (texh < (unsigned int) (txf->ascent+txf->descent)) {
-      texh *= 2;
-    }
-    /*printf("Taille réelle de texture utilisée: %d\n", ce->max_tex_size);*/
-    /*
-     * This is temporarily disabled until we find out
-     * how to reliably get max_tex_size up front without
-     * waiting for the window mapping.
-     */
-    if (texh > ce->max_tex_size) {
-      goto error;
-    }
-    xstep = 0/*0.5 / texw*/;
-    ystep = 0/*0.5 / texh*/;
-    
-    txf->teximage = ZnMalloc(texw * texh * sizeof(unsigned char));
-    if (txf->teximage == NULL) {
-      goto error;
-    }
-
-    txf->tgi = ZnMalloc(txf->num_glyphs * sizeof(TexGlyphInfo));
-    if (txf->tgi == NULL) {
-      goto error;
-    }
-    txf->tgvi = ZnMalloc(txf->num_glyphs * sizeof(ZnTexGVI));
-    if (txf->tgvi == NULL) {
-      goto error;
-    }
-    
-    glist = ZnMalloc((txf->num_glyphs+1) * sizeof(unsigned char));
-    for (i = 0; i < txf->num_glyphs; i++) {
-      glist[i] = i+MIN_CHAR;
-    }
-    glist[txf->num_glyphs] = 0;
-    qsort(glist, txf->num_glyphs, sizeof(unsigned char), glyphCompare);
-    /*
-     * Keep a cache a the sorted list in case we need to
-     * restart the allocation process.
-     */
-    glist2 = ZnMalloc((txf->num_glyphs+1) * sizeof(unsigned char));
-    strcpy(glist2, glist);
-
-  restart:
-    px = gap;
-    py = gap;
-    maxheight = 0;
-    for (i = 0; i < txf->num_glyphs; i++) {
-      if (glist[i] != 0) {  /* If not already processed... */
-	int foundWidthFit = 0;
-	int c;
-	
-	/* Try to find a character from the glist that will fit on the
-	   remaining space on the current row. */
-	tgi = &txf->tgi[i];
-	getMetric(fontinfo, glist[i], tgi);
-	width = tgi->width;
-	height = tgi->height;
-
-	if ((height > 0) && (width > 0)) {
-	  for (j = i; j < txf->num_glyphs;) {
-	    if ((height > 0) && (width > 0)) {
-	      if ((unsigned int) (px + width + gap) < texw) {
-		foundWidthFit = 1;
-		if (j != i) {
-		  i--;  /* Step back so i loop increment leaves us at same character. */
-		}
-		break;
-	      }
-	    }
-	    do {
-	      j++;
-	    } while (glist[j] == 0);
-	    if (j < txf->num_glyphs) {
-	      tgi = &txf->tgi[j];
-	      getMetric(fontinfo, glist[j], tgi);
-	      width = tgi->width;
-	      height = tgi->height;
-	    }
-	  }
-	  
-	  /* If a fit was found, use that character; otherwise
-	   * advance a line in the texture. */
-	  if (foundWidthFit) {
-	    if (height > maxheight) {
-	      maxheight = height;
-	    }
-	    c = j;
-	  }
-	  else {
-	    tgi = &txf->tgi[i];
-	    getMetric(fontinfo, glist[i], tgi);
-	    width = tgi->width;
-	    height = tgi->height;
-	    
-	    py += maxheight + gap;
-	    px = gap;
-	    maxheight = height;
-	    if ((unsigned int) (py + height + gap) >= texh) {
-	      if (texh*2 < ce->max_tex_size) {
-		texh *= 2;
-		ZnFree(txf->teximage);
-		txf->teximage = ZnMalloc(texw * texh * sizeof(unsigned char));
-		strcpy(glist, glist2);
-		goto restart;
-	      }
-	      else if (texw*2 < ce->max_tex_size) {
-		texw *= 2;
-		ZnFree(txf->teximage);
-		txf->teximage = ZnMalloc(texw * texh * sizeof(unsigned char));
-		strcpy(glist, glist2);
-		goto restart;
-	      }
-	      else {
-		/* Overflowed texture space */
-		goto error;
-	      }
-	    }
-	    c = i;
-	  }
-	  
-	  /* Place the glyph in the texture image. */
-	  placeGlyph(fontinfo, glist[c], txf->teximage, texw, px, py);
-	  
-	  /* Assign glyph's texture coordinate. */
-	  tgi->x = px;
-	  tgi->y = py;
-
-	  /* Advance by glyph width, remaining in the current line. */
-	  px += width + gap;
-	}
-	else {
-	  /* No texture image; assign invalid bogus texture coordinates. */
-	  tgi->x = -1;
-	  tgi->y = -1;
-	  c = i;
-	}
-	glist[c] = 0;     /* Mark processed; don't process again. */
-	txf->tgvi[c].t0[0] = tgi->x / ((GLfloat) texw) + xstep;
-	txf->tgvi[c].t0[1] = tgi->y / ((GLfloat) texh) + ystep;
-	txf->tgvi[c].v0[0] = tgi->xoffset;
-	txf->tgvi[c].v0[1] = tgi->yoffset - tgi->height;
-	txf->tgvi[c].t1[0] = (tgi->x + tgi->width) / ((GLfloat) texw) + xstep;
-	txf->tgvi[c].t1[1] = tgi->y / ((GLfloat) texh) + ystep;
-	txf->tgvi[c].v1[0] = (tgi->xoffset + tgi->width);
-	txf->tgvi[c].v1[1] = tgi->yoffset - tgi->height;
-	txf->tgvi[c].t2[0] = (tgi->x + tgi->width) / ((GLfloat) texw) + xstep;
-	txf->tgvi[c].t2[1] = (tgi->y + tgi->height) / ((GLfloat) texh) + ystep;
-	txf->tgvi[c].v2[0] = (tgi->xoffset + tgi->width);
-	txf->tgvi[c].v2[1] = tgi->yoffset;
-	txf->tgvi[c].t3[0] = tgi->x / ((GLfloat) texw) + xstep;
-	txf->tgvi[c].t3[1] = (tgi->y + tgi->height) / ((GLfloat) texh) + ystep;
-	txf->tgvi[c].v3[0] = tgi->xoffset;
-	txf->tgvi[c].v3[1] = tgi->yoffset;
-	txf->tgvi[c].advance = tgi->advance;
-      }
-    }
-    
-    min_glyph = txf->tgi[0].c;
-    max_glyph = txf->tgi[0].c;
-    for (i = 1; i < txf->num_glyphs; i++) {
-      if (txf->tgi[i].c < min_glyph) {
-	min_glyph = txf->tgi[i].c;
-      }
-      if (txf->tgi[i].c > max_glyph) {
-	max_glyph = txf->tgi[i].c;
-      }
-    }
-    txf->tex_width = texw;
-    txf->tex_height = texh;
-    /*printf("texture width: %g, texture height: %g\n", texw, texh);
-    printf("min glyph: (%d) \"%c\", max glyph: (%d) \"%c\"\n",
-    min_glyph, min_glyph, max_glyph, max_glyph);*/
-    txf->min_glyph = min_glyph;
-    txf->range = max_glyph - min_glyph + 1;
-    
-    txf->lut = ZnMalloc(txf->range * sizeof(ZnTexGVI *));
-    if (txf->lut == NULL) {
-    error:
-      if (glist) {
-	ZnFree(glist);
-      }
-      if (glist2) {
-	ZnFree(glist2);
-      }
-      if (fontinfo) {
-	for (i = 0; i < fontinfo->num_glyphs; i++) {
-	  if (fontinfo->glyph[i].bitmap)
-	    ZnFree(fontinfo->glyph[i].bitmap);
-	}
-	ZnFree(fontinfo);
-      }
-      if (txf->tgi) {
-	ZnFree(txf->tgi);
-	txf->tgi = NULL;
-      }
-      if (txf->tgvi) {
-	ZnFree(txf->tgvi);
-	txf->tgvi = NULL;
-      }
-      if (txf->lut) {
-	ZnFree(txf->lut);
-	txf->lut = NULL;
-      }
-      if (txf->teximage) {
-	ZnFree(txf->teximage);
-	txf->teximage = NULL;
-      }
-#ifndef PTK_800
-      Tcl_FreeEncoding(txf->enc);
-#endif
-      Tk_FreeFont(txf->tkfont);
-      ZnFree(txf);
-      ZnWarning("Cannot load font texture for font ");
-      ZnWarning(Tk_NameOfFont(font));
-      ZnWarning("\n");
-      return 0;
-    }
-    
-    memset(txf->lut, 0, txf->range * sizeof(ZnTexGVI *));
-    for (i = 0; i < txf->num_glyphs; i++) {
-      txf->lut[txf->tgi[i].c - txf->min_glyph] = &txf->tgvi[i];
-    }
-    
-    for (i = 0; i < fontinfo->num_glyphs; i++) {
-      if (fontinfo->glyph[i].bitmap)
-	ZnFree(fontinfo->glyph[i].bitmap);
-    }
-    ZnFree(fontinfo);
-    ZnFree(glist);
-    ZnFree(glist2);
-    
-    entry = Tcl_CreateHashEntry(&font_textures, (char *) font, &new);
+    entry = Tcl_CreateHashEntry(&font_textures, Tk_NameOfFont(font), &new);
     Tcl_SetHashValue(entry, (ClientData) txf);
     txf->hash = entry;
   }
@@ -1794,7 +1469,7 @@ ZnGetTexFont(ZnWInfo	*wi,
    * Now locate the texture obj in the texture list for this widget.
    */
   for (tfi = txf->tfi; tfi != NULL; tfi = tfi->next) {
-    if (tfi->wi->dpy == wi->dpy) {
+    if (tfi->dpy == wi->dpy) {
       tfi->refcount++;
       return tfi;
     }
@@ -1807,7 +1482,7 @@ ZnGetTexFont(ZnWInfo	*wi,
     return NULL;
   }
   tfi->refcount = 1;
-  tfi->wi = wi;
+  tfi->dpy = wi->dpy;
   tfi->txf = txf;
   tfi->texobj = 0;
   tfi->next = txf->tfi;
@@ -1843,10 +1518,13 @@ ZnTexFontTex(ZnTexFontInfo	tfi)
   TexFontInfo	*this = (TexFontInfo *) tfi;
   TexFont	*txf = this->txf;
 
+  if (!txf->teximage) {
+    return 0;
+  }
   if (!this->texobj) {
     glGenTextures(1, &this->texobj);
     /*printf("%d creation texture %d pour la fonte %s\n",
-      this->wi, this->texobj, ZnNameOfTexFont(tfi));*/
+      this->dpy, this->texobj, ZnNameOfTexFont(tfi));*/
     glBindTexture(GL_TEXTURE_2D, this->texobj);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -1854,8 +1532,8 @@ ZnTexFontTex(ZnTexFontInfo	tfi)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glGetError();
     /*printf("Demande texture de %d x %d\n", txf->tex_width, txf->tex_height);*/
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_INTENSITY4, txf->tex_width,
-		 txf->tex_height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, txf->tex_width,
+		 txf->tex_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE,
 		 txf->teximage);
     if (glGetError() != GL_NO_ERROR) {
       ZnWarning("Can't allocate the texture for font ");
@@ -1881,7 +1559,6 @@ void
 ZnFreeTexFont(ZnTexFontInfo	tfi)
 {
   TexFontInfo	*this = ((TexFontInfo *) tfi);
-  ZnWInfo	*wi = this->wi;
   TexFont	*txf = this->txf;
   TexFontInfo	*prev, *scan;
 
@@ -1909,27 +1586,30 @@ ZnFreeTexFont(ZnTexFontInfo	tfi)
     prev->next = this->next;
   }
   if (this->texobj) {
-    /*printf("%d Libération de la texture %d pour la fonte %s\n",
-      wi, this->texobj, ZnNameOfTexFont(tfi));*/
-    ZnGLMakeCurrent(wi->dpy, 0);
-    glDeleteTextures(1, &this->texobj);
-    /*ZnGLRelease(wi);*/
+    ZnGLContextEntry *ce;
+    /*printf("%d Freeing texture %d from font %s\n",
+      this->dpy, this->texobj, ZnNameOfTexFont(tfi));*/
+    ce = ZnGLMakeCurrent(this->dpy, 0);
+    if (ce) {
+      glDeleteTextures(1, &this->texobj);
+      ZnGLReleaseContext(ce);
+    }
   }
+  /*
+   * Remove the font from the deferred load list
+   */
+  ZnRemovedDeferredGLGlyph(txf);
 
   /*
    * There is no more client for this font
    * deallocate the structures.
    */
   if (txf->tfi == NULL) {
-    /*printf("%d destruction complète du txf pour %s\n", this, ZnNameOfTexFont(tfi));*/
+    /*printf("%d Freeing txf for %s\n", this, ZnNameOfTexFont(tfi));*/
     Tk_FreeFont(txf->tkfont);
-    ZnFree(txf->tgi);
+    ZnFree(txf->glyph);
     ZnFree(txf->tgvi);
-    ZnFree(txf->lut);
     ZnFree(txf->teximage);
-#ifndef PTK_800
-    Tcl_FreeEncoding(txf->enc);
-#endif
     Tcl_DeleteHashEntry(txf->hash);
     ZnFree(txf);
   }
@@ -1937,41 +1617,56 @@ ZnFreeTexFont(ZnTexFontInfo	tfi)
   ZnFree(this);
 }
 
+
 /*
  **********************************************************************************
  *
- * ZnCharInTexFont --
+ * ZnGetFontIndex --
  *
  **********************************************************************************
  */
-ZnBool
-ZnCharInTexFont(ZnTexFontInfo	tfi,
-		unsigned int	c)
+int
+ZnGetFontIndex(ZnTexFontInfo	tfi,
+	       int		c)
 {
-  TexFont *txf = ((TexFontInfo *) tfi)->txf;
+  TexFont	*txf;
+  ZnTexGVI	*tgvi;
+  int		code, min, max, mid;
 
-  if ((c >= txf->min_glyph) && (c < txf->min_glyph + txf->range)) {
-    if (txf->lut[c - txf->min_glyph]) {
-      return True;
+  if (c < 127) {
+    /*
+     * It is possible to index the points below 127. Unicode
+     * is the same as ascii down there.
+     */
+    return c - 32;
+  }
+
+  /*
+   * Else, search by dichotomy in the remaining chars.
+   */
+  txf = ((TexFontInfo *) tfi)->txf;
+  tgvi = txf->tgvi;
+  if (!tgvi) {
+    return -1;
+  }
+  min = 127;
+  max = txf->num_glyphs;
+  while (min < max) {
+    mid = (min + max) >> 1;
+    code = tgvi[mid].code;
+    if (c == code) {
+      return mid;
+    }
+    if (c < code) {
+      max = mid;
+    }
+    else {
+      min = mid + 1;
     }
   }
-  return False;
+  /*fprintf(stderr, "Tried to access unavailable texture font character %d (Unicode)\n", c);*/
+  return -1;
 }
-
-/*
- **********************************************************************************
- *
- * ZnTexFontEncoding --
- *
- **********************************************************************************
- */
-#ifndef PTK_800
-Tcl_Encoding
-ZnTexFontEncoding(ZnTexFontInfo tfi)
-{
-  return ((TexFontInfo *) tfi)->txf->enc;
-}
-#endif
 
 /*
  **********************************************************************************
@@ -1981,36 +1676,19 @@ ZnTexFontEncoding(ZnTexFontInfo tfi)
  **********************************************************************************
  */
 ZnTexGVI *
-ZnTexFontGVI(ZnTexFontInfo tfi,
-	     unsigned int  c)
+ZnTexFontGVI(ZnTexFontInfo	tfi,
+	     int		c)
 {
   TexFont	*txf = ((TexFontInfo *) tfi)->txf;
-  ZnTexGVI	*tgvi;
+  ZnTexGVI	*tgvi = NULL;
+  int		index;
 
-  /* Automatically substitute uppercase letters with lowercase if not
-     uppercase available (and vice versa). */
-  if ((c >= txf->min_glyph) && (c < txf->min_glyph + txf->range)) {
-    tgvi = txf->lut[c - txf->min_glyph];
-    if (tgvi) {
-      return tgvi;
-    }
-    if (islower(c)) {
-      c = toupper(c);
-      if ((c >= txf->min_glyph) && (c < txf->min_glyph + txf->range)) {
-        return txf->lut[c - txf->min_glyph];
-      }
-    }
-    if (isupper(c)) {
-      c = tolower(c);
-      if ((c >= txf->min_glyph) && (c < txf->min_glyph + txf->range)) {
-        return txf->lut[c - txf->min_glyph];
-      }
-    }
+  index = ZnGetFontIndex(tfi, c);
+  if (index >= 0) {
+    tgvi = &txf->tgvi[index];
   }
-  fprintf(stderr,
-	  "Tried to access unavailable texture font character '%c'(\\0%o)\n",
-	  c, c);
-  return txf->lut[(int)'!' - txf->min_glyph];
+
+  return tgvi;
 }
 
 #endif

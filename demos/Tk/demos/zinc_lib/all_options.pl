@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-# $Id: all_options.pl,v 1.4 2003/09/15 12:25:05 mertz Exp $
+# $Id: all_options.pl,v 1.5 2004/05/14 09:06:20 lecoanet Exp $
 # This simple demo has been developped by C. Mertz <mertz@cena.fr>
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -85,13 +85,13 @@ sub showAllOptions {
 				      -fill => 'both');
     my $bgcolor = 'ivory';
     $fm->Label(-text => 'Option', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => 1, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => 1, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => ($type eq 'zinc') ? 'optionClass' : 'Type',
 	       -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => 1, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => 1, -column => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => ($type eq 'zinc') ? 'defaultValue' : 'ReadOnly',
 	       -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => 1, -col => 3, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => 1, -column => 3, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     my $i = 2;
     my %options; #we used this hastable to sort the options by their names
     
@@ -111,16 +111,16 @@ sub showAllOptions {
     for my $optionName (sort keys %options) {
 	my ($optionType, $readOnly, $empty, $optionValue) = @{$options{$optionName}};
 	$fm->Label(-text => $optionName, -relief => 'ridge')
-	    ->grid(-row => $i, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	    ->grid(-row => $i, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
 	$fm->Label(-text => $optionType, -relief => 'ridge')
-	    ->grid(-row => $i, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	    ->grid(-row => $i, -column => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
 
 	# $empty is for provision by Zinc
 	if ($type ne 'zinc') {
 	    if ($readOnly) {$readOnly = "read only"} else { $readOnly = "" }
 	}
 	$fm->Label(-text => $readOnly, -relief => 'ridge')
-	    ->grid(-row => $i, -col => 3, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	    ->grid(-row => $i, -column => 3, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
 	# we do not display $optionValue for these fake items
 	$i++;
     }

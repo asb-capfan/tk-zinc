@@ -200,7 +200,7 @@ Init(ZnItem		item,
   text->alignment = TK_JUSTIFY_LEFT;
   text->font = Tk_GetFont(wi->interp, wi->win, Tk_NameOfFont(wi->font));
 #ifdef GL
-  text->tfi = NULL;
+  text->tfi = ZnGetTexFont(wi, text->font);
 #endif
   text->width = 0;
   text->spacing = 0;
@@ -237,7 +237,7 @@ Clone(ZnItem	item)
   text->color = ZnGetGradientByValue(text->color);
   text->font = Tk_GetFont(wi->interp, wi->win, Tk_NameOfFont(text->font));
 #ifdef GL
-  text->tfi = NULL;
+  text->tfi = ZnGetTexFont(wi, text->font);
 #endif
 
   /*
@@ -313,7 +313,7 @@ Configure(ZnItem	item,
   if (old_font != text->font) {
     if (text->tfi) {
       ZnFreeTexFont(text->tfi);
-      text->tfi = NULL;
+      text->tfi = ZnGetTexFont(item->wi, text->font);
     }
   }
 #endif
@@ -351,7 +351,7 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(item->connected_item->class->has_anchors &&
+	(ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
 	 (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
@@ -376,7 +376,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, text_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, text_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }  
 
@@ -868,8 +868,8 @@ Draw(ZnItem	item)
       box[3].y = box[2].y;
       ZnTransformPoints(transfo, box, box, 4);
       for (i = 0; i < 4; i++) {
-	xp[i].x = box[i].x;
-	xp[i].y = box[i].y;
+	xp[i].x = (short) box[i].x;
+	xp[i].y = (short) box[i].y;
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
     }
@@ -887,8 +887,8 @@ Draw(ZnItem	item)
       box[3].y = box[2].y;
       ZnTransformPoints(transfo, box, box, 4);
       for (i = 0; i < 4; i++) {
-	xp[i].x = box[i].x;
-	xp[i].y = box[i].y;
+	xp[i].x = (short) box[i].x;
+	xp[i].y = (short) box[i].y;
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
       for (i = sel_first_line+1, lines_ptr = &lines[sel_first_line+1];
@@ -903,8 +903,8 @@ Draw(ZnItem	item)
 	box[3].y = box[2].y;
 	ZnTransformPoints(transfo, box, box, 4);
 	for (i = 0; i < 4; i++) {
-	  xp[i].x = box[i].x;
-	  xp[i].y = box[i].y;
+	  xp[i].x = (short) box[i].x;
+	  xp[i].y = (short) box[i].y;
 	}
 	XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
       }
@@ -918,8 +918,8 @@ Draw(ZnItem	item)
       box[3].y = box[2].y;
       ZnTransformPoints(transfo, box, box, 4);
       for (i = 0; i < 4; i++) {
-	xp[i].x = box[i].x;
-	xp[i].y = box[i].y;
+	xp[i].x = (short) box[i].x;
+	xp[i].y = (short) box[i].y;
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
     }
@@ -942,7 +942,7 @@ Draw(ZnItem	item)
     box[1].y = box[0].y + font_height - 1;
     ZnTransformPoints(transfo, box, box, 2);
     XDrawLine(wi->dpy, wi->draw_buffer, wi->gc,
-	      box[0].x, box[0].y, box[1].x, box[1].y);
+	      (int) box[0].x, (int) box[0].y, (int) box[1].x, (int) box[1].y);
   }
 
 
@@ -961,10 +961,10 @@ Draw(ZnItem	item)
     values.foreground = ZnGetGradientPixel(text->color, 0.0);    
   }
   else {
-    dest_im_width = (item->item_bounding_box.corner.x -
-		     item->item_bounding_box.orig.x);
-    dest_im_height = (item->item_bounding_box.corner.y -
-		      item->item_bounding_box.orig.y);
+    dest_im_width = (unsigned int) (item->item_bounding_box.corner.x -
+				    item->item_bounding_box.orig.x);
+    dest_im_height = (unsigned int) (item->item_bounding_box.corner.y -
+				     item->item_bounding_box.orig.y);
 
     drw = Tk_GetPixmap(wi->dpy, wi->draw_buffer,
 		       MAX(dest_im_width, text->max_width),
@@ -1058,20 +1058,20 @@ Draw(ZnItem	item)
 
     ZnMapImage(src_im, dest_im, box);
 
-    XPutImage(wi->dpy, drw, gc, dest_im,
-	      0, 0, 0, 0, dest_im_width, dest_im_height);
+    TkPutImage(NULL, 0,wi->dpy, drw, gc, dest_im,
+	       0, 0, 0, 0, dest_im_width, dest_im_height);
 
     values.foreground = ZnGetGradientPixel(text->color, 0.0);
     values.stipple = drw;
-    values.ts_x_origin = item->item_bounding_box.orig.x;
-    values.ts_y_origin = item->item_bounding_box.orig.y;
+    values.ts_x_origin = (int) item->item_bounding_box.orig.x;
+    values.ts_y_origin = (int) item->item_bounding_box.orig.y;
     values.fill_style = FillStippled;
     XChangeGC(wi->dpy, wi->gc,
 	      GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground,
 	      &values);
     XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,
-		   item->item_bounding_box.orig.x,
-		   item->item_bounding_box.orig.y,
+		   (int) item->item_bounding_box.orig.x,
+		   (int) item->item_bounding_box.orig.y,
 		   dest_im_width, dest_im_height);
 
     XFreeGC(wi->dpy, gc);
@@ -1108,23 +1108,17 @@ Render(ZnItem	item)
   int		underline_thickness, underline_pos=0, overstrike_pos=0;
   int		sel_first_line=-1, sel_last_line=-1, cursor_line=-1;
   int		sel_start_offset=0, sel_stop_offset=0, cursor_offset=0;
-#ifndef PTK_800
-  Tcl_Encoding	enc;
-#endif
 
   if (!text->text_info) {
     return;
   }
-
+  /*
   if (!text->tfi) {
     if (! (text->tfi = ZnGetTexFont(wi, text->font))) {
       return;
     }
-  }
-#ifndef PTK_800
-  enc = ZnTexFontEncoding(text->tfi);
-#endif
-
+  }*/
+  
 #ifdef GL_LIST
   if (!item->gl_list) {
     item->gl_list = glGenLists(1);
@@ -1160,7 +1154,8 @@ Render(ZnItem	item)
     if (transfo) {
       m[0] = transfo->_[0][0]; m[1] = transfo->_[0][1];
       m[4] = transfo->_[1][0]; m[5] = transfo->_[1][1];
-      m[12] = transfo->_[2][0]; m[13] = transfo->_[2][1];
+      m[12] = ZnNearestInt(transfo->_[2][0]);
+      m[13] = ZnNearestInt(transfo->_[2][1]);
     }
     glLoadMatrixd(m);
     glTranslated(origin.x, origin.y, 0.0);
@@ -1267,32 +1262,7 @@ Render(ZnItem	item)
 	glEnable(GL_TEXTURE_2D);
       }
 
-#ifndef PTK_800
-      /*
-       * Temporary ack to fix utf8 display.
-       * the malloc should be done once for
-       * each rendering of the item and not
-       * for each line. The max line size should
-       * be stored by CC.
-       */
-      {
-	char	*buf;
-	int	result, written;
-
-	buf = ZnMalloc(lines_ptr->num_bytes+1);
-	if ((result = Tcl_UtfToExternal(wi->interp, enc,
-				       lines_ptr->start, lines_ptr->num_bytes,
-				       TCL_ENCODING_START|TCL_ENCODING_END,
-				       NULL, buf, lines_ptr->num_bytes+1, NULL,
-				       &written, NULL)) != TCL_OK) {
-	  printf("Failed to convert the string: %d\n", result);
-	}
-	ZnRenderString(text->tfi, buf, written);
-	ZnFree(buf);
-      }
-#else
       ZnRenderString(text->tfi, lines_ptr->start, lines_ptr->num_bytes);
-#endif
       glPopMatrix();
       glPushMatrix();
     }
@@ -1557,7 +1527,7 @@ PointToChar(TextItem	text,
 	break;
       }
       n = Tk_MeasureChars(text->font, ti->start, (int) ti->num_bytes,
-			  p.x + 2 - (int) ti->origin_x, TK_PARTIAL_OK,
+			  (int) (p.x + 2 - ti->origin_x), TK_PARTIAL_OK,
 			  &dummy);
 #ifdef PTK_800
       byte_index = (ti->start + n - 1) - text->text;
@@ -1998,11 +1968,11 @@ Selection(ZnItem	item,
  **********************************************************************************
  */
 static ZnItemClassStruct TEXT_ITEM_CLASS = {
-  sizeof(TextItemStruct),
-  0,			/* num_parts */
-  True,			/* has_anchors */
   "text",
+  sizeof(TextItemStruct),
   text_attrs,
+  0,			/* num_parts */
+  ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   Tk_Offset(TextItemStruct, pos),
   Init,
   Clone,

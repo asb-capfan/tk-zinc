@@ -17,7 +17,7 @@
 # This may be very usefull when your application segfaults and
 # when you have no idea where this happens in your code.
 #
-# $Id: Trace.pm,v 1.11 2003/09/19 12:39:59 mertz Exp $
+# $Id: Trace.pm,v 1.12 2004/04/29 08:28:25 etienne Exp $
 #
 # To trap Tk::Zinc errors, use rather the Tk::Zinc::TraceErrors package.
 #
@@ -27,7 +27,7 @@
 package Tk::Zinc::Trace;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
 
 use vars qw( $ForReplay );
 
@@ -72,6 +72,9 @@ my %ZincHash;
 
 sub Tk::Zinc::WidgetMethod {
     my ($zinc, $name, @args) = @_;
+    if (defined $Tk::Zinc::Trace::off and $Tk::Zinc::Trace::off > 0) {
+	return &$WidgetMethodfunction(@_) if $WidgetMethodfunction;
+    }
     my ($package, $filename, $line) = caller(1);
     $package="" unless defined $package;
     $filename="" unless defined $filename;
@@ -151,6 +154,8 @@ core dumps and you have no clue which method call can be responsible for. If
 you just want to trace Tk::Zinc errors when calling a method you
 should rather use the Tk::Zinc::TraceErrors module
 
+The global variable $Tk::Zinc::Trace:off can be used to trace some specific blocks. If set to 1, traces are deactivated, if set to 0, traces are reactivated.
+    
 If the global variable $Tk::Zinc::Trace:ForReplay is set or if the --code
 option is set in the second form, the printout will be very close to re-executable
 code, like this:

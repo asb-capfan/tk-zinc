@@ -1,7 +1,7 @@
 /*
 ** gluos.h - operating system dependencies for GLU
 **
-** $Header: /pii/repository/Tkzinc/libtess/gluos.h,v 1.2 2003/04/16 09:58:06 lecoanet Exp $
+** $Header: /pii/repository/Tkzinc/libtess/gluos.h,v 1.3 2004/05/14 09:07:37 lecoanet Exp $
 */
 #ifdef __VMS
 #ifdef __cplusplus 
@@ -17,7 +17,7 @@
 #include <malloc.h>
 
 #define WIN32_LEAN_AND_MEAN
-#define NOGDI
+/*#define NOGDI*/
 #define NOIME
 #define NOMINMAX
 

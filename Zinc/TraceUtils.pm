@@ -1,15 +1,17 @@
 package Tk::Zinc::TraceUtils;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
-use strict;
 use Tk::Font;
 use Tk::Photo;
-use vars qw(@EXPORT);
+
+require Exporter;
+@ISA = qw(Exporter);
 @EXPORT = qw(printItem printArray printList Item Array List);
 
+use strict;
 
 sub printItem {
     print &Item (@_);
@@ -23,39 +25,6 @@ sub printList {
     print &List (@_);
 }
 
-sub Item {
-    my ($value) = @_;
-    my $ref = ref($value);
-#    print "VALUE=$value REF=$ref\n";
-    if ($ref eq 'ARRAY') {
-	return Array ( @{$value} );
-    } elsif ($ref eq 'CODE') {
-	return "{CODE}";
-    } elsif ($ref eq 'Tk::Photo') {
-#	print " **** $value ***** ";
-	return "Tk::Photo(\"". scalar $value->cget('-file') . "\")";
-    } elsif ($ref eq 'Tk::Font') {
-	return "'$value'";
-    } elsif ($ref eq '') {  # scalar 
-	print "value: $value\n";
-	if (defined $value) {
-	    print "defined value: $value\n";
-	    { no strict;
-	      if ($value eq eval ($value)) {
-		  return $value;
-	      } else {
-		  return "'$value'";
-	      }
-	      use strict;
-	  }
-	} else {
-	    return "_undef";
-	}
-    } else { # some  class instance
-	return $value;
-    }
-    
-} # end Item
 
 ### to print something
 sub Item {
@@ -134,6 +103,7 @@ sub List {
     return $res. ")";
     
 } # end List
+
 
 1;
 

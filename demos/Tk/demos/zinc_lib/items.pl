@@ -1,22 +1,21 @@
 #!/usr/bin/perl -w
-# $Id: items.pl,v 1.5 2003/09/15 12:25:05 mertz Exp $
+# $Id: items.pl,v 1.6 2004/04/30 11:35:18 lecoanet Exp $
 # these simple samples have been developped by C. Mertz mertz@cena.fr
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
 use strict;
 
-my $defaultfont = '-adobe-helvetica-bold-r-normal-*-120-*-*-*-*-*-*';
+my $defaultfont = '-adobe-helvetica-bold-r-normal--*-120-*-*-*-*-*-*';
 my $mw = MainWindow->new();
-my $zinc = $mw->Zinc(-width => 700, -height => 600,
-		     -font => "10x20", # usually fonts are sets in resources
-		                       # but for this example it is set in the code!
-		     -borderwidth => 3, -relief => 'sunken',
-#		     -render => 1,
-		     )->pack;
+my $zinc = $mw->Scrolled('Zinc', -width => 700, -height => 600,
+			 -font => '10x20', -borderwidth => 3,
+			 -relief => 'sunken', -scrollbars => 'se',
+			 -scrollregion => [-100, 0, 1000, 1000]);
+$zinc->pack(-expand => 'yes', -fill => 'both');
 
 $zinc->add('rectangle', 1, [10,10, 100, 50], -fillcolor => "green", -filled => 1,
 	    -linewidth => 10, -relief => "roundridge", -linecolor => "darkgreen");

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: Types.h,v 1.41 2004/03/23 14:53:46 lecoanet Exp $
+ * $Id: Types.h,v 1.44 2004/05/14 09:11:24 lecoanet Exp $
  */
 
 /*
@@ -73,19 +73,10 @@
 /* This EXTERN declaration is needed for Tcl < 8.0.3 */
 #ifndef EXTERN
 # ifdef __cplusplus
-#  define EXTERN extern "C"
+#  define EXTERN extern "C" TCL_STORAGE_CLASS
 # else
-#  define EXTERN extern
+#  define EXTERN extern TCL_STORAGE_CLASS
 # endif
-#endif
-
-#ifdef TCL_STORAGE_CLASS
-#  undef TCL_STORAGE_CLASS
-#endif
-#ifdef BUILD_Tkzinc
-#  define TCL_STORAGE_CLASS DLLEXPORT
-#else
-#  define TCL_STORAGE_CLASS DLLIMPORT
 #endif
 
 
@@ -99,7 +90,6 @@ typedef int	ZnBool;	/* Keep it an int to keep Tk happy */
 typedef ZnReal	ZnPos;
 typedef ZnReal	ZnDim;
 typedef void	*ZnPtr;
-
 
 
 #define ZnPixel(color)		((color)->pixel)
@@ -131,49 +121,54 @@ Tk_GetScrollInfo(interp, argc, (Tcl_Obj **) args, fract, count)
  * Macros for Windows compatibility
  */
 #ifdef _WIN32
+#  include <tkWinInt.h>
+
 #  ifndef _MSC_VER
 #    undef EXTERN
 #    define EXTERN
 #  endif
-#  include <tkWinInt.h>
-#undef XFillRectangle
-EXTERN void XFillRectangle(Display* display, Drawable d, GC gc,
-			   int x, int y, unsigned int width,
-			   unsigned int height);
-#undef XFillRectangles
-EXTERN void XFillRectangles(Display*display, Drawable d, GC gc,
-			    XRectangle *rectangles, int nrectangles);
-#undef XFillArc
-EXTERN void XFillArc(Display* display, Drawable d, GC gc,
-		     int x, int y, unsigned int width,
-		     unsigned int height, int start, int extent);
-#undef XFillPolygon
-EXTERN void XFillPolygon(Display* display, Drawable d, GC gc,
-			 XPoint* points, int npoints, int shape,
-			 int mode);
-#undef XDrawRectangle
-EXTERN void XDrawRectangle(Display* display, Drawable d, GC gc,
-			   int x, int y, unsigned int width,
-			   unsigned int height);
-#undef XDrawArc
-EXTERN void XDrawArc(Display* display, Drawable d, GC gc,
-		     int x, int y, unsigned int width,
-		     unsigned int height, int start, int extent);
-#undef XDrawLine
-EXTERN void XDrawLine(Display* display, Drawable d, GC gc,
-		      int x1, int y1, int x2, int y2);
-#undef XDrawLines
-EXTERN void XDrawLines(Display* display, Drawable d, GC gc,
-		       XPoint* points, int npoints, int mode);
+#  ifdef TCL_STORAGE_CLASS
+#    undef TCL_STORAGE_CLASS
+#  endif
+#  ifdef BUILD_Tkzinc
+#    define TCL_STORAGE_CLASS DLLEXPORT
+#  else
+#    define TCL_STORAGE_CLASS DLLIMPORT
+#  endif
 
-EXTERN ZnBool ZnPointInRegion(TkRegion reg, int x, int y);
-EXTERN void ZnUnionRegion(TkRegion sra, TkRegion srb, 
-			  TkRegion dr_return);
-EXTERN void ZnOffsetRegion(TkRegion reg, int dx, int dy);
-EXTERN TkRegion ZnPolygonRegion(XPoint *points, int n,
-				int fill_rule);
+#  undef XFillRectangle
+void XFillRectangle(Display *display, Drawable d, GC gc, int x, int y,
+		    unsigned int width, unsigned int height);
+#  undef XFillRectangles
+void XFillRectangles(Display *display, Drawable d, GC gc,
+		     XRectangle* rectangles, int nrectangles);
+#  undef XFillArc
+void XFillArc(Display *display, Drawable d, GC gc, int x, int y, unsigned int width,
+	      unsigned int height, int start, int extent);
+#  undef XFillPolygon
+void XFillPolygon(Display *display, Drawable d, GC gc, XPoint *points, int npoints,
+		  int shape, int mode);
+#  undef XDrawRectangle
+void XDrawRectangle(Display *display, Drawable d, GC gc, int x, int y,
+		    unsigned int width, unsigned int height);
+#  undef XDrawArc
+void XDrawArc(Display *display, Drawable d, GC gc, int x, int y,
+	      unsigned int width, unsigned int height, int start, int extent);
+#  undef XDrawLine
+void XDrawLine(Display *display, Drawable d, GC gc, int x1, int y1, int x2, int y2);
+#  undef XDrawLines
+void XDrawLines(Display *display, Drawable d, GC gc, XPoint* points,
+		int npoints, int mode);
+
+ZnBool ZnPointInRegion(TkRegion reg, int x, int y);
+void ZnUnionRegion(TkRegion sra, TkRegion srb, 
+		   TkRegion dr_return);
+void ZnOffsetRegion(TkRegion reg, int dx, int dy);
+TkRegion ZnPolygonRegion(XPoint *points, int n,
+			 int fill_rule);
 #  ifdef GL
 #    define ZnGLContext HGLRC
+#    define ZnGLWaitX()
 #    define ZnGLWaitGL()
 #    define ZN_GL_LINE_WIDTH_RANGE GL_LINE_WIDTH_RANGE
 #    define ZN_GL_POINT_SIZE_RANGE GL_POINT_SIZE_RANGE
@@ -189,6 +184,8 @@ EXTERN TkRegion ZnPolygonRegion(XPoint *points, int n,
   XOffsetRegion((Region) reg, dx, dy)
 #  ifdef GL
 #    define ZnGLContext GLXContext
+#    define ZnGLWaitX() \
+  glXWaitX()
 #    define ZnGLWaitGL() \
   glXWaitGL()
 #    define ZN_GL_LINE_WIDTH_RANGE GL_SMOOTH_LINE_WIDTH_RANGE

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Mar 15 14:02:03 1999
  *
- * $Id: tkZinc.h,v 1.15 2004/03/23 14:53:46 lecoanet Exp $
+ * $Id: tkZinc.h,v 1.17 2004/05/10 15:55:40 lecoanet Exp $
  */
 
 /*
@@ -34,6 +34,7 @@
 #include "Item.h"
 #include "List.h"
 #include "MapInfo.h"
+#include "glu.h"
 
 typedef struct _ZnTagSearch {
   ZnWInfo	*wi;
@@ -60,6 +61,25 @@ typedef struct _ZnTagSearch {
   ZnList	item_stack;
 } ZnTagSearch;
 
+/*
+ * Structure used by the tesselator.
+ */
+typedef struct _ZnCombineData {
+  ZnReal		v[2];
+  struct _ZnCombineData	*next;
+} ZnCombineData;
+
+typedef struct _ZnTess {
+  GLUtesselator	*tess;
+  ZnCombineData	*combine_list;
+  int		type;
+} ZnTess;
+
+ZnList	   ZnWorkPoints;
+ZnList	   ZnWorkXPoints;
+ZnList	   ZnWorkStrings;
+ZnTess	   ZnTesselator;
+
 #ifdef GL
 typedef struct _ZnGLContextEntry {
   ZnGLContext	context;
@@ -67,7 +87,11 @@ typedef struct _ZnGLContextEntry {
   ZnReal	max_line_width;
   ZnReal	max_point_width;
   unsigned int	max_tex_size;
-#ifdef WIN
+  ZnList	widgets;
+#ifdef _WIN32
+  PIXELFORMATDESCRIPTOR pfd;
+  int		ipixel;
+  HWND		hwnd;	/* Temporary storage between MakeCurrent and Release */
   HDC		hdc;
 #else
   XVisualInfo	*visual; /* Should these two be managed by screen ? */
@@ -77,8 +101,8 @@ typedef struct _ZnGLContextEntry {
 } ZnGLContextEntry;
 
 ZnGLContextEntry *ZnGetGLContext(Display *dpy);
-void ZnGLMakeCurrent(Display *dpy, Tk_Window win);
-void ZnGLSwapBuffers(Display *dpy, Tk_Window win);
+ZnGLContextEntry *ZnGLMakeCurrent(Display *dpy, ZnWInfo *wi);
+void ZnGLReleaseContext(ZnGLContextEntry *ce);
 #endif
 
 int ZnParseCoordList(ZnWInfo *wi, Tcl_Obj *arg, ZnPoint **pts,

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Coords.t,v 1.2 2004/04/02 12:01:49 mertz Exp $
+# $Id: Coords.t,v 1.5 2004/05/12 08:57:33 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -10,7 +10,7 @@
 BEGIN {
     if (!eval q{
 #        use Test::More qw(no_plan);
-        use Test::More tests => 12;
+        use Test::More tests => 20;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";
@@ -71,7 +71,7 @@ is_deeply([ $zinc->coords($curve) ],
 
 is_deeply([ $zinc->coords($curve,0) ],
 	  [ [10,20] ,[40,50,'c'], [90,10,'c'], [30,60] ],
-	  "coords of contour 0 of a curve are list of arrays");
+	  "coords of contour 0 of a curve is a list of arrays");
 
 is_deeply([ $zinc->coords($curve,0,0) ],
 	  [ 10,20 ],
@@ -94,6 +94,57 @@ is_deeply([ $zinc->coords($text,0) ],
 is_deeply([ $zinc->coords($text,0,0) ],
 	  [ 10,20 ],
 	  "coords of text contour first point");
+
+
+my $group = $zinc->add('group', 1);
+
+is_deeply([ $zinc->coords($group) ],
+	  [ 0,0 ],
+	  "coords of a empty group, not moved");
+
+$zinc->translate($group, 23, 45);
+#my @coords = @{$zinc->coords($group)}[0];
+#print "coords = @coords", $coords[0][0], $coords[0][1], "\n";
+is_deeply([ $zinc->coords($group) ],
+	  [ 23,45 ],
+	  "coords of a empty group, translated");
+
+
+my $track = $zinc->add('track', 1, 0, -position => [56, 78]);
+is_deeply([ $zinc->coords($track) ],
+	  [ 56,78 ],
+	  "coords of a track");
+
+my $wpt = $zinc->add('waypoint', 1, 0, -position => [561, 781]);
+is_deeply([ $zinc->coords($wpt) ],
+	  [ 561,781 ],
+	  "coords of a waypoint");
+
+my $tab = $zinc->add('tabular', 1, 1, -position => [61, 81]);
+is_deeply([ $zinc->coords($tab) ],
+	  [ 61,81 ],
+	  "coords of a empty tabular");
+$zinc->itemconfigure($tab, -labelformat => 'x20x18+0+0');
+is_deeply([ $zinc->coords($tab) ],
+	  [ 61,81 ],
+	  "coords of a tabular with a labelformat");
+
+
+my $arc = $zinc->add('arc', 1, [13,31, 42,24]);
+is_deeply([ $zinc->coords($arc) ],
+	  [ [13,31],  [42,24] ],
+	  "coords of an arc");
+
+my $tri = $zinc->add('triangles', 1, [ [10,20],  [30,40], [50,60], [70,80], [90,99] ]);
+is_deeply([ $zinc->coords($tri) ],
+	  [ [10,20],  [30,40], [50,60], [70,80], [90,99] ],
+	  "coords of an triangle");
+
+my $photoMickey = $zinc->Photo('mickey.gif', -file => Tk->findINC("demos/images/mickey.gif"));
+my $icon = $zinc->add('icon', 1, -position => [20,100], -image => $photoMickey);
+is_deeply([ $zinc->coords($icon) ],
+	  [ 20,100 ],
+	  "coords of an icon");
 
 diag("############## coords test");
 

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: text.t,v 1.5 2004/04/02 12:01:49 mertz Exp $
+# $Id: text.t,v 1.6 2004/05/07 13:53:00 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -15,7 +15,7 @@ my $mw;
 BEGIN {
     if (!eval q{
 #        use Test::More qw(no_plan);
-        use Test::More tests => 55;
+        use Test::More tests => 69;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";
@@ -56,8 +56,8 @@ my $g1 = $zinc->add('group',1, -tags => "gr1");
 
 my $TEXT = "";
 
-my @families = $zinc->fontFamilies;
-#print "@families\n";
+my @families = $mw->fontFamilies;
+#print "families=@families\n";
 
 my $family="";
 if ( grep /^verdana$/i , @families) {
@@ -68,7 +68,7 @@ if ( grep /^verdana$/i , @families) {
 } elsif  ( grep /^arial$/i , @families) {
     $family = "arial";
 }
-
+#print "family=$family\n";
 
 my $topLevel = $mw->Toplevel();
 $topLevel->title("testing all ascii glyphs of $family");
@@ -89,6 +89,7 @@ foreach my $row (2..15) {
     $zinc0->add('text', 1, -position => [10,$row*20-40], 
 		-text => $string, -font => 'fonta');
     $zinc0->update;
+    &pass("adding text item n°$row with a $family font of size 20 and normal weight");
 }
 
 

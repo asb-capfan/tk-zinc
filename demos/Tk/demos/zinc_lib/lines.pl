@@ -1,15 +1,15 @@
 #!/usr/bin/perl
-# $Id: lines.pl,v 1.2 2003/09/15 12:25:05 mertz Exp $
+# $Id: lines.pl,v 1.3 2004/04/30 11:35:18 lecoanet Exp $
 # these simple samples have been developped by C. Mertz mertz@cena.fr
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
 use strict;
 
-my $defaultfont = '-adobe-helvetica-bold-r-normal-*-120-*-*-*-*-*-*';
+my $defaultfont = '-adobe-helvetica-bold-r-normal--*-120-*-*-*-*-*-*';
 my $mw = MainWindow->new();
 my $zinc = $mw->Zinc(-width => 700, -height => 600,
 		     -font => "10x20", # usually fonts are sets in resources

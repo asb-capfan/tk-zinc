@@ -1,13 +1,13 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: traceutils.t,v 1.1 2003/11/07 15:36:49 mertz Exp $
+# $Id: traceutils.t,v 1.2 2004/05/07 16:53:43 mertz Exp $
 # Author: Christophe Mertz
 #
 
 # testing Tk::Zinc::TraceUtils utilities
 
-use Tk::Zinc::TraceUtils;
+#use Tk::Zinc::TraceUtils;
 use strict;
 
 BEGIN {
@@ -25,7 +25,7 @@ BEGIN {
 	use Tk::Zinc::TraceUtils;
  	1;
     }) {
-        print "unable to load Tk::ZincTraceUtils";
+        print "unable to load Tk::Zinc::TraceUtils";
         print "1..1\n";
         print "ok 1\n";
         exit;
@@ -49,8 +49,7 @@ SKIP: {
     
     like ($font, qr/^testfont/, "font creation");
     is (&Item ($font), "'testfont'", "testing " . "testfont"); # not so sure about this result!
-    print "$font : ", ref($font), "\n";
-    is (&List (-font => $font), "(-font => 'testfont')", );
+    is (&List (-font => $font), "(-font => 'testfont')", "(-font => afont)");
 }
 
 $arg = "()";

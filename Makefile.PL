@@ -1,5 +1,6 @@
 use 5.006;
 use Tk;
+use Config;
 use Tk::Config;
 use ExtUtils::MakeMaker;
 use strict;
@@ -7,7 +8,7 @@ use strict;
 my $TkLibDir = $Tk::library;
 my $platform = $Tk::platform;
 
-my $VERSION = 3.297;
+my $VERSION = 3.298;
 
 
 if (!$TkLibDir)
@@ -23,14 +24,10 @@ if (!$TkLibDir)
 print "Configuring version $VERSION for $platform platform...\n";
 print "Using $TkLibDir as Tk library...\n";
 
-#
-# Humm! inclusion of Zinc.c here is needed to include Zinc.o in the link but it create
-# a circular dependancy in the generated Makefile. Another solution ?
-#
 my @GENERIC_C = ('Track.c', 'Tabular.c', 'Reticle.c', 'Map.c', 'Rectangle.c', 'Arc.c', 'Curve.c',
 		 'Item.c', 'PostScript.c', 'MapInfo.c', 'Attrs.c', 'Draw.c', 'Geo.c', 'List.c',
 		 'perfos.c', 'Transfo.c', 'Group.c', 'Icon.c', 'Text.c', 'Image.c', 'Color.c',
-		 'Field.c', 'Triangles.c', 'Window.c', 'tkZinc.c', 'Zinc.c');
+		 'Field.c', 'Triangles.c', 'Window.c', 'tkZinc.c');
 
 my @LIBTESS_C = ('dict.c', 'geom.c', 'memalloc.c', 'mesh.c', 'normal.c', 'priorityq.c',
 		 'render.c', 'sweep.c', 'tess.c', 'tessmono.c');
@@ -45,9 +42,13 @@ my $WIN = ($platform =~ /win/i);
 
 push @C, @LIBTESS_C, @GENERIC_C ;
 
+my $NeededLibs = ['-L/usr/X11R6/lib -lXext -lX11 -lGL -L.'];
+
 if ($WIN) {
     push @C, @WIN_C;
+    $NeededLibs = ['-lopengl32']
 }
+my $ZincObj = "Zinc" . $Config{"_o"};
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
@@ -56,15 +57,15 @@ WriteMakefile(
 	      'NAME'		=> 'Tk::Zinc',
 	      'VERSION'	        => $VERSION,
 	      'PREREQ_PM'	=> {Tk => 8.0},
-	      'LIBS'		=> ['-L/usr/X11R6/lib -lXext -lX11 -lGL -lpthread -L.'], 
+	      'LIBS'		=> $NeededLibs, 
 	      'DEFINE'		=> &get_flags,
-	      'INC'		=> "-I. -I$TkLibDir -I$TkLibDir/pTk",
+	      'INC'             => "-I. -I$TkLibDir -I$TkLibDir/pTk -I$TkLibDir/X11",
 	      'C'               => [@C],
 	      'XS_VERSION'      => $Tk::Config::VERSION,
-	      'XS'              => {'Zinc.sx' => 'Zinc.c'},
+	      'XS'              => {'Zinc.xs' => 'Zinc.c'},
 	      'linkext'         => {LINKTYPE => 'dynamic'},
-	      'depend'          => {'Zinc.o' => '$(O_FILES) Zinc.o'},
-	      'LDFROM' => '$(O_FILES)',
+	      'depend'          => {$ZincObj => '$(O_FILES) Zinc.c'},
+	      'LDFROM'		=> "\$(O_FILES) $ZincObj",
 	      );
 
 sub get_flags {
@@ -95,12 +96,17 @@ sub get_flags {
 	}
     }
     
-    #
-    # No shape extension on Windows (planned later).
-    if ($WIN) {
-	$DEF_FLAGS{'SHAPE'} = 0;
-    }
     my $defines = '-DPTK';
+
+    if ($WIN) {
+	#
+	# No shape extension on Windows (planned later).
+	$DEF_FLAGS{'SHAPE'} = 0;
+	#
+	# Visual C++ does not define __STDC__ by default
+	$defines .= ' -D__STDC__';
+    }
+
     print "Configuring with:\n    ";
     foreach my $flag (keys %DEF_FLAGS) {
 	print "$flag=", $DEF_FLAGS{$flag} ? 'ok' : 'no', " ";

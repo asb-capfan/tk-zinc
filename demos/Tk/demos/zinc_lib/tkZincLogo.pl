@@ -1,19 +1,19 @@
 #!/usr/bin/perl
-# $Id: tkZincLogo.pl,v 1.10 2003/09/15 12:25:05 mertz Exp $
+# $Id: tkZincLogo.pl,v 1.11 2004/04/30 11:35:18 lecoanet Exp $
 # this simple demo has been adapted by C. Mertz <mertz@cena.fr> from the original
 # work of JL. Vinot <vinot@cena.fr>
 
 package tkZincLogo; # for avoiding symbol collision between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
 use strict;
 use Tk::Zinc::Logo; # this module implements a class which instances are Zinc logo!
 
-my $defaultfont = '-adobe-helvetica-bold-r-normal-*-140-*-*-*-*-*-*';
+my $defaultfont = '-adobe-helvetica-bold-r-normal--*-140-*-*-*-*-*-*';
 my $mw = MainWindow->new();
 my $text = $mw->Scrolled(qw/Text -relief sunken -borderwidth 2 -setgrid true
 	      -height 7 -scrollbars ''/);

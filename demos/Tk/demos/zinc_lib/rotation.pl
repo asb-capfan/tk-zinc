@@ -1,9 +1,9 @@
 #!/usr/bin/perl
-# $Id: rotation.pl,v 1.3 2003/09/15 12:25:05 mertz Exp $
+# $Id: rotation.pl,v 1.4 2004/04/30 11:35:18 lecoanet Exp $
 # This simple demo has been developped by C. Schlienger <celine@intuilab.com>
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 
 use Tk;
@@ -13,7 +13,7 @@ use constant;
 
 my constant $PI=3.1416;
 
-my $defaultfont = '-adobe-helvetica-bold-r-normal-*-120-*-*-*-*-*-*';
+my $defaultfont = '-adobe-helvetica-bold-r-normal--*-120-*-*-*-*-*-*';
 my $mw = MainWindow->new();
 
 

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Wed Mar 30 16:24:09 1994
  *
- * $Id: Arc.c,v 1.53 2004/03/23 14:53:45 lecoanet Exp $
+ * $Id: Arc.c,v 1.54 2004/04/30 12:02:49 lecoanet Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Arc.c,v 1.53 2004/03/23 14:53:45 lecoanet Exp $";
+static const char rcsid[] = "$Id: Arc.c,v 1.54 2004/04/30 12:02:49 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -339,7 +339,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, arc_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, arc_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }  
 
@@ -985,8 +985,8 @@ Draw(ZnItem	item)
       (ISSET(arc->flags, FILLED_BIT) || (arc->line_width))) {
     p = ZnListArray(arc->render_shape);
     num_points = ZnListSize(arc->render_shape);
-    ZnListAssertSize(wi->work_xpts, num_points);
-    xp = ZnListArray(wi->work_xpts);
+    ZnListAssertSize(ZnWorkXPoints, num_points);
+    xp = ZnListArray(ZnWorkXPoints);
     for (i = 0; i < num_points; i++, p++) {
       xp[i].x = (short) p->x;
       xp[i].y = (short) p->y;
@@ -1609,11 +1609,11 @@ GetClipVertices(ZnItem		item,
   
   center.x = (item->item_bounding_box.corner.x + item->item_bounding_box.orig.x) / 2.0;
   center.y = (item->item_bounding_box.corner.y + item->item_bounding_box.orig.y) / 2.0;
-  ZnListEmpty(item->wi->work_pts);
-  ZnListAdd(item->wi->work_pts, &center, ZnListTail);
-  ZnListAppend(item->wi->work_pts, arc->render_shape);
-  ZnTriStrip1(tristrip, ZnListArray(item->wi->work_pts),
-	      ZnListSize(item->wi->work_pts), True);
+  ZnListEmpty(ZnWorkPoints);
+  ZnListAdd(ZnWorkPoints, &center, ZnListTail);
+  ZnListAppend(ZnWorkPoints, arc->render_shape);
+  ZnTriStrip1(tristrip, ZnListArray(ZnWorkPoints),
+	      ZnListSize(ZnWorkPoints), True);
   
   return False;
 }
@@ -1758,11 +1758,11 @@ PostScript(ZnItem	item __unused,
  **********************************************************************************
  */
 static ZnItemClassStruct ARC_ITEM_CLASS = {
-  sizeof(ArcItemStruct),
-  0,			/* num_parts */
-  False,		/* has_anchors */
   "arc",
+  sizeof(ArcItemStruct),
   arc_attrs,
+  0,			/* num_parts */
+  0,			/* flags */
   -1,
   Init,
   Clone,

@@ -4,7 +4,7 @@
  * Authors		: Patrick LECOANET
  * Creation date	: Wed Dec  8 11:04:44 1999
  *
- * $Id: Image.h,v 1.15 2004/03/23 14:53:45 lecoanet Exp $
+ * $Id: Image.h,v 1.17 2004/05/10 15:42:26 lecoanet Exp $
  */
 
 /*
@@ -64,34 +64,27 @@ GLuint
 ZnImageTex(ZnImage image, ZnReal *t, ZnReal *s);
 
 typedef struct _ZnTexGlyphVertexInfo {
-  GLfloat t0[2];
-  GLshort v0[2];
-  GLfloat t1[2];
-  GLshort v1[2];
-  GLfloat t2[2];
-  GLshort v2[2];
-  GLfloat t3[2];
-  GLshort v3[2];
-  GLfloat advance;
+  GLfloat	t0x;
+  GLfloat	t0y;
+  GLshort	v0x;
+  GLshort	v0y;
+  GLfloat	t1x;
+  GLfloat	t1y;
+  GLshort	v1x;
+  GLshort	v1y;
+  GLfloat	advance;
+  int		code;
 } ZnTexGVI;
 
 
 typedef void	*ZnTexFontInfo;
 
-ZnTexFontInfo
-ZnGetTexFont(struct _ZnWInfo *wi, Tk_Font font);
-void
-ZnFreeTexFont(ZnTexFontInfo tfi);
-ZnBool
-ZnCharInTexFont(ZnTexFontInfo tfi, unsigned int c);
-ZnTexGVI *
-ZnTexFontGVI(ZnTexFontInfo tfi, unsigned int c);
-GLuint
-ZnTexFontTex(ZnTexFontInfo tfi);
-#ifndef PTK_800
-Tcl_Encoding
-ZnTexFontEncoding(ZnTexFontInfo tfi);
-#endif
+ZnTexFontInfo ZnGetTexFont(struct _ZnWInfo *wi, Tk_Font font);
+void ZnFreeTexFont(ZnTexFontInfo tfi);
+ZnTexGVI *ZnTexFontGVI(ZnTexFontInfo tfi, int c);
+int ZnGetFontIndex(ZnTexFontInfo tfi, int c);
+GLuint ZnTexFontTex(ZnTexFontInfo tfi);
+void ZnGetDeferredGLGlyphs(void);
 #endif
 
 #endif	/* _Image_h */

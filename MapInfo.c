@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: MapInfo.c,v 1.22 2004/03/03 16:38:18 lecoanet Exp $
+ * $Id: MapInfo.c,v 1.23 2004/04/30 15:15:23 lecoanet Exp $
  */
 
 /*
@@ -42,7 +42,7 @@
 
 
 
-static const char rcsid[] = "$Id: MapInfo.c,v 1.22 2004/03/03 16:38:18 lecoanet Exp $";
+static const char rcsid[] = "$Id: MapInfo.c,v 1.23 2004/04/30 15:15:23 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -329,7 +329,7 @@ ZnMapInfoAddLine(ZnMapInfoId	map_info,
       line_struct.width = 0;
     }
     else {
-      line_struct.width = line_width;
+      line_struct.width = (int) line_width;
     }
     line_struct.tag = tag;
     line_struct.from.x = x_from;
@@ -372,7 +372,7 @@ ZnMapInfoReplaceLine(ZnMapInfoId	map_info,
         line_ptr->width = 0;
       }
       else {
-        line_ptr->width = line_width;
+        line_ptr->width = (int) line_width;
       }
       line_ptr->tag = tag;
       line_ptr->from.x = x_from;
@@ -757,14 +757,14 @@ ZnMapInfoAddArc(ZnMapInfoId	map_info,
       arc_struct.width = 0;
     }
     else {
-      arc_struct.width = line_width;
+      arc_struct.width = (int) line_width;
     }
     arc_struct.tag = tag;
     arc_struct.center.x = center_x;
     arc_struct.center.y = center_y;
-    arc_struct.radius = radius;
-    arc_struct.start_angle = start_angle;
-    arc_struct.extend = extend;
+    arc_struct.radius = (int) radius;
+    arc_struct.start_angle = (int) start_angle;
+    arc_struct.extend = (int) extend;
     
     ZnListAdd(cur_map->arcs, &arc_struct, index);
   }
@@ -794,14 +794,14 @@ ZnMapInfoReplaceArc(ZnMapInfoId		map_info,
         arc_ptr->width = 0;
       }
       else {
-        arc_ptr->width = line_width;
+        arc_ptr->width = (int) line_width;
       }
       arc_ptr->tag = tag;
       arc_ptr->center.x = center_x;
       arc_ptr->center.y = center_y;
-      arc_ptr->radius = radius;
-      arc_ptr->start_angle = start_angle;
-      arc_ptr->extend = extend;      
+      arc_ptr->radius = (int) radius;
+      arc_ptr->start_angle = (int) start_angle;
+      arc_ptr->extend = (int) extend;
     }
   }
 }
@@ -930,7 +930,7 @@ ZnMapInfoScale(ZnMapInfoId	map_info,
     for (i = 0; i < num; i++, arc_ptr++) {
       arc_ptr->center.x *= factor;
       arc_ptr->center.y *= factor;
-      arc_ptr->radius *= factor;
+      arc_ptr->radius = (unsigned int) (arc_ptr->radius * factor);
     }
   }
 }

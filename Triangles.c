@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Tue Dec 11 10:52:01 2001
  *
- * $Id: Triangles.c,v 1.16 2004/03/03 10:16:24 lecoanet Exp $
+ * $Id: Triangles.c,v 1.17 2004/04/30 12:03:56 lecoanet Exp $
  */
 
 /*
@@ -251,7 +251,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, tr_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, tr_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }
 
@@ -411,8 +411,8 @@ Draw(ZnItem	item)
   
   if (ISCLEAR(tr->flags, FAN_BIT)) {
     XPoint	*xpoints;
-    ZnListAssertSize(wi->work_xpts, num_points);
-    xpoints = ZnListArray(wi->work_xpts);
+    ZnListAssertSize(ZnWorkXPoints, num_points);
+    xpoints = ZnListArray(ZnWorkXPoints);
     for (i = 0; i < num_points; i++) {
       xpoints[i].x = ZnNearestInt(points[i].x);
       xpoints[i].y = ZnNearestInt(points[i].y);
@@ -632,7 +632,6 @@ GetContours(ZnItem	item,
 	   ZnPoly	*poly)
 {
   TrianglesItem	tr = (TrianglesItem) item;
-  ZnWInfo	*wi = item->wi;
   ZnPoint	*points;
   unsigned int	k, j, num_points;
   int		i;
@@ -645,8 +644,8 @@ GetContours(ZnItem	item,
   num_points = tr->dev_points.strips->num_points;
 
   if (ISCLEAR(tr->flags, FAN_BIT)) {
-    ZnListAssertSize(wi->work_pts, num_points);
-    points = ZnListArray(wi->work_pts);
+    ZnListAssertSize(ZnWorkPoints, num_points);
+    points = ZnListArray(ZnWorkPoints);
     
     for (k = 1, j = 0; k < num_points; k += 2, j++) {
       points[j] = tr->dev_points.strips->points[k];
@@ -842,11 +841,11 @@ PickVertex(ZnItem	item,
  **********************************************************************************
  */
 static ZnItemClassStruct TRIANGLES_ITEM_CLASS = {
-  sizeof(TrianglesItemStruct),
-  0,			/* num_parts */
-  False,		/* has_anchors */
   "triangles",
+  sizeof(TrianglesItemStruct),
   tr_attrs,
+  0,			/* num_parts */
+  0,			/* flags */
   -1,
   Init,
   Clone,

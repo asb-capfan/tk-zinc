@@ -1,5 +1,5 @@
-# $Id: Zinc.pm,v 1.26 2004/03/26 16:24:37 lecoanet Exp $
-# $Name: cpan_3_297 $
+# $Id: Zinc.pm,v 1.28 2004/05/14 09:02:17 lecoanet Exp $
+# $Name: cpan_3_298 $
 
 package Tk::Zinc;
 
@@ -13,8 +13,8 @@ Construct Tk::Widget 'Zinc';
 
 use vars qw($VERSION $REVISION);
 
-$REVISION = q$Revision: 1.26 $ ;  # this line is automagically modified by CVS
-$VERSION = 3.297;
+$REVISION = q$Revision: 1.28 $ ;  # this line is automagically modified by CVS
+$VERSION = 3.298;
 
 
 bootstrap Tk::Zinc $Tk::VERSION;
@@ -28,7 +28,7 @@ sub CreateOptions
 
 Tk::Methods("add", "addtag", "anchorxy", "bbox", "becomes", "bind", "cget",
 	    "chggroup", "clone", "configure", "contour", "coords", "currentpart",
-	    "cursor", "dchars", "dtag", "fieldbbox", "find", "fit", "focus", "gdelete", "gettags",
+	    "cursor", "dchars", "dtag", "find", "fit", "focus", "gdelete", "gettags",
 	    "gname", "group", "hasanchors", "hasfields", "hastag", "index",
 	    "insert", "itemcget", "itemconfigure", "lower", "monitor",
 	    "numparts", "postscript", "raise", "remove", "rotate", "scale",
@@ -124,7 +124,7 @@ TkZinc with small examples.
 =head1 WHERE CAN I FIND TkZinc?
 
 TkZinc is available as source in tar.gz format or as Debian or RedHat/Mandrake
-packages at http://www.openatc.org/zinc or http://freshmeat.net/projects/zincisnotcanvas/
+packages at http://www.tkzinc.org/ or http://freshmeat.net/projects/zincisnotcanvas/
 
 TkZinc is also available on CPAN since v3.294 (a kind of 3.2.94)
 

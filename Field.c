@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: Field.c,v 1.20 2004/03/23 14:53:45 lecoanet Exp $
+ * $Id: Field.c,v 1.22 2004/05/07 09:37:07 lecoanet Exp $
  */
 
 /*
@@ -38,7 +38,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Field.c,v 1.20 2004/03/23 14:53:45 lecoanet Exp $";
+static const char rcsid[] = "$Id: Field.c,v 1.22 2004/05/07 09:37:07 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -1055,7 +1055,7 @@ QueryField(ZnFieldSet		fs,
     return TCL_ERROR;
   }
     
-  if (ZnQueryAttribute(fs->item->wi, &fs->fields[field], field_attrs,
+  if (ZnQueryAttribute(fs->item->wi->interp, &fs->fields[field], field_attrs,
 		       argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }
@@ -2118,7 +2118,7 @@ RenderField(ZnWInfo	*wi,
     color = ZnGetGradientColor(fptr->border_color, 0.0, &alpha);
     alpha = ZnComposeAlpha(alpha, wi->alpha);
     glColor4us(color->red, color->green, color->blue, alpha);
-    glLineWidth(1.5);
+    glLineWidth(1.0);
     ZnSetLineStyle(wi, ZN_LINE_SIMPLE);
     glBegin(GL_LINES);
     if (fptr->border_edges & ZN_LEFT_BORDER) {

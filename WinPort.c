@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: WinPort.c,v 1.3 2003/10/08 08:08:36 lecoanet Exp $
+ * $Id: WinPort.c,v 1.6 2004/05/14 09:16:14 lecoanet Exp $
  */
 
 /*
@@ -28,13 +28,24 @@
 
 #ifdef _WIN32
 
-#include "Geo.h"
+#include "Types.h"
+
 #include <tkInt.h>
 #include <tkWinInt.h>
-#include "Types.h"
+#ifdef PTK
+#include <tkIntPlatDecls.m>
+#endif
 
 static const char rcsid[] = "$Id";
 static const char compile_id[]="$Compile$";
+
+#ifndef MIN
+#define MIN(a, b) 	((a) <= (b) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a, b) 	((a) >= (b) ? (a) : (b))
+#endif
+
 
 /*
  *----------------------------------------------------------------------
@@ -51,12 +62,12 @@ static const char compile_id[]="$Compile$";
  *
  *----------------------------------------------------------------------
  */
-ZnBool
+int
 ZnPointInRegion(TkRegion reg,
 		int	 x,
 		int	 y)
 {
-  return (ZnBool) PtInRegion((HRGN) reg, x, y);
+  return PtInRegion((HRGN) reg, x, y);
 }
 
 /*
@@ -128,9 +139,8 @@ ZnPolygonRegion(XPoint	*points,
   POINT	*pts;
   HRGN reg;
   int	i;
-  char msg[256];
 
-  pts = ZnMalloc(n*sizeof(POINT));
+  pts = (POINT *) ckalloc(n*sizeof(POINT));
   for (i = 0; i < n; i++, points++) {
     pts[i].x = points->x;
     pts[i].y = points->y;
@@ -139,10 +149,9 @@ ZnPolygonRegion(XPoint	*points,
   reg = CreatePolygonRgn(pts, n,
 			 fill_rule==EvenOddRule?ALTERNATE:WINDING);
   if (!reg) {
-    sprintf(msg, "Polygon region failed: %ld, n: %d\n", GetLastError(), n);
-    OutputDebugString(msg);
+    fprintf(stderr, "Polygon region failed: %ld, n: %d\n", GetLastError(), n);
   }
-  ZnFree(pts);
+  ckfree((char *) pts);
   return (TkRegion) reg;
 }
 
@@ -403,7 +412,7 @@ XFillRectangles(display, d, gc, rectangles, nrectangles)
 	HBRUSH bgBrush = CreateSolidBrush(gc->background);
 
 	if (twdPtr->type != TWD_BITMAP) {
-	    panic("unexpected drawable type in stipple");
+	    Tcl_Panic("unexpected drawable type in stipple");
 	}
 
 	/*
@@ -420,7 +429,6 @@ XFillRectangles(display, d, gc, rectangles, nrectangles)
 	 * the rectangle and fill it with the background color.  Then merge the
 	 * result with the stipple pattern.
 	 */
-
 	for (i = 0; i < nrectangles; i++) {
 	    bitmap = CreateCompatibleBitmap(dc, rectangles[i].width,
 		    rectangles[i].height);
@@ -541,7 +549,7 @@ RenderObject(dc, gc, points, npoints, mode, pen, func)
 	HBRUSH oldMemBrush;
 	
 	if (twdPtr->type != TWD_BITMAP) {
-	    panic("unexpected drawable type in stipple");
+	    Tcl_Panic("unexpected drawable type in stipple");
 	}
 
 	/*
@@ -921,7 +929,7 @@ DrawOrFillArc(display, d, gc, x, y, width, height, start, extent, fill)
 	HBRUSH oldMemBrush;
 	
 	if (twdPtr->type != TWD_BITMAP) {
-	  panic("unexpected drawable type in stipple");
+	  Tcl_Panic("unexpected drawable type in stipple");
 	}
 	
 	/*

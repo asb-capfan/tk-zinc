@@ -4,12 +4,12 @@
 #
 #        Author : Daniel Etienne <etienne@cena.fr>
 #
-# $Id: Debug.pm,v 1.43 2003/12/11 10:34:28 etienne Exp $
+# $Id: Debug.pm,v 1.44 2004/04/27 14:52:18 etienne Exp $
 #---------------------------------------------------------------------------
 package Tk::Zinc::Debug;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.43 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.44 $ =~ /(\d+)\.(\d+)/);
 
 use strict 'vars';
 use vars qw(@ISA @EXPORT @EXPORT_OK $WARNING $endoptions);
@@ -1097,18 +1097,18 @@ sub showalloptions {
     
    my $bgcolor = 'ivory';
     $fm->Label(-text => 'Option', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => 2, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => 2, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Value', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => 2, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => 2, -column => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
 
     my @options = $zinc->itemconfigure($item);
     my $i = 3;
     for my $elem (@options) {
 	my ($option, $type, $value) = (@$elem)[0,1,4];
 	$fm->Label(-text => $option, -relief => 'ridge')
-	    ->grid(-row => $i, -col => 1, -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+	    ->grid(-row => $i, -column => 1, -ipady => 5, -ipadx => 5, -sticky => 'nswe');
 	&entryoption($fm, $item, $zinc, $option, undef, 50, 25)
-	    ->grid(-row => $i, -col => 2, -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+	    ->grid(-row => $i, -column => 2, -ipady => 5, -ipadx => 5, -sticky => 'nswe');
 	$i++;
     }
     
@@ -1190,7 +1190,7 @@ sub showcoords {
 	my $lab = $coords_fm->Label(-text => "Contour $i",
 				    -background => $bgcolor,
 				    -relief => 'ridge')->grid(-row => $row,
-							      -col => $col,
+							      -column => $col,
 							      -ipadx => 5,
 							      -ipady => 5,
 							      -sticky => 'nswe');
@@ -1206,7 +1206,7 @@ sub showcoords {
 	my $lab1 = $coords_fm->Label(-text => scalar(@{$contour[$i]})." points",
 				     -background => $bgcolor,
 				     -relief => 'ridge')->grid(-row => $row+1,
-							       -col => $col,
+							       -column => $col,
 							       -ipadx => 5,
 							       -ipady => 5,
 							       -sticky => 'nswe');
@@ -1241,7 +1241,7 @@ sub showcoords {
 					  -relief => 'ridge')->grid(-row => $row,
 								    -ipadx => 5,
 								    -ipady => 5,
-								    -col => $col++,
+								    -column => $col++,
 								    -sticky => 'nswe'));
 	}
 	$row++ if (@{$contour[$i]} < 10);
@@ -1328,10 +1328,10 @@ sub showgroupattributes {
     my $bgcolor = 'ivory';
     # coords
     $fm->Label(-text => 'Coordinates', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $r++, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe',
+	->grid(-row => $r++, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe',
 	       -columnspan => 2);	# coords
     $fm->Label(-text => 'Coords', -relief => 'ridge')
-	->grid(-row => $r, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $r, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     my @coords = $zinc->coords($item);
     my $coords;
     if (@coords == 2) {
@@ -1355,10 +1355,10 @@ sub showgroupattributes {
 	print "we should not go through this case (2d)!\n";
     }
     $fm->Label(-text => $coords, -relief => 'ridge')
-	->grid(-row => $r++, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $r++, -column => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     # device coords
     $fm->Label(-text => 'Device coords', -relief => 'ridge')
-	->grid(-row => $r, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $r, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     @coords = $zinc->transform($item, 'device', [@coords]);
     if (@coords == 2) {
 	my $x0 = int($coords[0]);
@@ -1381,19 +1381,19 @@ sub showgroupattributes {
 	print "we should not go through this case (4)!\n";
     }
     $fm->Label(-text => $coords, -relief => 'ridge')
-	->grid(-row => $r++, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $r++, -column => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
 
     # options
     $fm->Label(-text => 'Option', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $r, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $r, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Value', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $r++, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $r++, -column => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
 
     my @options = $zinc->itemconfigure($item);
     for my $elem (@options) {
 	my ($option, $value) = (@$elem)[0,4];
 	$fm->Label(-text => $option, -relief => 'ridge')
-	    ->grid(-row => $r, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	    ->grid(-row => $r, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
 	my $w;
 	if ($option and $option eq '-tags') {
 	    $value = join("\n", @$value);
@@ -1404,7 +1404,7 @@ sub showgroupattributes {
 	} else {
 	    $w = &entryoption($fm, $item, $zinc, $option, undef, 50, 25);
 	}
-	$w->grid(-row => $r, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	$w->grid(-row => $r, -column => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
 	$r++;
     }
 
@@ -1457,7 +1457,7 @@ sub showattributes {
 	my $type = $zinc->type($item);
 	# transformations
 	my $btn = $fm->Button(-text => 'treset')
-	    ->grid(-row => $i, -col => 0, -sticky => 'nswe', -ipadx => 5);
+	    ->grid(-row => $i, -column => 0, -sticky => 'nswe', -ipadx => 5);
 	$btn->bind('<1>', [\&showtransfo, $zinc, $item, 0]);
 	$btn->bind('<2>', [\&showtransfo, $zinc, $item, 1]);
 	$btn->bind('<3>', [\&showtransfo, $zinc, $item, 2]);
@@ -1465,7 +1465,7 @@ sub showattributes {
 	my $idbtn =
 	    $fm->Button(-text => $item,
 			-foreground => 'red'
-			)->grid(-row => $i, -col => 1, -sticky => 'nswe',
+			)->grid(-row => $i, -column => 1, -sticky => 'nswe',
 				-ipadx => 5);
 	$idbtn->bind('<1>', [\&highlightitem, $zinc, $item, 0]);
 	$idbtn->bind('<2>', [\&highlightitem, $zinc, $item, 1]);
@@ -1474,25 +1474,25 @@ sub showattributes {
 	if ($type eq 'group') {
 	    $fm->Button(-text => $type, 
 			-command => [\&showgroupcontent, $zinc, $item])
-		->grid(-row => $i, -col => 2, -sticky => 'nswe', -ipadx => 5);
+		->grid(-row => $i, -column => 2, -sticky => 'nswe', -ipadx => 5);
 	} else {
 	    $fm->Label(-text => $type, -relief => 'ridge')
-		->grid(-row => $i, -col => 2, -sticky => 'nswe', -ipadx => 5);
+		->grid(-row => $i, -column => 2, -sticky => 'nswe', -ipadx => 5);
 	}
 	# group
 	my $group = $zinc->group($item);
 	$fm->Button(-text => $group,
 		    -command => [\&showgroupattributes, $zinc, $group])
-	    ->grid(-row => $i, -col => 3, -sticky => 'nswe', -ipadx => 5);
+	    ->grid(-row => $i, -column => 3, -sticky => 'nswe', -ipadx => 5);
 	# priority
 	&entryoption($fm, $item, $zinc, -priority)
-	    ->grid(-row => $i, -col => 4, -sticky => 'nswe', -ipadx => 5);
+	    ->grid(-row => $i, -column => 4, -sticky => 'nswe', -ipadx => 5);
 	# sensitiveness
 	&entryoption($fm, $item, $zinc, -sensitive)
-	    ->grid(-row => $i, -col => 5, -sticky => 'nswe', -ipadx => 5);
+	    ->grid(-row => $i, -column => 5, -sticky => 'nswe', -ipadx => 5);
 	# visibility
 	&entryoption($fm, $item, $zinc, -visible)
-	    ->grid(-row => $i, -col => 6, -sticky => 'nswe', -ipadx => 5);
+	    ->grid(-row => $i, -column => 6, -sticky => 'nswe', -ipadx => 5);
 	# coords
 	my @coords = $zinc->coords($item);
 	my $coords;
@@ -1517,10 +1517,10 @@ sub showattributes {
 	if (@coords > 2) {
 	    $fm->Button(-text => $coords,
 			-command => [\&showcoords, $zinc, $item])
-		->grid(-row => $i, -col => 7, -sticky => 'nswe', -ipadx => 5);
+		->grid(-row => $i, -column => 7, -sticky => 'nswe', -ipadx => 5);
 	} else {
 	    $fm->Label(-text => $coords, -relief => 'ridge')
-		->grid(-row => $i, -col => 7, -sticky => 'nswe', -ipadx => 5);
+		->grid(-row => $i, -column => 7, -sticky => 'nswe', -ipadx => 5);
 	}
 	# device coords
 	@coords = $zinc->transform($item, 'device', [@coords]);
@@ -1545,31 +1545,31 @@ sub showattributes {
 	if (@coords > 2) {
 	    $fm->Button(-text => $coords,
 			-command => [\&showdevicecoords, $zinc, $item])
-		->grid(-row => $i, -col => 8, -sticky => 'nswe', -ipadx => 5);
+		->grid(-row => $i, -column => 8, -sticky => 'nswe', -ipadx => 5);
 	} else {
 	    $fm->Label(-text => $coords, -relief => 'ridge')
-		->grid(-row => $i, -col => 8, -sticky => 'nswe', -ipadx => 5);
+		->grid(-row => $i, -column => 8, -sticky => 'nswe', -ipadx => 5);
 	}
 	# bounding box
 	my @bbox = $zinc->bbox($item);
 	if (@bbox == 4) {
 	    my $btn = $fm->Button(-text => "($bbox[0], $bbox[1]), ($bbox[2], $bbox[3])")
-		->grid(-row => $i, -col => 9, -sticky => 'nswe', -ipadx => 5);
+		->grid(-row => $i, -column => 9, -sticky => 'nswe', -ipadx => 5);
 	    $btn->bind('<1>', [\&showbbox, $zinc, $item]);
 	    $btn->bind('<ButtonRelease-1>', [\&hidebbox, $zinc]) ;
 	} else {
 	    $fm->Label(-text => "--", , -relief => 'ridge')
-		->grid(-row => $i, -col => 9, -sticky => 'nswe', -ipadx => 5);
+		->grid(-row => $i, -column => 9, -sticky => 'nswe', -ipadx => 5);
 	}
 	# tags
   	my @tags = $zinc->gettags($item);
 	&entryoption($fm, $item, $zinc, -tags, join("\n", @tags), 30, scalar @tags)
-	    ->grid(-row => $i, -col => 10, -sticky => 'nswe', -ipadx => 5);
+	    ->grid(-row => $i, -column => 10, -sticky => 'nswe', -ipadx => 5);
 
 	# other options
 	$fm->Button(-text => 'All options',
 		    -command => [\&showalloptions, $zinc, $item, $fm])
-	    ->grid(-row => $i, -col => 11, -sticky => 'nswe', -ipadx => 5);
+	    ->grid(-row => $i, -column => 11, -sticky => 'nswe', -ipadx => 5);
 	$i++;
 	&showbanner($fm, $i++) if ($i % 15 == 0);
     }
@@ -1585,26 +1585,26 @@ sub showbanner {
     my $i = shift;
     my $bgcolor = 'ivory';
     $fm->Label(-text => 'Id', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Type', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Group', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 3, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 3, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Priority', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 4, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 4, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Sensitive', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 5, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 5, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Visible', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 6, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 6, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Coords', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 7, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 7, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Device coords', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 8, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 8, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Bounding box', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 9, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+	->grid(-row => $i, -column => 9, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
     $fm->Label(-text => 'Tags', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 10, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label()->grid(-row => 1, -col => 11, -pady => 10);
+	->grid(-row => $i, -column => 10, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label()->grid(-row => 1, -column => 11, -pady => 10);
      
 } # end showbanner
 

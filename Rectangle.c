@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Fri Dec  2 14:47:42 1994
  *
- * $Id: Rectangle.c,v 1.65 2004/03/23 14:53:45 lecoanet Exp $
+ * $Id: Rectangle.c,v 1.66 2004/04/30 12:08:17 lecoanet Exp $
  */
 
 /*
@@ -37,7 +37,7 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Rectangle.c,v 1.65 2004/03/23 14:53:45 lecoanet Exp $";
+static const char rcsid[] = "$Id: Rectangle.c,v 1.66 2004/04/30 12:08:17 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -290,7 +290,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, rect_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, rect_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }
 
@@ -788,8 +788,8 @@ GetClipVertices(ZnItem		item,
   ZnPoint	*points;
 
   if (ISSET(rect->flags, ALIGNED_BIT)) {
-    ZnListAssertSize(item->wi->work_pts, 2);
-    points = ZnListArray(item->wi->work_pts);
+    ZnListAssertSize(ZnWorkPoints, 2);
+    points = ZnListArray(ZnWorkPoints);
     ZnTriStrip1(tristrip, points, 2, False);
     tristrip->strips[0].fan = False;
   
@@ -811,8 +811,8 @@ GetClipVertices(ZnItem		item,
     }
   }
   else {
-    ZnListAssertSize(item->wi->work_pts, 4);
-    points = ZnListArray(item->wi->work_pts);
+    ZnListAssertSize(ZnWorkPoints, 4);
+    points = ZnListArray(ZnWorkPoints);
     points[0] = rect->dev[1];
     points[1] = rect->dev[2];
     points[2] = rect->dev[0];
@@ -924,11 +924,11 @@ GetAnchor(ZnItem	item,
  **********************************************************************************
  */ 
 static ZnItemClassStruct RECTANGLE_ITEM_CLASS = {
-  sizeof(RectangleItemStruct),
-  0,			/* num_parts */
-  False,		/* has_anchors */
   "rectangle",
+  sizeof(RectangleItemStruct),
   rect_attrs,
+  0,			/* num_parts */
+  0,			/* flags */
   -1,
   Init,
   Clone,

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Wed Jun 23 10:09:20 1999
  *
- * $Id: Group.c,v 1.45 2004/03/24 15:06:44 lecoanet Exp $
+ * $Id: Group.c,v 1.46 2004/04/30 14:19:20 lecoanet Exp $
  */
 
 /*
@@ -39,7 +39,7 @@
 #endif
 
 
-static const char rcsid[] = "$Id: Group.c,v 1.45 2004/03/24 15:06:44 lecoanet Exp $";
+static const char rcsid[] = "$Id: Group.c,v 1.46 2004/04/30 14:19:20 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -471,7 +471,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, group_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, group_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }
 
@@ -590,7 +590,7 @@ PopTransform(ZnItem	item)
   
   pos = NULL;
   if (item->class->pos_offset >= 0) {
-    pos = ((void *) item) + item->class->pos_offset;
+    pos = (ZnPoint *) (((char *) item) + item->class->pos_offset);
     if (pos->x == 0 && pos->y == 0) {
       pos = NULL;
     }
@@ -1077,7 +1077,7 @@ Render(ZnItem 	item)
   PushTransform(item);
   PushClip(group, True);
 #ifdef GL_DAMAGE
-  if (group->clip != ZN_NO_ITEM) {
+  if (ISCLEAR(wi->flags, ZN_CONFIGURE_EVENT) && (group->clip != ZN_NO_ITEM)) {
     old_damaged_area = wi->damaged_area;
     if (ZnCurrentClip(wi, NULL, &clip_box, NULL)) {
       ZnIntersectBBox(&wi->damaged_area, clip_box, &bbox);
@@ -1091,7 +1091,7 @@ Render(ZnItem 	item)
     if (ISSET(current_item->flags, ZN_VISIBLE_BIT)) {
 #ifdef GL_DAMAGE
       ZnIntersectBBox(&wi->damaged_area, &current_item->item_bounding_box, &bbox);
-      if (!ZnIsEmptyBBox(&bbox)) {
+      if (!ZnIsEmptyBBox(&bbox) || ISSET(wi->flags, ZN_CONFIGURE_EVENT)) {
 #endif
 	if (current_item->class != ZnGroup) {
 	  PushTransform(current_item);
@@ -1112,7 +1112,7 @@ Render(ZnItem 	item)
   }
 
 #ifdef GL_DAMAGE
-  if (group->clip != ZN_NO_ITEM) {
+  if (ISCLEAR(wi->flags, ZN_CONFIGURE_EVENT) && (group->clip != ZN_NO_ITEM)) {
     wi->damaged_area = old_damaged_area;
   }
 #endif
@@ -1345,8 +1345,8 @@ Coords(ZnItem		item,
   else if ((cmd == ZN_COORDS_READ) || (cmd == ZN_COORDS_READ_ALL)) {
     ZnPoint	*p;
     
-    ZnListAssertSize(item->wi->work_pts, 1);
-    p = (ZnPoint *) ZnListArray(item->wi->work_pts);
+    ZnListAssertSize(ZnWorkPoints, 1);
+    p = (ZnPoint *) ZnListArray(ZnWorkPoints);
     ZnTransfoDecompose(item->transfo, NULL, p, NULL, NULL);
     *num_pts = 1;
     *pts = p;
@@ -1692,11 +1692,11 @@ GetAnchor(ZnItem	item,
  **********************************************************************************
  */
 static ZnItemClassStruct GROUP_ITEM_CLASS = {
-  sizeof(GroupItemStruct),
-  0,			/* num_parts */
-  False,		/* has_anchors */
   "group",
+  sizeof(GroupItemStruct),
   group_attrs,
+  0,			/* num_parts */
+  ZN_CLASS_ONE_COORD,	/* flags */
   -1,
   Init,
   Clone,

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: Transfo.c,v 1.13 2004/03/24 15:06:44 lecoanet Exp $
+ * $Id: Transfo.c,v 1.14 2004/04/30 14:33:17 lecoanet Exp $
  */
 
 /*
@@ -233,7 +233,7 @@ ZnTransfoCompose(ZnTransfo	*res,
 		 ZnTransfo	*t2)
 {
   if ((t1 != NULL) && (t2 != NULL)) {
-    register ZnReal	tmp;
+    register float	tmp;
 
     tmp = t1->_[0][0];
     res->_[0][0] = tmp*t2->_[0][0] + t1->_[0][1]*t2->_[1][0];
@@ -280,7 +280,7 @@ ZnTransfo *
 ZnTransfoInvert(ZnTransfo	*t,
 		ZnTransfo	*inv)
 {
-  ZnReal	pos, neg, temp, det_l;
+  float	pos, neg, temp, det_l;
 
   if (t == NULL) {
     ZnTransfoSetIdentity(inv);
@@ -314,7 +314,7 @@ ZnTransfoInvert(ZnTransfo	*t,
     return NULL;
   }
   
-  det_l = 1.0/ det_l;
+  det_l = 1 / det_l;
   inv->_[0][0] = t->_[1][1] * det_l;
   inv->_[0][1] = - t->_[0][1] * det_l;
   inv->_[1][0] = - t->_[1][0] * det_l;
@@ -354,7 +354,7 @@ ZnTransfoDecompose(ZnTransfo	*t,
 		   ZnReal	*skewxy)
 {
   ZnTransfo	local;
-  ZnReal	skew, len, rot, det;
+  float		skew, len, rot, det;
   
   if (t == NULL) {
     /* Identity transform */
@@ -394,8 +394,8 @@ ZnTransfoDecompose(ZnTransfo	*t,
   }
 
   /* Get scale and skew */
-  len = sqrt(local._[0][0]*local._[0][0] +
-	     local._[0][1]*local._[0][1]); /* Get x scale from 1st row */
+  len = (float) sqrt(local._[0][0]*local._[0][0] +
+		     local._[0][1]*local._[0][1]); /* Get x scale from 1st row */
   if (scale) {
     scale->x = len < PRECISION_LIMIT ? 0.0 : len;
   }
@@ -410,8 +410,8 @@ ZnTransfoDecompose(ZnTransfo	*t,
    */
   local._[1][0] -= local._[0][0]*skew;
   local._[1][1] -= local._[0][1]*skew;
-  len = sqrt(local._[1][0]*local._[1][0] +
-	     local._[1][1]*local._[1][1]); /* Get y scale from 2nd row */
+  len = (float) sqrt(local._[1][0]*local._[1][0] +
+		     local._[1][1]*local._[1][1]); /* Get y scale from 2nd row */
   if (scale) {
     scale->y = len < PRECISION_LIMIT ? 0.0 : len;
   }
@@ -444,11 +444,11 @@ ZnTransfoDecompose(ZnTransfo	*t,
    */
   det = (local._[0][0]*local._[1][1]- local._[0][1]*local._[1][0]);
   
-  rot = atan2(local._[0][1], local._[0][0]);
+  rot = (float) atan2(local._[0][1], local._[0][0]);
   if (rot < 0) {
-    rot = 2*M_PI+rot;
+    rot = (2 * (float) M_PI) + rot;
   }
-  rot = rot < PRECISION_LIMIT ? 0.0 : rot;
+  rot = rot < PRECISION_LIMIT ? 0 : rot;
   if (rot >= M_PI) {
     /*rot -= M_PI;  Why that, I'll have to check Graphic Gems ??? */
     if (scale && det < 0) {
@@ -622,12 +622,12 @@ ZnTranslate(ZnTransfo	*t,
 	    ZnBool	abs)
 {
   if (abs) {
-    t->_[2][0] = delta_x;
-    t->_[2][1] = delta_y;
+    t->_[2][0] = (float) delta_x;
+    t->_[2][1] = (float) delta_y;
   }
   else {
-    t->_[2][0] = t->_[2][0] + delta_x;
-    t->_[2][1] = t->_[2][1] + delta_y;
+    t->_[2][0] = t->_[2][0] + (float) delta_x;
+    t->_[2][1] = t->_[2][1] + (float) delta_y;
   }
 
   return t;
@@ -644,15 +644,15 @@ ZnTranslate(ZnTransfo	*t,
  */
 ZnTransfo *
 ZnScale(ZnTransfo	*t,
-	register ZnReal	scale_x,
-	register ZnReal	scale_y)
+	ZnReal		scale_x,
+	ZnReal		scale_y)
 {
-  t->_[0][0] = t->_[0][0]*scale_x;
-  t->_[0][1] = t->_[0][1]*scale_y;
-  t->_[1][0] = t->_[1][0]*scale_x;
-  t->_[1][1] = t->_[1][1]*scale_y;
-  t->_[2][0] = t->_[2][0]*scale_x;
-  t->_[2][1] = t->_[2][1]*scale_y;
+  t->_[0][0] = t->_[0][0] * (float) scale_x;
+  t->_[0][1] = t->_[0][1] * (float) scale_y;
+  t->_[1][0] = t->_[1][0] * (float) scale_x;
+  t->_[1][1] = t->_[1][1] * (float) scale_y;
+  t->_[2][0] = t->_[2][0] * (float) scale_x;
+  t->_[2][1] = t->_[2][1] * (float) scale_y;
   
   return t;
 }
@@ -672,9 +672,9 @@ ZnTransfo *
 ZnRotateRad(ZnTransfo	*t,
 	    ZnReal	angle)
 {
-  register ZnReal	c = cos(angle);
-  register ZnReal	s = sin(angle);
-  register ZnReal	tmp;
+  float	c = (float) cos(angle);
+  float	s = (float) sin(angle);
+  float	tmp;
   
   tmp = t->_[0][0];
   t->_[0][0] = tmp*c - t->_[0][1]*s;
@@ -723,9 +723,9 @@ ZnSkewRad(ZnTransfo	*t,
 	  ZnReal	skew_x,
 	  ZnReal	skew_y)
 {
-  register ZnReal	sx = tan(skew_x);
-  register ZnReal	sy = tan(skew_y);
-  register ZnReal	tmp;
+  float	sx = (float) tan(skew_x);
+  float	sy = (float) tan(skew_y);
+  float	tmp;
 
   tmp = t->_[0][0];
   t->_[0][0] = tmp + t->_[0][1]*sx;

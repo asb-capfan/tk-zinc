@@ -67,12 +67,12 @@
 #-----------------------------------------------------------------------------------
 #      Authors: Jean-Luc Vinot <vinot@cena.fr>
 #
-# $Id: Graphics.pm,v 1.11 2004/04/13 15:54:13 mertz Exp $ 
+# $Id: Graphics.pm,v 1.12 2004/04/16 09:06:55 mertz Exp $ 
 #-----------------------------------------------------------------------------------
 package Tk::Zinc::Graphics;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
 
 require Exporter;
 @ISA = qw(Exporter);
@@ -2598,8 +2598,8 @@ sub zincItemPredominantColor {
 
     } else {
       my $grad =  $widget->itemcget($item, -fillcolor);
-
-      return $grad if (scalar (split / /, $grad) < 2);
+      
+      return $grad if (scalar (my @unused = (split / /, $grad)) < 2);
 	
       my @colorparts = split /\|/, $grad;
       foreach my $section (@colorparts) {
@@ -2718,10 +2718,10 @@ sub  RGBtoLCH {
 
   # Conversion XYZtoLab
   $gamma = 1/3;
-  my ($L, $a, $b);
+  my ($L, $A, $B);
 
   if ($Y == 0) {
-    ($L, $a, $b) = (0, 0, 0);
+    ($L, $A, $B) = (0, 0, 0);
 
   } else {
 
@@ -2733,8 +2733,8 @@ sub  RGBtoLCH {
 
     $L = (116.0 * $Ys) - 16.0;
 
-    $a = 500 * ($Xs - $Ys);
-    $b = 200 * ($Ys - $Zs);
+    $A = 500 * ($Xs - $Ys);
+    $B = 200 * ($Ys - $Zs);
 
   }
 
@@ -2742,12 +2742,12 @@ sub  RGBtoLCH {
   my ($C, $H);
 
 
-  if ($a == 0) {
+  if ($A == 0) {
     $H = 0;
 
   } else {
 
-    $H = atan2($b, $a);
+    $H = atan2($B, $A);
 	
     if ($H > 0) {
       $H = ($H / pi) * 180;
@@ -2758,7 +2758,7 @@ sub  RGBtoLCH {
   }
 
 
-  $C = sqrt($a**2 + $b**2);
+  $C = sqrt($A**2 + $B**2);
 
   return [$L, $C, $H];
 
@@ -3046,7 +3046,6 @@ sub min {
 #-----------------------------------------------------------------------------------
 sub r_modp {
   my ($x, $m) = @_;
-  my $value;
 
   return undef if $m == 0;
 

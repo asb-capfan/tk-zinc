@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: WidgetInfo.h,v 1.33 2004/03/23 14:53:46 lecoanet Exp $
+ * $Id: WidgetInfo.h,v 1.34 2004/04/30 14:37:12 lecoanet Exp $
  */
 
 /*
@@ -31,7 +31,6 @@
 #define _WidgetInfo_h
 
 
-#include "glu.h"
 #include "Item.h"
 #include "Transfo.h"
 #include "Types.h"
@@ -59,19 +58,11 @@
 #define ZN_MONITORING		(1<<10)	/* Set if performance monitoring is on. */
 #define	ZN_PRINT_CONFIG		(1<<11) /* If set the openGL hardware configuration
 					 * is printed on startup. */
+#define ZN_CONFIGURE_EVENT	(1<<12)
 
 #ifdef __CPLUSPLUS__
 extern "C" {
 #endif
-
-
-/*
- * Structure used by the tesselator.
- */
-typedef struct _ZnCombineData {
-  ZnReal		v[2];
-  struct _ZnCombineData	*next;
-} ZnCombineData;
 
 
 /*
@@ -164,8 +155,10 @@ typedef struct _ZnWInfo {
   ZnTexFontInfo		map_font_tfi;		/* Used to preserve the default font from
 						 * being freed again and again */
 #endif
+  Tcl_Obj		*map_symbol_obj;
   ZnImage		map_distance_symbol;	/* Distance marks displayed along Map	*/
 						/* lines.				*/
+  Tcl_Obj		*track_symbol_obj;
   ZnImage		track_symbol;		/* Symbol displayed at track/wp current */
 						/* positrion.				*/
   /* Transformer */
@@ -178,7 +171,7 @@ typedef struct _ZnWInfo {
   ZnGradient		*fore_color;		/* Default gradient used in new items	*/
   ZnGradient		*back_color;		/* Color of the widget background.	*/
   ZnGradient		*bbox_color;		/* Color used to draw bboxes (debug).	*/
-  Cursor		cursor;			/* Cursor displayed in zinc window.	*/
+  Tk_Cursor		cursor;			/* Cursor displayed in zinc window.	*/
   ZnBool		draw_bboxes;		/* Draw item's bboxes (debug).		*/
   ZnBool		follow_pointer;		/* Process pointer motion events to	*/
 						/* emit enter/leave events.		*/
@@ -190,6 +183,7 @@ typedef struct _ZnWInfo {
   ZnTexFontInfo		font_tfi;		/* Used to preserve the default font from
 						 * being freed again and again */
 #endif
+  Tcl_Obj		*tile_obj;
   ZnImage		tile;
   
   /* Zinc private resources */
@@ -201,10 +195,6 @@ typedef struct _ZnWInfo {
   Display		*dpy;			/* The display of the widget window.	*/
   Screen		*screen;
   Tk_Window		win;			/* The window of the widget. */
-
-  GLUtesselator		*tess;
-  ZnCombineData		*tess_combine_list;
-  int			tess_type;
   Pixmap		draw_buffer;		/* Pixmap for double buffering		*/
   ZnBBox		damaged_area;		/* The current damaged rectangle	*/
   GC			gc;
@@ -214,12 +204,9 @@ typedef struct _ZnWInfo {
   int			render;
   unsigned char		alpha;			/* Current composite group alpha. */
   ZnItem		top_group;
-  ZnList		work_item_list;		/* Temporary item list used in internal
-						 * works. */
-  ZnList		work_pts;		/* Temporary point lists. */
-  ZnList		work_xpts;
-  ZnList		work_doubles;		/* Temporary number list. */
-  ZnList		work_strs;		/* Temporary string list */
+#ifndef PTK_800
+  Tk_OptionTable	opt_table;
+#endif
 
   /* Text management */
   ZnTextInfo		text_info;
@@ -241,8 +228,8 @@ typedef struct _ZnWInfo {
   LangCallback		*x_scroll_cmd;
   LangCallback		*y_scroll_cmd;
 #else
-  char			*x_scroll_cmd;		/* Command prefixes for communicating with */
-  char			*y_scroll_cmd;		/* scrollbars.  NULL means no scrollbar.
+  Tcl_Obj		*x_scroll_cmd;		/* Command prefixes for communicating with */
+  Tcl_Obj		*y_scroll_cmd;		/* scrollbars.  NULL means no scrollbar.
 						 * Malloc'ed */
 #endif
   int			x_scroll_incr;		/* If >0, defines a grid for horiz/vert */
@@ -252,15 +239,12 @@ typedef struct _ZnWInfo {
   int			scroll_xo;		/* This bbox define the region that is the */
   int			scroll_yo;		/* 100% area for scrolling (i.e. it determines */
   int			scroll_xc;		/* the size and location of the sliders on */
-int			scroll_yc;		/* scrollbars). */
+  int			scroll_yc;		/* scrollbars). */
   ZnBool		confine;		/* When true, it is not possible to scroll the
 						 * viewing area past the scroll region. */
-#ifdef PTK
-  Arg			region;
-#else
-  char			*region;		/* Scroll region option string source of the
+  Tcl_Obj		*region;		/* Scroll region option string source of the
 						 * scroll_region above. */
-#endif
+
   /* Perf measurement variables. */
 #ifndef _WIN32
   ZnChrono		this_draw_chrono;

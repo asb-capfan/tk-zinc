@@ -1,11 +1,11 @@
 #!/usr/bin/perl
-# $Id: atomic-groups.pl,v 1.2 2003/09/15 12:25:05 mertz Exp $
+# $Id: atomic-groups.pl,v 1.3 2004/04/30 11:35:18 lecoanet Exp $
 # this simple sample has been developped by C. Mertz mertz@cena.fr
 
 package atomic_groups;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -13,7 +13,7 @@ use Tk::Checkbutton;
 use Tk::Label;
 use strict;
 
-my $defaultfont = '-adobe-helvetica-bold-r-normal-*-120-*-*-*-*-*-*';
+my $defaultfont = '-adobe-helvetica-bold-r-normal--*-120-*-*-*-*-*-*';
 my $mw = MainWindow->new();
 my $zinc = $mw->Zinc(-width => 500, -height => 350,
 		     -font => "10x20", # usually fonts are sets in resources

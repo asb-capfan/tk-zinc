@@ -1,3 +1,46 @@
+zinc-tk (3.2.98) unstable; urgency=low
+
+  * Suppressed the fieldbbox command. It is available when calling
+    the bbox command with the -field and -label options.
+  * Fixed a nasty openGL/Windows redraw bug when opening a window.
+  * GL contexts are destoyed when no longer needed.
+  * Fixed Enter/leave emission to match the Canvas (and better).
+  * Slightly rearranged the init sequence for openGL. This will
+    ensure that render will be reset has soon has possible if
+    GL is not there. It will _stay_ set if we discover later that
+    GL is not available. This will fix a rather bewildering situation
+    when using images: The image is created for GL, then all of a sudden
+    accessed in an X11 context.
+  * Bug fixes. These should have boosted the stability a lot.
+  * A new Tcl_Obj type "attribute" is used to cache the attribute
+    lookup from one command invocation to the other. This can
+    speed up the code slightly (or more). Available only for
+    Tcl.
+  * Text rendering in text items should be better quality.
+  * Fixed the scrollbar protocol to work with all versions
+    of Perl/Tk and Tcl.
+  * The "new" tk option configuration mecanism is used where
+    possible (not with Perl/TK 800).
+  * Only one tesselator is allocated regardless of how many
+    TkZinc widgets an application use. This potentially can
+    bring resource savings for applications using many
+    TkZincs with OpenGL.
+  * TkZinc perl works under Windows (Perl/Tk 804 only).
+  * Font loading under GL has been rewritten it is now as fast
+    as before and still utf8 based.
+  * coords has (yet) been modified (fixed) so that items which
+    exhibit only one meaningful coordinate will return this
+    coordinate as a flat list instead of as a list of lists.
+  * Redisplaying after a move or a resize even when clipped
+    by the display border is now rock stable. This has been
+    achieved by a full redisplay when moving/resizing.
+  * An msi package Tcl/Tk and Perl/Tk on Windows.
+  * makefile for building for Tcl with vc++ has been updated.
+  * Several fixes in Makefile.PL (pthreads, INC augmented,
+    Windows port)
+
+ -- Patrick Lecoanet <lecoanet@ath.cena.fr>  Mon, 3 May 2004 17:10:07 +0200
+
 zinc-tk (3.2.97) unstable; urgency=low
 
   * Added a tget command. If called with a transform or an

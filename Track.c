@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Track.c,v 1.76 2004/03/23 14:53:46 lecoanet Exp $
+ * $Id: Track.c,v 1.77 2004/04/30 12:04:50 lecoanet Exp $
  */
 
 /*
@@ -41,7 +41,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Track.c,v 1.76 2004/03/23 14:53:46 lecoanet Exp $";
+static const char rcsid[] = "$Id: Track.c,v 1.77 2004/04/30 12:04:50 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -680,7 +680,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, track_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, track_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }
 
@@ -2289,18 +2289,18 @@ Selection(ZnItem	item,
 **********************************************************************************
 */
 /*
- * Track and WP -position attribute is not handled the same way as other
+ * Track -position attribute is not handled the same way as other
  * interface items like texts, icons and such, as it make little sense
  * to change the local transform of a track. It is always processed as
  * a point in the coordinate system of the track's parent. It is the same
  * for the points in the history and the speed vector end.
  */
 static ZnItemClassStruct TRACK_ITEM_CLASS = {
-  sizeof(TrackItemStruct),
-  4,			/* num_parts */
-  True,			/* has_anchors */
   "track",
+  sizeof(TrackItemStruct),
   track_attrs,
+  4,			/* num_parts */
+  ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   -1,
   Init,
   Clone,
@@ -2330,11 +2330,11 @@ static ZnItemClassStruct TRACK_ITEM_CLASS = {
 };
 
 static ZnItemClassStruct WAY_POINT_ITEM_CLASS = {
-  sizeof(TrackItemStruct),
-  3,			/* num_parts */
-  True,			/* has_anchors */
   "waypoint",
+  sizeof(TrackItemStruct),
   wp_attrs,
+  3,			/* num_parts */
+  ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   -1,
   Init,
   Clone,

@@ -29,9 +29,10 @@
 #include "Geo.h"
 #include "Types.h"
 #include "WidgetInfo.h"
+#include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Window.c,v 1.13 2004/03/03 10:16:24 lecoanet Exp $";
+static const char rcsid[] = "$Id: Window.c,v 1.14 2004/04/30 12:03:32 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -278,7 +279,7 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(item->connected_item->class->has_anchors &&
+	(ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
 	 (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
@@ -324,7 +325,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, wind_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, wind_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }  
 
@@ -590,12 +591,12 @@ GetClipVertices(ZnItem		item,
   int		w=0, h=0;
   ZnPoint	*points;
   
-  ZnListAssertSize(item->wi->work_pts, 2);
+  ZnListAssertSize(ZnWorkPoints, 2);
   if (wind->win != NULL) {
     w = wind->real_width;
     h = wind->real_height;    
   }
-  points = ZnListArray(item->wi->work_pts);
+  points = ZnListArray(ZnWorkPoints);
   ZnTriStrip1(tristrip, points, 2, False);
   points[0] = wind->pos_dev;
   points[1].x = points[0].x + w;
@@ -656,11 +657,11 @@ Coords(ZnItem		item,
  **********************************************************************************
  */
 static ZnItemClassStruct WINDOW_ITEM_CLASS = {
-  sizeof(WindowItemStruct),
-  0,			/* num_parts */
-  True,			/* has_anchors */
   "window",
+  sizeof(WindowItemStruct),
   wind_attrs,
+  0,			/* num_parts */
+  ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   Tk_Offset(WindowItemStruct, pos),
   Init,
   Clone,

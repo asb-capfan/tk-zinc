@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Map.c,v 1.57 2004/03/23 14:53:45 lecoanet Exp $
+ * $Id: Map.c,v 1.58 2004/04/30 14:30:39 lecoanet Exp $
  */
 
 /*
@@ -40,7 +40,7 @@
 #include <stdio.h>
 
 
-static const char rcsid[] = "$Id: Map.c,v 1.57 2004/03/23 14:53:45 lecoanet Exp $";
+static const char rcsid[] = "$Id: Map.c,v 1.58 2004/04/30 14:30:39 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -440,7 +440,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, map_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, map_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }  
 
@@ -803,8 +803,8 @@ ComputeCoordinates(ZnItem	item,
     arc.y	= (int) (center.y - radius);
     arc.width	= 2 * radius;
     arc.height	= arc.width;
-    arc.angle1	= start_angle*64;
-    arc.angle2	= extend*64;
+    arc.angle1	= ((unsigned short) start_angle) * 64;
+    arc.angle2	= ((unsigned short) extend) * 64;
     
     switch (line_style) {
     case ZnMapInfoLineSimple:
@@ -1031,8 +1031,8 @@ Draw(ZnItem	item)
       
       cnt = ZnListSize(map->vectors);
       if (cnt) {
-	ZnListAssertSize(wi->work_xpts, cnt);
-	xpoints = (XPoint *) ZnListArray(wi->work_xpts);
+	ZnListAssertSize(ZnWorkXPoints, cnt);
+	xpoints = (XPoint *) ZnListArray(ZnWorkXPoints);
 	points = (ZnPoint *) ZnListArray(map->vectors);
 	for (i = 0; i < cnt; i++) {
 	  xpoints[i].x = (int) points[i].x;
@@ -1328,7 +1328,8 @@ Render(ZnItem	item)
   unsigned int	i, cnt;
   int		w, h;
   XColor	*color;
-  ZnDim		line_width, new_width;
+  GLfloat	line_width;
+  ZnDim		new_width;
   unsigned short alpha;
 
   if (!map->map_info) {
@@ -1364,7 +1365,7 @@ Render(ZnItem	item)
           ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &new_width, NULL,
 			 NULL, NULL, NULL);
           if (new_width != line_width) {
-	    line_width = new_width;
+	    line_width = (GLfloat)new_width;
 	    glLineWidth(line_width);
           }
 	  glVertex2d(points[i].x, points[i].y);
@@ -1385,7 +1386,7 @@ Render(ZnItem	item)
           ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &new_width, NULL,
 			 NULL, NULL, NULL);
           if (new_width != line_width) {
-	    line_width = new_width;
+	    line_width = (GLfloat)new_width;
 	    glLineWidth(line_width);
           }
 	  glVertex2d(points[i].x, points[i].y);
@@ -1407,7 +1408,7 @@ Render(ZnItem	item)
           ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &new_width, NULL,
 			 NULL, NULL, NULL);
           if (new_width != line_width) {
-	    line_width = new_width;
+	    line_width = (GLfloat)new_width;
 	    glLineWidth(line_width);
           }
 	  glVertex2d(points[i].x, points[i].y);
@@ -1429,7 +1430,7 @@ Render(ZnItem	item)
           ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &new_width, NULL,
 			 NULL, NULL, NULL);
           if (new_width != line_width) {
-	    line_width = new_width;
+	    line_width = (GLfloat)new_width;
 	    glLineWidth(line_width);
           }
 	  glVertex2d(points[i].x, points[i].y);
@@ -1563,29 +1564,6 @@ Pick(ZnItem	item __unused,
 /*
  **********************************************************************************
  *
- * Coords --
- *	Nothing to do for maps (or too complex anyway).
- *
- **********************************************************************************
- */
-static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index __unused,
-       int		cmd __unused,
-       ZnPoint		**pts __unused,
-       char		**controls __unused,
-       unsigned int	*num_pts __unused)
-{
-  Tcl_AppendResult(item->wi->interp,
-		   " maps doesn't support the coords command", NULL);
-  return TCL_ERROR;
-}
-
-
-/*
- **********************************************************************************
- *
  * PostScript --
  *
  **********************************************************************************
@@ -1606,11 +1584,11 @@ PostScript(ZnItem	item __unused,
  */
 
 static ZnItemClassStruct MAP_ITEM_CLASS = {
-  sizeof(MapItemStruct),
-  0,			/* num_parts */
-  False,		/* has_anchors */
   "map",
+  sizeof(MapItemStruct),
   map_attrs,
+  0,			/* num_parts */
+  0,			/* flags */
   -1,
   Init,
   Clone,
@@ -1621,7 +1599,7 @@ static ZnItemClassStruct MAP_ITEM_CLASS = {
   NULL,			/* GetAnchor */
   NULL,			/* GetClipVertices */
   NULL,			/* GetContours */
-  Coords,
+  NULL,
   NULL,			/* InsertChars */
   NULL,			/* DeleteChars */
   NULL,			/* Cursor */

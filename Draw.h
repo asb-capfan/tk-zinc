@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Sat Dec 10 12:51:30 1994
  *
- * $Id: Draw.h,v 1.21 2004/01/26 09:32:18 lecoanet Exp $
+ * $Id: Draw.h,v 1.22 2004/04/30 14:23:25 lecoanet Exp $
  */
 
 /*
@@ -122,11 +122,9 @@ void RenderHollowDot(struct _ZnWInfo *wi, ZnPoint *p, ZnReal size);
 
 void ZnRenderGlyph(ZnTexFontInfo *tfi, int c);
 void ZnRenderString(ZnTexFontInfo *tfi, unsigned char *str, unsigned int len);
-void ZnRenderFancyString(ZnTexFontInfo *tfi, unsigned char *str, unsigned int len);
 #endif
 
 void ZnMapImage(XImage *image, XImage *mapped_image, ZnPoint *poly);
 
 
 #endif	/* _Draw_h */
-

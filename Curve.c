@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Fri Mar 25 15:32:17 1994
  *
- * $Id: Curve.c,v 1.49 2004/03/23 14:53:45 lecoanet Exp $
+ * $Id: Curve.c,v 1.50 2004/04/30 14:16:27 lecoanet Exp $
  */
 
 /*
@@ -39,7 +39,7 @@
 
 #include <ctype.h>
 
-static const char rcsid[] = "$Id: Curve.c,v 1.49 2004/03/23 14:53:45 lecoanet Exp $";
+static const char rcsid[] = "$Id: Curve.c,v 1.50 2004/04/30 14:16:27 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -490,120 +490,11 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, cv_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, cv_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }
 
   return TCL_OK;
-}
-
-
-static void
-CurveTessBegin(GLenum	type,
-	       void	*data)
-{
-  CurveItem	cv = data;
-  ZnWInfo	*wi = ((ZnItem) data)->wi;
-
-  ZnListEmpty(wi->work_pts);
-  wi->tess_type = type;
-  if (type == GL_LINE_LOOP) {
-    cv->outlines.num_contours++;
-    cv->outlines.contours = ZnRealloc(cv->outlines.contours,
-				      cv->outlines.num_contours * sizeof(ZnContour));
-  }
-  else {
-    cv->tristrip.num_strips++;
-    cv->tristrip.strips = ZnRealloc(cv->tristrip.strips,
-				    cv->tristrip.num_strips * sizeof(ZnStrip));
-    cv->tristrip.strips[cv->tristrip.num_strips-1].fan = (type==GL_TRIANGLE_FAN);
-  }
-  /*printf("Début de fragment de type: %s\n",
-	 (type == GL_TRIANGLE_FAN) ? "FAN" : 
-	 (type == GL_TRIANGLE_STRIP) ? "STRIP" :
-	 (type == GL_TRIANGLES) ? "TRIANGLES" :
-	 (type == GL_LINE_LOOP) ? "LINE LOOP" : "");*/
-}
-static void
-CurveTessVertex(void	*vertex_data,
-		void	*data)
-{
-  CurveItem	cv = data;
-  ZnWInfo	*wi = ((ZnItem) data)->wi;
-  ZnPoint	p;
-  int		size;
-
-  p.x = ((GLdouble *) vertex_data)[0];
-  p.y = ((GLdouble *) vertex_data)[1];
-  /*printf("Sommet en %g %g\n", p.x, p.y);*/
-  size = ZnListSize(wi->work_pts);
-  if ((wi->tess_type == GL_TRIANGLES) && (size == 3)) {
-    cv->tristrip.strips[cv->tristrip.num_strips-1].num_points = size;
-    cv->tristrip.strips[cv->tristrip.num_strips-1].points = ZnMalloc(size * sizeof(ZnPoint));
-    memcpy(cv->tristrip.strips[cv->tristrip.num_strips-1].points,
-	   ZnListArray(wi->work_pts), size * sizeof(ZnPoint));
-    /*printf("Fin de fragment intermediaire %d, num points: %d\n", cv->tristrip.num_strips-1, size);*/
-    /* Allocate a new fragment */
-    ZnListEmpty(wi->work_pts);
-    cv->tristrip.num_strips++;
-    cv->tristrip.strips = ZnRealloc(cv->tristrip.strips,
-				    cv->tristrip.num_strips * sizeof(ZnStrip));
-    cv->tristrip.strips[cv->tristrip.num_strips-1].fan = False;
-  }
-  ZnListAdd(wi->work_pts, &p, ZnListTail);
-}
-static void
-CurveTessEnd(void	*data)
-{
-  CurveItem	cv = data;
-  ZnWInfo	*wi = ((ZnItem) data)->wi;
-  unsigned int	size = ZnListSize(wi->work_pts);
-  unsigned int	num;
-
-  if (wi->tess_type == GL_LINE_LOOP) {
-    /* Add the last point to close the outline */
-    size++;
-    num = cv->outlines.num_contours;
-    cv->outlines.contours[num-1].num_points = size;
-    cv->outlines.contours[num-1].points = ZnMalloc(size * sizeof(ZnPoint));
-    memcpy(cv->outlines.contours[num-1].points,
-	   ZnListArray(wi->work_pts), size * sizeof(ZnPoint));
-    cv->outlines.contours[num-1].points[size-1] = cv->outlines.contours[num-1].points[0];
-    cv->outlines.contours[num-1].cw = !ZnTestCCW(cv->outlines.contours[num-1].points, size);
-  }
-  else {
-    num = cv->tristrip.num_strips;
-    cv->tristrip.strips[num-1].num_points = size;
-    cv->tristrip.strips[num-1].points = ZnMalloc(size * sizeof(ZnPoint));
-    memcpy(cv->tristrip.strips[num-1].points,
-	   ZnListArray(wi->work_pts), size * sizeof(ZnPoint));
-  }
-  /*printf("Fin de fragment %d, num points: %d\n", num, size);*/
-}
-static void
-CurveTessCombine(GLdouble	coords[3],
-		 void		*vertex_data[4] __unused,
-		 GLfloat	weight[4] __unused,
-		 void		**out_data,
-		 void		*data)
-{
-  ZnWInfo	*wi = ((ZnItem) data)->wi;
-  ZnCombineData	*cdata;
-  
-  cdata = ZnMalloc(sizeof(ZnCombineData));
-  cdata->v[0] = coords[0];
-  cdata->v[1] = coords[1];
-  cdata->next = wi->tess_combine_list;
-  wi->tess_combine_list = cdata;
-  *out_data = &cdata->v;
-  /*printf("Création d'un nouveau sommet en %g %g\n",
-    cdata->v[0], cdata->v[1]);*/
-}
-static void
-CurveTessError(GLenum	errno,
-	       void	*data __unused)
-{
-  fprintf(stderr, "Tesselation error in curve item: %d\n", errno);
 }
 
 static void
@@ -611,29 +502,17 @@ UpdateTristrip(CurveItem	cv,
 	       ZnPoly		*poly,
 	       ZnBool		revert)
 {
-  ZnWInfo	*wi = ((ZnItem) cv)->wi;
   ZnCombineData	*cdata, *cnext;
   GLdouble	v[3];
   unsigned int	j, k;
   int		i;
 
   /*printf("UpdateTristrips sur %d\n", ((ZnItem) cv)->id);*/
-  gluTessCallback(wi->tess, GLU_TESS_BEGIN_DATA,
-		  (_GLUfuncptr) CurveTessBegin);
-  gluTessCallback(wi->tess, GLU_TESS_VERTEX_DATA,
-		  (_GLUfuncptr) CurveTessVertex);
-  gluTessCallback(wi->tess, GLU_TESS_END_DATA,
-		  (_GLUfuncptr) CurveTessEnd);
-  gluTessCallback(wi->tess, GLU_TESS_COMBINE_DATA,
-		  (_GLUfuncptr) CurveTessCombine);
-  gluTessCallback(wi->tess, GLU_TESS_ERROR_DATA,
-		  (_GLUfuncptr) CurveTessError);
-  gluTessProperty(wi->tess, GLU_TESS_WINDING_RULE, (GLdouble) cv->fill_rule);
-  gluTessNormal(wi->tess, 0.0, 0.0, -1.0);
+  gluTessProperty(ZnTesselator.tess, GLU_TESS_WINDING_RULE, (GLdouble) cv->fill_rule);
 
   if (cv->tristrip.num_strips == 0) {
-    gluTessProperty(wi->tess, GLU_TESS_BOUNDARY_ONLY, (GLdouble) GL_FALSE);
-    gluTessBeginPolygon(wi->tess, cv);
+    gluTessProperty(ZnTesselator.tess, GLU_TESS_BOUNDARY_ONLY, (GLdouble) GL_FALSE);
+    gluTessBeginPolygon(ZnTesselator.tess, &cv->tristrip);
     /*
      * We need to take care of the final (after transformation) winding
      * direction of the polygon in order to have the right tesselation
@@ -641,7 +520,7 @@ UpdateTristrip(CurveItem	cv,
      */
     if (!revert) {
       for (j = 0; j < poly->num_contours; j++){
-	gluTessBeginContour(wi->tess);
+	gluTessBeginContour(ZnTesselator.tess);
 	/*printf("Début contour %d num_points %d\n",
 	  j, poly->contours[j].num_points);*/
 	for (k = 0; k < poly->contours[j].num_points; k++) {
@@ -649,15 +528,15 @@ UpdateTristrip(CurveItem	cv,
 	  v[0] = poly->contours[j].points[k].x;
 	  v[1] = poly->contours[j].points[k].y;
 	  v[2] = 0;
-	  gluTessVertex(wi->tess, v, &poly->contours[j].points[k]);
+	  gluTessVertex(ZnTesselator.tess, v, &poly->contours[j].points[k]);
 	}
 	/*printf("\n");*/
-	gluTessEndContour(wi->tess);
+	gluTessEndContour(ZnTesselator.tess);
       }
     }
     else {
       for (j = 0; j < poly->num_contours; j++){
-	gluTessBeginContour(wi->tess);
+	gluTessBeginContour(ZnTesselator.tess);
 	/*printf("revert Début contour %d num_points %d\n",
 	  j, poly->contours[j].num_points);*/
 	for (i = (int) (poly->contours[j].num_points-1); i >= 0; i--) {
@@ -665,20 +544,20 @@ UpdateTristrip(CurveItem	cv,
 	  v[0] = poly->contours[j].points[i].x;
 	  v[1] = poly->contours[j].points[i].y;
 	  v[2] = 0;
-	  gluTessVertex(wi->tess, v, &poly->contours[j].points[i]);
+	  gluTessVertex(ZnTesselator.tess, v, &poly->contours[j].points[i]);
 	}
 	/*printf("\n");*/
-	gluTessEndContour(wi->tess);
+	gluTessEndContour(ZnTesselator.tess);
       }
     }
-    gluTessEndPolygon(wi->tess);
-    cdata = wi->tess_combine_list;
+    gluTessEndPolygon(ZnTesselator.tess);
+    cdata = ZnTesselator.combine_list;
     while (cdata) {
       cnext = cdata->next;
       ZnFree(cdata);
       cdata = cnext;
     }
-    wi->tess_combine_list = NULL;
+    ZnTesselator.combine_list = NULL;
   }
   /*printf("Fin UpdateTristrips sur %d\n", ((ZnItem) cv)->id);*/
 }
@@ -688,29 +567,17 @@ UpdateOutlines(CurveItem	cv,
 	       ZnPoly		*poly,
 	       ZnBool		revert)
 {
-  ZnWInfo	*wi = ((ZnItem) cv)->wi;
   ZnCombineData	*cdata, *cnext;
   GLdouble	v[3];
   unsigned int	j, k;
   int		i;
 
   /*printf("UpdateOutlines sur %d\n", ((ZnItem) cv)->id);*/
-  gluTessCallback(wi->tess, GLU_TESS_BEGIN_DATA,
-		  (_GLUfuncptr) CurveTessBegin);
-  gluTessCallback(wi->tess, GLU_TESS_VERTEX_DATA,
-		  (_GLUfuncptr) CurveTessVertex);
-  gluTessCallback(wi->tess, GLU_TESS_END_DATA,
-		  (_GLUfuncptr) CurveTessEnd);
-  gluTessCallback(wi->tess, GLU_TESS_COMBINE_DATA,
-		  (_GLUfuncptr) CurveTessCombine);
-  gluTessCallback(wi->tess, GLU_TESS_ERROR_DATA,
-		  (_GLUfuncptr) CurveTessError);
-  gluTessProperty(wi->tess, GLU_TESS_WINDING_RULE, (GLdouble) cv->fill_rule);
-  gluTessNormal(wi->tess, 0.0, 0.0, -1.0);
+  gluTessProperty(ZnTesselator.tess, GLU_TESS_WINDING_RULE, (GLdouble) cv->fill_rule);
 
   if (cv->outlines.num_contours == 0) {
-    gluTessProperty(wi->tess, GLU_TESS_BOUNDARY_ONLY, (GLdouble) GL_TRUE);
-    gluTessBeginPolygon(wi->tess, cv);
+    gluTessProperty(ZnTesselator.tess, GLU_TESS_BOUNDARY_ONLY, (GLdouble) GL_TRUE);
+    gluTessBeginPolygon(ZnTesselator.tess, &cv->outlines);
 
     /*
      * We need to take care of the final (after transformation) winding
@@ -719,36 +586,36 @@ UpdateOutlines(CurveItem	cv,
      */
     if (!revert) {
       for (j = 0; j < poly->num_contours; j++){
-	gluTessBeginContour(wi->tess);
+	gluTessBeginContour(ZnTesselator.tess);
 	for (k = 0; k < poly->contours[j].num_points; k++) {
 	  v[0] = poly->contours[j].points[k].x;
 	  v[1] = poly->contours[j].points[k].y;
 	  v[2] = 0;
-	  gluTessVertex(wi->tess, v, &poly->contours[j].points[k]);
+	  gluTessVertex(ZnTesselator.tess, v, &poly->contours[j].points[k]);
 	}
-	gluTessEndContour(wi->tess);
+	gluTessEndContour(ZnTesselator.tess);
       }
     }
     else {
       for (j = 0; j < poly->num_contours; j++){
-	gluTessBeginContour(wi->tess);
+	gluTessBeginContour(ZnTesselator.tess);
 	for (i = (int) (poly->contours[j].num_points-1); i >= 0; i--) {
 	  v[0] = poly->contours[j].points[i].x;
 	  v[1] = poly->contours[j].points[i].y;
 	  v[2] = 0;
-	  gluTessVertex(wi->tess, v, &poly->contours[j].points[i]);
+	  gluTessVertex(ZnTesselator.tess, v, &poly->contours[j].points[i]);
 	}
-	gluTessEndContour(wi->tess);
+	gluTessEndContour(ZnTesselator.tess);
       }
     }
-    gluTessEndPolygon(wi->tess);
-    cdata = wi->tess_combine_list;
+    gluTessEndPolygon(ZnTesselator.tess);
+    cdata = ZnTesselator.combine_list;
     while (cdata) {
       cnext = cdata->next;
       ZnFree(cdata);
       cdata = cnext;
     }
-    wi->tess_combine_list = NULL;
+    ZnTesselator.combine_list = NULL;
   }
   /*printf("Fin UpdateOutlines sur %d\n", ((ZnItem) cv)->id);*/
 }
@@ -833,8 +700,8 @@ ComputeCoordinates(ZnItem	item,
      */
     if (c1->controls) {
       segment_start = 0;
-      ZnListEmpty(wi->work_pts);
-      ZnListAdd(wi->work_pts, &c2->points[0], ZnListTail);
+      ZnListEmpty(ZnWorkPoints);
+      ZnListAdd(ZnWorkPoints, &c2->points[0], ZnListTail);
       /*printf("moveto %g@%g\n", c2->points[0].x, c2->points[0].y);*/
       for (j = 1; j < c1->num_points; j++) {
 	if (!c1->controls[j]) {
@@ -846,11 +713,11 @@ ComputeCoordinates(ZnItem	item,
 		   c2->points[j].x, c2->points[j].y);*/
 	    ZnGetBezierPoints(&c2->points[segment_start],
 			      &c2->points[segment_start+1], &c2->points[j-1],
-			      &c2->points[j], wi->work_pts, 0.5);
+			      &c2->points[j], ZnWorkPoints, 0.5);
 	  }
 	  else {
 	    /*printf("lineto %g@%g\n", c2->points[j].x, c2->points[j].y);*/
-	    ZnListAdd(wi->work_pts, &c2->points[j], ZnListTail);
+	    ZnListAdd(ZnWorkPoints, &c2->points[j], ZnListTail);
 	  }
 	  segment_start = j;
 	}
@@ -863,19 +730,19 @@ ComputeCoordinates(ZnItem	item,
       if (c1->controls[c1->num_points-1]) {
 	ZnGetBezierPoints(&c2->points[segment_start],
 			  &c2->points[segment_start+1], &c2->points[c1->num_points-1],
-			  &c2->points[0], wi->work_pts, 0.5);
+			  &c2->points[0], ZnWorkPoints, 0.5);
       }
 
       /*
        * Replace the original path by the expanded, closing it as
        * needed (one open contour).
        */
-      num_points =ZnListSize(wi->work_pts);
+      num_points =ZnListSize(ZnWorkPoints);
       if (c2->num_points != c1->num_points) {
 	num_points++;
       }
       c2->points = ZnRealloc(c2->points, num_points*sizeof(ZnPoint));
-      memcpy(c2->points, ZnListArray(wi->work_pts), num_points*sizeof(ZnPoint));
+      memcpy(c2->points, ZnListArray(ZnWorkPoints), num_points*sizeof(ZnPoint));
       if (c2->num_points != c1->num_points) {
 	c2->points[num_points-1] = c2->points[0];
       }
@@ -1249,8 +1116,8 @@ Draw(ZnItem	item)
 	}
       }
       else {
-	ZnListAssertSize(wi->work_xpts, num_points);
-	xpoints = ZnListArray(wi->work_xpts);
+	ZnListAssertSize(ZnWorkXPoints, num_points);
+	xpoints = ZnListArray(ZnWorkXPoints);
 	for (j = 0; j < num_points; j++) {
 	  xpoints[j].x = ZnNearestInt(points[j].x);
 	  xpoints[j].y = ZnNearestInt(points[j].y);
@@ -1306,8 +1173,8 @@ Draw(ZnItem	item)
       for (j = 0; j < cv->outlines.num_contours; j++) {
 	num_points = cv->outlines.contours[j].num_points;
 	points = cv->outlines.contours[j].points;
-	ZnListAssertSize(wi->work_xpts, num_points);
-	xpoints = ZnListArray(wi->work_xpts);
+	ZnListAssertSize(ZnWorkXPoints, num_points);
+	xpoints = ZnListArray(ZnWorkXPoints);
 	for (i = 0; i < num_points; i++) {
 	  xpoints[i].x = ZnNearestInt(points[i].x);
 	  xpoints[i].y = ZnNearestInt(points[i].y);
@@ -1356,8 +1223,8 @@ Draw(ZnItem	item)
     for (j = 0; j < cv->outlines.num_contours; j++) {
       num_points = cv->outlines.contours[j].num_points;
       points = cv->outlines.contours[j].points;
-      ZnListAssertSize(wi->work_xpts, num_points);
-      xpoints = (XPoint *) ZnListArray(wi->work_xpts);
+      ZnListAssertSize(ZnWorkXPoints, num_points);
+      xpoints = (XPoint *) ZnListArray(ZnWorkXPoints);
       for (i = 0; i < num_points; i++) {
 	xpoints[i].x = (short) ZnNearestInt(points[i].x);
 	xpoints[i].y = (short) ZnNearestInt(points[i].y);
@@ -2263,11 +2130,11 @@ GetAnchor(ZnItem	item,
  **********************************************************************************
  */
 static ZnItemClassStruct CURVE_ITEM_CLASS = {
-  sizeof(CurveItemStruct),
-  0,			/* num_parts */
-  False,		/* has_anchors */
   "curve",
+  sizeof(CurveItemStruct),
   cv_attrs,
+  0,			/* num_parts */
+  0,			/* flags */
   -1,
   Init,
   Clone,

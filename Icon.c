@@ -31,9 +31,10 @@
 #include "Types.h"
 #include "Image.h"
 #include "WidgetInfo.h"
+#include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Icon.c,v 1.39 2004/03/23 14:53:45 lecoanet Exp $";
+static const char rcsid[] = "$Id: Icon.c,v 1.40 2004/04/30 14:49:22 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -204,7 +205,7 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(item->connected_item->class->has_anchors &&
+	(ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
 	 (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
@@ -229,7 +230,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, icon_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, icon_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }  
 
@@ -414,11 +415,11 @@ Draw(ZnItem	item)
       TkRegion	    current_clip;
       ZnBBox	    *current_clip_box;
 
-      dest_im_width = (item->item_bounding_box.corner.x -
-		       item->item_bounding_box.orig.x);
+      dest_im_width = (unsigned int) (item->item_bounding_box.corner.x -
+				      item->item_bounding_box.orig.x);
       max_width = MAX(dest_im_width, (unsigned int) w);
-      dest_im_height = (item->item_bounding_box.corner.y -
-			item->item_bounding_box.orig.y);
+      dest_im_height = (unsigned int) (item->item_bounding_box.corner.y -
+				       item->item_bounding_box.orig.y);
       max_height = MAX(dest_im_height, (unsigned int) h);
 
       mask = Tk_GetPixmap(wi->dpy, wi->draw_buffer, max_width, max_height, 1);
@@ -483,20 +484,20 @@ Draw(ZnItem	item)
       ZnCurrentClip(wi, &current_clip, &current_clip_box, NULL);
       TkSetRegion(wi->dpy, mask_gc, current_clip);
       XSetClipOrigin(wi->dpy, mask_gc,
-		     -item->item_bounding_box.orig.x, -item->item_bounding_box.orig.y);
-      XPutImage(wi->dpy, mask, mask_gc, dest_mask,
-		0, 0, 0, 0, dest_im_width, dest_im_height);
-      XPutImage(wi->dpy, drw, gc, dest_im,
+		     (int) -item->item_bounding_box.orig.x, (int) -item->item_bounding_box.orig.y);
+      TkPutImage(NULL, 0,wi->dpy, mask, mask_gc, dest_mask,
+		 0, 0, 0, 0, dest_im_width, dest_im_height);
+      TkPutImage(NULL, 0, wi->dpy, drw, gc, dest_im,
 		0, 0, 0, 0, dest_im_width, dest_im_height);
 
       XSetClipMask(wi->dpy, gc, mask);
       XSetClipOrigin(wi->dpy, gc,
-		     item->item_bounding_box.orig.x,
-		     item->item_bounding_box.orig.y);
+		     (int) item->item_bounding_box.orig.x,
+		     (int) item->item_bounding_box.orig.y);
       XCopyArea(wi->dpy, drw, wi->draw_buffer, gc,
 		0, 0, dest_im_width, dest_im_height,
-		item->item_bounding_box.orig.x,
-		item->item_bounding_box.orig.y);
+		(int) item->item_bounding_box.orig.x,
+		(int) item->item_bounding_box.orig.y);
 
       XFreeGC(wi->dpy, gc);
       XFreeGC(wi->dpy, mask_gc);
@@ -546,11 +547,11 @@ Draw(ZnItem	item)
       unsigned int  max_width, max_height;
       GC	    gc;
 
-      dest_im_width = (item->item_bounding_box.corner.x -
-		       item->item_bounding_box.orig.x);
+      dest_im_width = (unsigned int) (item->item_bounding_box.corner.x -
+				      item->item_bounding_box.orig.x);
       max_width = MAX(dest_im_width, (unsigned int) w);
-      dest_im_height = (item->item_bounding_box.corner.y -
-			item->item_bounding_box.orig.y);
+      dest_im_height = (unsigned int) (item->item_bounding_box.corner.y -
+				       item->item_bounding_box.orig.y);
       max_height = MAX(dest_im_height, (unsigned int) h);
       
       drw = Tk_GetPixmap(wi->dpy, wi->draw_buffer, max_width, max_height, 1);
@@ -587,21 +588,21 @@ Draw(ZnItem	item)
 
       ZnMapImage(src_im, dest_im, box);
 
-      XPutImage(wi->dpy, drw, gc, dest_im,
-		0, 0, 0, 0, dest_im_width, dest_im_height);
+      TkPutImage(NULL, 0,wi->dpy, drw, gc, dest_im,
+		 0, 0, 0, 0, dest_im_width, dest_im_height);
 
       values.foreground = ZnGetGradientPixel(icon->color, 0.0);
       values.stipple = drw;
-      values.ts_x_origin = item->item_bounding_box.orig.x;
-      values.ts_y_origin = item->item_bounding_box.orig.y;
+      values.ts_x_origin = (int) item->item_bounding_box.orig.x;
+      values.ts_y_origin = (int) item->item_bounding_box.orig.y;
       values.fill_style = FillStippled;
       XChangeGC(wi->dpy, wi->gc,
 		GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground,
 		&values);
       XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,
-		     item->item_bounding_box.orig.x,
-		     item->item_bounding_box.orig.y,
-		     dest_im_width, dest_im_height);
+		     (int) item->item_bounding_box.orig.x,
+		     (int) item->item_bounding_box.orig.y,
+		     (int) dest_im_width, (int) dest_im_height);
 
       XFreeGC(wi->dpy, gc);
       Tk_FreePixmap(wi->dpy, drw);
@@ -787,8 +788,8 @@ GetClipVertices(ZnItem		item,
   IconItem	icon = (IconItem) item;
   ZnPoint	*points;
   
-  ZnListAssertSize(item->wi->work_pts, 4);
-  points = ZnListArray(item->wi->work_pts);
+  ZnListAssertSize(ZnWorkPoints, 4);
+  points = ZnListArray(ZnWorkPoints);
   points[0] = icon->dev[0];
   points[1] = icon->dev[1];
   points[2] = icon->dev[3];
@@ -850,11 +851,11 @@ Coords(ZnItem		item,
  **********************************************************************************
  */
 static ZnItemClassStruct ICON_ITEM_CLASS = {
-  sizeof(IconItemStruct),
-  0,			/* num_parts */
-  True,			/* has_anchors */
   "icon",
+  sizeof(IconItemStruct),
   icon_attrs,
+  0,			/* num_parts */
+  ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   Tk_Offset(IconItemStruct, pos),
   Init,
   Clone,

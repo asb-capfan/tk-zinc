@@ -18,7 +18,7 @@
 # module name, the line number and the complete error messages are reported
 # for each error.
 #
-# $Id: TraceErrors.pm,v 1.6 2003/09/19 12:40:47 mertz Exp $
+# $Id: TraceErrors.pm,v 1.7 2004/04/29 08:26:25 etienne Exp $
 #
 # When you have no idea where this happens in your code or when your
 # application segfaults, use the Tk::Zinc::Trace package which traces every
@@ -30,7 +30,7 @@
 package Tk::Zinc::TraceErrors;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use strict;
@@ -44,7 +44,7 @@ BEGIN {
     my $bold = "[1m";
     my $_bold = "[m";
     
-    if ($ZincTrace::on == 1) {
+    if (defined $ZincTrace::on and $ZincTrace::on == 1) {
 	print STDERR $bold."Tk::Zinc::TraceErrors: incompatible package Tk::Zinc::Trace is already ".
 	    "loaded".$_bold." (exit 1)\n";
 	exit 1;

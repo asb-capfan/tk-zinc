@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Sat Dec 10 12:51:30 1994
  *
- * $Id: Draw.c,v 1.56 2004/03/24 15:06:44 lecoanet Exp $
+ * $Id: Draw.c,v 1.58 2004/05/07 09:35:54 lecoanet Exp $
  */
 
 /*
@@ -326,8 +326,8 @@ ZnDrawLineShape(ZnWInfo		*wi,
   values.cap_style = CapRound;
   XChangeGC(wi->dpy, wi->gc,
 	    GCFillStyle|GCLineWidth|GCJoinStyle|GCCapStyle|GCForeground, &values);
-  ZnListAssertSize(wi->work_xpts, num_p);
-  xpoints = (XPoint *) ZnListArray(wi->work_xpts);
+  ZnListAssertSize(ZnWorkXPoints, num_p);
+  xpoints = (XPoint *) ZnListArray(ZnWorkXPoints);
   for (i = 0; i < num_p; i++) {
     xpoints[i].x = (short) p[i].x;
     xpoints[i].y = (short) p[i].y;
@@ -535,7 +535,7 @@ ZnDrawRectangleRelief(ZnWInfo		*wi,
     new_line_width = line_width/2.0;
     offset = (unsigned) (line_width - new_line_width);
     ZnDrawRectangleRelief(wi,
-			  (unsigned) ((relief==ZN_RELIEF_GROOVE)?ZN_RELIEF_SUNKEN:ZN_RELIEF_RAISED),
+			  (ZnReliefStyle) ((relief==ZN_RELIEF_GROOVE)?ZN_RELIEF_SUNKEN:ZN_RELIEF_RAISED),
 			  gradient, bbox, new_line_width);
     internal_bbox = *bbox;
     internal_bbox.x += offset;
@@ -543,7 +543,7 @@ ZnDrawRectangleRelief(ZnWInfo		*wi,
     internal_bbox.width -= offset*2;
     internal_bbox.height -= offset*2;
     ZnDrawRectangleRelief(wi,
-			  (unsigned) ((relief==ZN_RELIEF_GROOVE)?ZN_RELIEF_RAISED:ZN_RELIEF_SUNKEN),
+			  (ZnReliefStyle) ((relief==ZN_RELIEF_GROOVE)?ZN_RELIEF_RAISED:ZN_RELIEF_SUNKEN),
 			  gradient, &internal_bbox, new_line_width);
     return;
   }
@@ -1479,8 +1479,8 @@ ComputeAxialGradient(ZnWInfo	*wi,
   c = shape->contours;
   ZnResetBBox(&bbox);
   for (i = 0; i < shape->num_contours; i++, c++) {
-    ZnListAssertSize(wi->work_pts, c->num_points);
-    points = ZnListArray(wi->work_pts);
+    ZnListAssertSize(ZnWorkPoints, c->num_points);
+    points = ZnListArray(ZnWorkPoints);
     ZnTransformPoints(transfo1, c->points, points, c->num_points);
     ZnAddPointsToBBox(&bbox, points, c->num_points);
   }
@@ -1783,8 +1783,8 @@ ZnRenderGradient(ZnWInfo	*wi,
     XColor	 *color2;
 
     genarc = ZnGetCirclePoints(3, ZN_CIRCLE_FINE, 0.0, 2*M_PI, &num_p, NULL);
-    ZnListAssertSize(wi->work_pts, num_p);
-    tarc = ZnListArray(wi->work_pts);
+    ZnListAssertSize(ZnWorkPoints, num_p);
+    tarc = ZnListArray(ZnWorkPoints);
     ZnTransformPoints((ZnTransfo *) quad, genarc, tarc, num_p);
     p.x = p.y = 0;
     ZnTransformPoint((ZnTransfo *) quad, &p, &focalp);
@@ -1902,8 +1902,8 @@ ZnRenderGradient(ZnWInfo	*wi,
     XColor	 col;
 
     genarc = ZnGetCirclePoints(3, ZN_CIRCLE_FINEST, 0.0, 2*M_PI, &num_p, NULL);
-    ZnListAssertSize(wi->work_pts, num_p);
-    tarc = ZnListArray(wi->work_pts);
+    ZnListAssertSize(ZnWorkPoints, num_p);
+    tarc = ZnListArray(ZnWorkPoints);
     ZnTransformPoints((ZnTransfo *) quad, genarc, tarc, num_p);
     p.x = p.y = 0;
     ZnTransformPoint((ZnTransfo *) quad, &p, &focalp);
@@ -1966,144 +1966,60 @@ ZnRenderHollowDot(ZnWInfo	*wi,
 
 
 #ifdef GL
-/* Copyright (c) Mark J. Kilgard, 1997. */
-
-/* This program is freely distributable without licensing fees  and is
-   provided without guarantee or warrantee expressed or  implied. This
-   program is -not- in the public domain. */
-
 void
 ZnRenderGlyph(ZnTexFontInfo	*tfi,
 	      int		c)
 {
   ZnTexGVI *tgvi;
 
-  tgvi = ZnTexFontGVI(tfi, c);	 
+  tgvi = ZnTexFontGVI(tfi, c);
+  if (!tgvi) {
+    return;
+  }
+  /*printf("%c --> x0,y0: %d %d, tx0,ty0: %g %g, x1,y1: %d %d, tx1,ty1: %g %g, advance: %g\n",
+	 c, tgvi->v0x, tgvi->v0y, tgvi->t0x, tgvi->t0y,
+	 tgvi->v1x, tgvi->v1y, tgvi->t1x, tgvi->t1y,
+	 tgvi->advance);*/
   glBegin(GL_QUADS);
-  glTexCoord2fv(tgvi->t0);
-  glVertex2sv(tgvi->v0);
-  glTexCoord2fv(tgvi->t1);
-  glVertex2sv(tgvi->v1);
-  glTexCoord2fv(tgvi->t2);
-  glVertex2sv(tgvi->v2);
-  glTexCoord2fv(tgvi->t3);
-  glVertex2sv(tgvi->v3);
+  glTexCoord2f(tgvi->t0x, tgvi->t0y); glVertex2s(tgvi->v0x, tgvi->v0y);
+  glTexCoord2f(tgvi->t0x, tgvi->t1y); glVertex2s(tgvi->v0x, tgvi->v1y);
+  glTexCoord2f(tgvi->t1x, tgvi->t1y); glVertex2s(tgvi->v1x, tgvi->v1y);
+  glTexCoord2f(tgvi->t1x, tgvi->t0y); glVertex2s(tgvi->v1x, tgvi->v0y);
   glEnd();
   glTranslatef(tgvi->advance, 0.0, 0.0);
 }
 
+#ifdef PTK_800
 void
 ZnRenderString(ZnTexFontInfo	*tfi,
 	       unsigned char	*string,
 	       unsigned int	len)
 {
-  unsigned int i;
-
-  for (i = 0; i < len; i++) {
-    ZnRenderGlyph(tfi, string[i]);
+  while (len) {
+    ZnRenderGlyph(tfi, *string);
+    string++;
+    len--;
   }
 }
-
-enum {
-  MONO, TOP_BOTTOM, LEFT_RIGHT, FOUR
-};
-
+#else
 void
-ZnRenderFancyString(ZnTexFontInfo	*tfi,
-		    unsigned char	*string,
-		    unsigned int	len)
+ZnRenderString(ZnTexFontInfo	*tfi,
+	       unsigned char	*string,
+	       unsigned int	len)
 {
-  ZnTexGVI	*tgvi;
-  GLubyte	c[4][3];
-  int		mode = MONO;
-  unsigned int	i;
+  unsigned int	clen;
+  Tcl_UniChar	c;
 
-  for (i = 0; i < len; i++) {
-    if (string[i] == 27) {
-      switch (string[i + 1]) {
-      case 'M':
-        mode = MONO;
-        glColor3ubv((GLubyte *) & string[i + 2]);
-        i += 4;
-        break;
-      case 'T':
-        mode = TOP_BOTTOM;
-        memcpy(c, &string[i + 2], 6);
-        i += 7;
-        break;
-      case 'L':
-        mode = LEFT_RIGHT;
-        memcpy(c, &string[i + 2], 6);
-        i += 7;
-        break;
-      case 'F':
-        mode = FOUR;
-        memcpy(c, &string[i + 2], 12);
-        i += 13;
-        break;
-      }
-    } else {
-      switch (mode) {
-      case MONO:
-        ZnRenderGlyph(tfi, string[i]);
-        break;
-      case TOP_BOTTOM:
-        tgvi = ZnTexFontGVI(tfi, string[i]);
-        glBegin(GL_QUADS);
-        glColor3ubv(c[0]);
-        glTexCoord2fv(tgvi->t0);
-        glVertex2sv(tgvi->v0);
-        glTexCoord2fv(tgvi->t1);
-        glVertex2sv(tgvi->v1);
-        glColor3ubv(c[1]);
-        glTexCoord2fv(tgvi->t2);
-        glVertex2sv(tgvi->v2);
-        glTexCoord2fv(tgvi->t3);
-        glVertex2sv(tgvi->v3);
-        glEnd();
-        glTranslatef(tgvi->advance, 0.0, 0.0);
-        break;
-      case LEFT_RIGHT:
-        tgvi = ZnTexFontGVI(tfi, string[i]);
-        glBegin(GL_QUADS);
-        glColor3ubv(c[0]);
-        glTexCoord2fv(tgvi->t0);
-        glVertex2sv(tgvi->v0);
-        glColor3ubv(c[1]);
-        glTexCoord2fv(tgvi->t1);
-        glVertex2sv(tgvi->v1);
-        glColor3ubv(c[1]);
-        glTexCoord2fv(tgvi->t2);
-        glVertex2sv(tgvi->v2);
-        glColor3ubv(c[0]);
-        glTexCoord2fv(tgvi->t3);
-        glVertex2sv(tgvi->v3);
-        glEnd();
-        glTranslatef(tgvi->advance, 0.0, 0.0);
-        break;
-      case FOUR:
-        tgvi = ZnTexFontGVI(tfi, string[i]);
-        glBegin(GL_QUADS);
-        glColor3ubv(c[0]);
-        glTexCoord2fv(tgvi->t0);
-        glVertex2sv(tgvi->v0);
-        glColor3ubv(c[1]);
-        glTexCoord2fv(tgvi->t1);
-        glVertex2sv(tgvi->v1);
-        glColor3ubv(c[2]);
-        glTexCoord2fv(tgvi->t2);
-        glVertex2sv(tgvi->v2);
-        glColor3ubv(c[3]);
-        glTexCoord2fv(tgvi->t3);
-        glVertex2sv(tgvi->v3);
-        glEnd();
-        glTranslatef(tgvi->advance, 0.0, 0.0);
-        break;
-      }
-    }
+  while (len) {
+    clen = Tcl_UtfToUniChar(string, &c);
+
+    ZnRenderGlyph(tfi, c);
+
+    string += clen;
+    len -= clen;
   }
 }
-
+#endif
 #endif
 
 /*

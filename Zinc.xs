@@ -12,6 +12,9 @@
 
 #include <pTk/tkPort.h>
 #include <pTk/tkInt.h>
+#ifdef _WIN32
+#include <pTk/tkWinInt.h>
+#endif
 #include <pTk/tkImgPhoto.h>
 #include <pTk/tkVMacro.h>
 #include <tkGlue.h>

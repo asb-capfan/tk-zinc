@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Thu Dec 16 15:41:53 1999
  *
- * $Id: Color.c,v 1.27 2004/03/24 15:06:44 lecoanet Exp $
+ * $Id: Color.c,v 1.28 2004/04/30 14:27:30 lecoanet Exp $
  */
 
 /*
@@ -179,24 +179,24 @@ ZnInterpGradientColor(ZnGradient     *grad,
     if (rel_pos > gc1->control) {
       rel_pos = (rel_pos - gc1->control) * 100.0 / (100.0 - gc1->control);
       color->red = gc1->mid_rgb->red + 
-	(gc2->rgb->red - gc1->mid_rgb->red) * rel_pos / 100.0;
+	(unsigned short) ((gc2->rgb->red - gc1->mid_rgb->red) * rel_pos / 100.0);
       color->green = gc1->mid_rgb->green + 
-	(gc2->rgb->green - gc1->mid_rgb->green) * rel_pos / 100.0;
+	(unsigned short) ((gc2->rgb->green - gc1->mid_rgb->green) * rel_pos / 100.0);
       color->blue = gc1->mid_rgb->blue +
-	(gc2->rgb->blue - gc1->mid_rgb->blue) * rel_pos / 100.0;
+	(unsigned short) ((gc2->rgb->blue - gc1->mid_rgb->blue) * rel_pos / 100.0);
       *alpha = gc1->mid_alpha +
-	(gc2->alpha - gc1->mid_alpha) * rel_pos / 100.0;
+	(unsigned short) ((gc2->alpha - gc1->mid_alpha) * rel_pos / 100.0);
     }
     else {
       rel_pos = rel_pos * 100.0 / gc1->control;
       color->red = gc1->rgb->red +
-	(gc1->mid_rgb->red - gc1->rgb->red) * rel_pos / 100.0;
+	(unsigned short) ((gc1->mid_rgb->red - gc1->rgb->red) * rel_pos / 100.0);
       color->green = gc1->rgb->green +
-	(gc1->mid_rgb->green - gc1->rgb->green) * rel_pos / 100.0;
+	(unsigned short) ((gc1->mid_rgb->green - gc1->rgb->green) * rel_pos / 100.0);
       color->blue = gc1->rgb->blue +
-	(gc1->mid_rgb->blue - gc1->rgb->blue) * rel_pos / 100.0;
+	(unsigned short) ((gc1->mid_rgb->blue - gc1->rgb->blue) * rel_pos / 100.0);
       *alpha = gc1->alpha +
-	(gc1->mid_alpha - gc1->alpha) * rel_pos / 100.0;
+	(unsigned short) ((gc1->mid_alpha - gc1->alpha) * rel_pos / 100.0);
     }
   }
 }

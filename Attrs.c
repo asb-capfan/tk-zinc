@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Fri Dec 31 10:03:34 1999
  *
- * $Id: Attrs.c,v 1.9 2003/05/09 15:01:14 lecoanet Exp $
+ * $Id: Attrs.c,v 1.10 2004/04/30 14:28:08 lecoanet Exp $
  */
 
 /*
@@ -32,12 +32,13 @@
 #include "List.h"
 #include "Geo.h"
 #include "WidgetInfo.h"
+#include "glu.h"
 
 #include <memory.h>
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Attrs.c,v 1.9 2003/05/09 15:01:14 lecoanet Exp $";
+static const char rcsid[] = "$Id: Attrs.c,v 1.10 2004/04/30 14:28:08 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 

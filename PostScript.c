@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Tue Jan 3 13:17:17 1995
  *
- * $Id: PostScript.c,v 1.14 2004/02/13 10:37:43 lecoanet Exp $
+ * $Id: PostScript.c,v 1.15 2004/04/30 14:31:31 lecoanet Exp $
  */
 
 /*
@@ -41,7 +41,7 @@
  **********************************************************************************
  */
 
-#ifndef _WIN32
+#if 0
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -66,7 +66,7 @@
  **********************************************************************************
  */
 
-static	const char rcsid[] = "$Id: PostScript.c,v 1.14 2004/02/13 10:37:43 lecoanet Exp $";
+static	const char rcsid[] = "$Id: PostScript.c,v 1.15 2004/04/30 14:31:31 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -820,7 +820,7 @@ ZnPostScriptCmd(ZnWInfo	*wi,
 		     NULL);
     
     if (ps_info.chan != NULL) {
-      Tcl_Write(ps_info.chan, Tcl_GetStringResult(wi->interp), -1);
+      /*      Tcl_Write(ps_info.chan, Tcl_GetStringResult(wi->interp), -1);*/
       Tcl_ResetResult(wi->interp);
     }
 
@@ -878,7 +878,7 @@ ZnPostScriptCmd(ZnWInfo	*wi,
   }
 
   if (ps_info.chan != NULL) {
-    Tcl_Write(ps_info.chan, Tcl_GetStringResult(wi->interp), -1);
+    /*    Tcl_Write(ps_info.chan, Tcl_GetStringResult(wi->interp), -1);*/
     Tcl_ResetResult(wi->interp);
   }
   
@@ -903,7 +903,7 @@ ZnPostScriptCmd(ZnWInfo	*wi,
 		     NULL);
   }
   if (ps_info.chan != NULL) {
-    Tcl_Write(ps_info.chan, Tcl_GetStringResult(wi->interp), -1);
+    /*    Tcl_Write(ps_info.chan, Tcl_GetStringResult(wi->interp), -1);*/
     Tcl_ResetResult(wi->interp);
   }
 
@@ -930,4 +930,4 @@ ZnPostScriptCmd(ZnWInfo	*wi,
 }
 
 
-#endif /* _WIN32 */
+#endif

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: Reticle.c,v 1.39 2004/03/03 10:16:24 lecoanet Exp $
+ * $Id: Reticle.c,v 1.40 2004/04/30 12:05:39 lecoanet Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
 #include <math.h>
 
 
-static const char rcsid[] = "$Id: Reticle.c,v 1.39 2004/03/03 10:16:24 lecoanet Exp $";
+static const char rcsid[] = "$Id: Reticle.c,v 1.40 2004/04/30 12:05:39 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -237,7 +237,7 @@ Query(ZnItem		item,
       int		argc __unused,
       Tcl_Obj *CONST	argv[])
 {
-  if (ZnQueryAttribute(item->wi, item, reticle_attrs, argv[0]) == TCL_ERROR) {
+  if (ZnQueryAttribute(item->wi->interp, item, reticle_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
   }  
 
@@ -594,11 +594,11 @@ PostScript(ZnItem	item __unused,
  **********************************************************************************
  */
 static ZnItemClassStruct RETICLE_ITEM_CLASS = {
-  sizeof(ReticleItemStruct),
-  0,			/* num_parts */
-  False,		/* has_anchors */
   "reticle",
+  sizeof(ReticleItemStruct),
   reticle_attrs,
+  0,			/* num_parts */
+  ZN_CLASS_ONE_COORD,	/* flags */
   Tk_Offset(ReticleItemStruct, pos),
   Init,
   Clone,

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Images.t,v 1.3 2003/11/28 09:21:10 mertz Exp $
+# $Id: Images.t,v 1.5 2004/05/12 12:33:33 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -60,11 +60,20 @@ like ($xpm, qr/^Tk::Photo=HASH/ , "creating a Tk::Photo with a .xpm");
 
 #### tiling Tk::Zinc
 $zinc->configure(-tile => $xpm);
-is ($zinc->cget(-tile), "QuitPB.xpm", "verifying Tk::Zinc -tile option value");
+if ($Tk::VERSION < 804) {
+  is ($zinc->cget(-tile), "QuitPB.xpm", "verifying Tk::Zinc -tile option value");
+} else {
+    is ($zinc->cget(-tile), $xpm, "verifying Tk::Zinc -tile option value");
+}
+
 &wait ("-tile of Tk::Zinc with QuitPB.xpm");
 
 $zinc->configure(-tile => $photoMickey);
-is ($zinc->cget(-tile), "mickey.gif", "verifying Tk::Zinc -tile option value");
+if ($Tk::VERSION < 804) {
+  is ($zinc->cget(-tile), "mickey.gif", "verifying Tk::Zinc -tile option value");
+} else {
+  is ($zinc->cget(-tile), $photoMickey, "verifying Tk::Zinc -tile option value");
+}
 &wait ("-tile of Tk::Zinc with mickey.gif");
 
 # modifying the Tk::Photo to see if the Tk::Zinc -tile changes
@@ -75,7 +84,11 @@ $photoMickey->read( Tk->findINC("demos/images/mickey.gif") );
 &wait ("-tile of Tk::Zinc should display mickey again VISUAL INSPECTION!"); sleep 1;
 
 $zinc->configure(-tile => "");
-is ($zinc->cget(-tile), "", "removing Tk::Zinc -tile");
+if ($Tk::VERSION < 804) {
+  is ($zinc->cget(-tile), "", "removing Tk::Zinc -tile");
+} else {
+  is ($zinc->cget(-tile), undef, "removing Tk::Zinc -tile");
+}
 &wait ("-tile of Tk::Zinc with nothing");
 
 
@@ -108,7 +121,7 @@ TODO: {
     local $TODO = "because it makes Tk::Zinc dying" if 1;
 
     # the next line makes Tk::Zinc (v3.29x) dying... so I comment it out the 3 next lines 
-    # $zinc->itemconfigure($rect1, -fillpattern => $bitmap)
+    # $zinc->itemconfigure($rect1, -fillpattern => $bitmap);
     # is ($zinc->itemcget($rect1, -fillpattern), $bitmap, "verifying rectangle -fillpattern option value as a Tk::Bitmap");
     # &wait ("displaying a rectangle with -fillpattern as a Tk::Bitmap");
 }

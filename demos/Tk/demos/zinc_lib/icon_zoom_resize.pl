@@ -1,18 +1,18 @@
 #!/usr/bin/perl
-# $Id: icon_zoom_resize.pl,v 1.6 2004/04/01 13:32:59 mertz Exp $
+# $Id: icon_zoom_resize.pl,v 1.7 2004/04/30 11:35:18 lecoanet Exp $
 # this simple demo has been developped by C. Mertz <mertz@cena.fr>
 
 package icon_zoom__resize; # for avoiding symbol re-use between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
 use strict;
 
 
-my $defaultfont = '-adobe-helvetica-bold-r-normal-*-140-*-*-*-*-*-*';
+my $defaultfont = '-adobe-helvetica-bold-r-normal--*-140-*-*-*-*-*-*';
 my $mw = MainWindow->new();
 my $text = $mw->Scrolled(qw/Text -relief sunken -borderwidth 2 -setgrid true
 	      -height 7 -scrollbars ''/);
