@@ -431,20 +431,15 @@ ComputeCoordinates(ZnItem	item,
     if ((scan = text->text) != NULL) {
       while (*scan) {
 	TextLineInfoStruct	info;
-	char			*ptr;
+	char			*special;
 	int			num;
 
 	/*
 	 * Limit the excursion of Tk_MeasureChars to the end
 	 * of the line. Do not include \n in the measure done.
 	 */
-	ptr = strchr(scan, '\n');
-	if (ptr) {
-	  num = ptr-scan;
-	}
-	else {
-	  num = strlen(scan);
-	}
+	num = strcspn(scan, "\r\n\t");
+	special = scan + num;
 	info.num_bytes = Tk_MeasureChars(text->font, scan, num, wrap,
 					 TK_WHOLE_WORDS|TK_AT_LEAST_ONE,
 					 &info.width);
@@ -455,9 +450,17 @@ ComputeCoordinates(ZnItem	item,
 	scan += info.num_bytes;
 
 	/*
-	 * Adjust for the newline at the end of line.
+	 * Add a text info describing the tab span (to be completed).
+	 * The entries in the text_info list should be interpreted
+	 * as text chunk not lines before going further..
 	 */
-	if (ptr) {
+	while (*scan == '\t') {
+	  scan++;
+	}
+	/*
+	 * Skip the newline line character.
+	 */
+	if ((*scan == '\r') || (*scan == '\n')) {
 	  scan++;
 	}
 	else {
@@ -465,18 +468,18 @@ ComputeCoordinates(ZnItem	item,
 	   * Skip white spaces occuring after an
 	   * automatic line break.
 	   */
-	  if ((*scan == ' ') || (*scan == '\t')) {
+	  while ((*scan == ' ') || (*scan == '\t')) {
 	    scan++;
 	  }
 	}
 	
-	/* Build a line info even for an empty line
+	/* Build a text info even for an empty line
 	 * at the end of text or for an empty text.
 	 * It is needed to enable selection and cursor
 	 * insertion to behave correctly.
 	 */
 	ZnListAdd(text->text_info, &info, ZnListTail);
-	/*printf("adding a line : %s, num_bytes :  %d, width : %d\n",
+	/*printf("adding a text info : %s, num_bytes :  %d, width : %d\n",
 	  info.start, info.num_bytes, info.width);*/
       }
     }
@@ -508,7 +511,6 @@ ComputeCoordinates(ZnItem	item,
     }
   } /* ISSET(item->inv_flags, INV_TEXT_LAYOUT) */
     
-  
   height = font_height;
   if (text->text_info) {
     int h;

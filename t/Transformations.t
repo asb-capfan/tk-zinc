@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Transformations.t,v 1.1 2003/10/02 09:14:23 mertz Exp $
+# $Id: Transformations.t,v 1.2 2003/12/11 12:11:41 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -89,8 +89,54 @@ is_deeply([
 	   $zinc->transform($rect2, 1, [$zinc->coords($rect2)] )
 	    ],
 	  [ [20,20], [80, 80] ],
-	  "transform rect2 coordinates to window coordinates"); 
+	  "transform rect2 coordinates to window coordinates, with group 1"); 
 
+is_deeply([
+	   $zinc->transform($rect2, 'device', [$zinc->coords($rect2)] )
+	    ],
+	  [ [20,20], [80, 80] ],
+	  "transform rect2 coordinates to window coordinates with 'device'"); 
 
+$zinc->scale(1, 0.5, 0.5);
+
+is_deeply([
+	   $zinc->transform($rect2, 'device', [$zinc->coords($rect2)] )
+	    ],
+	  [ [10,10], [40, 40] ],
+	  "transform rect2 coordinates to window coordinates with 'device'"); 
+
+# setting the top group transformation to the id, with a translation with tset
+$zinc->tset(1,   1,0, 0,1, -20,-10);
+is_deeply([
+	   $zinc->transform($rect2, 'device', [$zinc->coords($rect2)] )
+	    ],
+	  [ [0,10], [60, 70] ],
+	  "rect2 window coordinates with 'device' after topgroup transfo setting"); 
+
+# restting top group transformation
+$zinc->treset(1);
+is_deeply([
+	   $zinc->transform($rect2, 'device', [$zinc->coords($rect2)] )
+	    ],
+	  [ [20,20], [80, 80] ],
+	  "rect2 window coordinates with 'device' after topgroup treset"); 
+
+# resetting the rect2 trasnformation
+$zinc->treset($rect2);
+is_deeply([
+	   $zinc->transform($rect2, 'device', [$zinc->coords($rect2)] )
+	    ],
+	  [ [10,10], [40, 40] ],
+	  "rect2 window coordinates with 'device' after rect2 treset"); 
+
+$zinc->skew($rect2, 10,00);
+$zinc->skew($rect2, -10,00);
+is_deeply([
+	   $zinc->transform($rect2, 'device', [$zinc->coords($rect2)] )
+	    ],
+	  [ [10,10], [40, 40] ],
+	  "rect2 window coordinates with 'device' after rect2 skew (back and forth)"); 
 
 diag("############## transformations test");
+
+

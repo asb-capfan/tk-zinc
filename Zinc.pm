@@ -1,5 +1,5 @@
-# $Id: Zinc.pm,v 1.23 2003/10/02 07:32:58 lecoanet Exp $
-# $Name: cpan_3_295 $
+# $Id: Zinc.pm,v 1.24 2003/12/11 08:00:53 lecoanet Exp $
+# $Name: cpan_3_296 $
 
 package Tk::Zinc;
 
@@ -13,8 +13,8 @@ Construct Tk::Widget 'Zinc';
 
 use vars qw($VERSION $REVISION);
 
-$REVISION = q$Revision: 1.23 $ ;  # this line is automagically modified by CVS
-$VERSION = 3.295;
+$REVISION = q$Revision: 1.24 $ ;  # this line is automagically modified by CVS
+$VERSION = 3.296;
 
 
 bootstrap Tk::Zinc $Tk::VERSION;
@@ -32,8 +32,9 @@ Tk::Methods("add", "addtag", "anchorxy", "bbox", "becomes", "bind", "cget",
 	    "gname", "group", "hasanchors", "hasfields", "hastag", "index",
 	    "insert", "itemcget", "itemconfigure", "lower", "monitor",
 	    "numparts", "postscript", "raise", "remove", "rotate", "scale",
-	    "select", "smooth", "tapply", "tdelete", "transform", "translate",
-	    "treset", "trestore", "tsave", "type", "vertexat", "xview", "yview");
+	    "select", "skew", "smooth", "tapply", "tcompose", "tdelete", "transform",
+	    "translate", "treset", "trestore", "tsave", "tset", "type", "vertexat",
+	    "xview", "yview");
 
 ## coord0 is a compatibility function usefull for porting old application
 ## previously running with Tk::Zinc V <= 3.2.6a

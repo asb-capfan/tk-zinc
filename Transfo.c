@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: Transfo.c,v 1.10 2003/04/16 09:49:22 lecoanet Exp $
+ * $Id: Transfo.c,v 1.11 2003/12/11 08:20:16 lecoanet Exp $
  */
 
 /*
@@ -37,7 +37,7 @@
  * Any of the operations in this module yield an affine matrix. Composition
  * of two affine matrices and inversion of an affine matrix result in an
  * affine matrix (Affine matrices Group property). Rotation, translation
- * anamorphic scaling, xy shear and yx shear also preserve the property.
+ * anamorphic scaling, xy skew and yx skew also preserve the property.
  *
  */
 
@@ -65,11 +65,11 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  *	x x 0
  *	x x 1
  *
- * It is necessary to only feed such matrices to these primitives as they
- * do optimizations based on their properties. Furthermore the package
- * stores only the first two columns, the third is constant. There is no
- * way to describe perspective transformation with these transformation
- * matrices.
+ * It is necessary to feed only those matrices to the Transfo primitives
+ * as they do optimizations based on the properties of affine matrices.
+ * Furthermore the package stores only the first two columns, the third
+ * is constant. There is no way to describe perspective transformation
+ * with these transformation matrices.
  *
  *************************************************************************
  */
@@ -146,6 +146,11 @@ ZnTransfoFree(ZnTransfo	*t)
 void
 ZnPrintTransfo(ZnTransfo	*t)
 {
+  /*
+   * sx 0	cos(rot)  sin(rot)	1          tan(skewy)	1  0
+   * 0  sy	-sin(rot) cos(rot)	tan(skewx) 1	        0  1
+   * 0  0	0         0		0          0	        tx ty
+   */
   printf("(%5g %5g\n %5g %5g\n %5g %5g)\n",
 	 t->_[0][0], t->_[0][1],
 	 t->_[1][0], t->_[1][1],
@@ -325,11 +330,11 @@ ZnTransfoInvert(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnTransfoDecompose --
- *	Decompose an affine matrix into translation, scale, shear and
+ *	Decompose an affine matrix into translation, scale, skew and
  *	rotation. The different values are stored in the locations
  *	pointed to by the pointer parameters. If some values are not
- *	needed a NULL pointer can be given instead. The resulting shear
- *	shears x coordinate when y change.
+ *	needed a NULL pointer can be given instead. The resulting skew
+ *	shews x coordinate when y change.
  *	This code is taken from Graphics Gems II.
  *
  *************************************************************************
@@ -339,10 +344,10 @@ ZnTransfoDecompose(ZnTransfo	*t,
 		   ZnPoint	*scale,
 		   ZnPoint	*trans,
 		   ZnReal	*rotation,
-		   ZnReal	*shearxy)
+		   ZnReal	*skewxy)
 {
   ZnTransfo	local;
-  ZnReal	shear, len, rot, det;
+  ZnReal	skew, len, rot, det;
   
   if (t == NULL) {
     /* Identity transform */
@@ -357,8 +362,8 @@ ZnTransfoDecompose(ZnTransfo	*t,
     if (rotation) {
       *rotation = 0.0;
     }
-    if (shearxy) {
-      *shearxy = 0.0;
+    if (skewxy) {
+      *skewxy = 0.0;
     }
     //printf("Transfo is identity\n");
     return;
@@ -377,11 +382,11 @@ ZnTransfoDecompose(ZnTransfo	*t,
     trans->x = ABS(local._[2][0]) < PRECISION_LIMIT ? 0 : local._[2][0];
     trans->y = ABS(local._[2][1]) < PRECISION_LIMIT ? 0 : local._[2][1];
   }
-  if (!scale && !shearxy && !rotation) {
+  if (!scale && !skewxy && !rotation) {
     return;
   }
 
-  /* Get scale and shear */
+  /* Get scale and skew */
   len = sqrt(local._[0][0]*local._[0][0] +
 	     local._[0][1]*local._[0][1]); /* Get x scale from 1st row */
   if (scale) {
@@ -389,38 +394,38 @@ ZnTransfoDecompose(ZnTransfo	*t,
   }
   local._[0][0] /= len;			 /* Normalize 1st row */
   local._[0][1] /= len;
-  shear = (local._[0][0]*local._[1][0] +
-	   local._[0][1]*local._[1][1]); /* Shear is dot product of 1st row & 2nd row */
+  skew = (local._[0][0]*local._[1][0] +
+	  local._[0][1]*local._[1][1]); /* Skew is dot product of 1st row & 2nd row */
   /* Make the 2nd row orthogonal to the 1st row
    * by linear combinaison:
-   * row1.x = row1.x + row0.x*-shear &
-   * row1.y = row1.y + row0.y*-shear
+   * row1.x = row1.x + row0.x*-skew &
+   * row1.y = row1.y + row0.y*-skew
    */
-  local._[1][0] -= local._[0][0]*shear;
-  local._[1][1] -= local._[0][1]*shear;
+  local._[1][0] -= local._[0][0]*skew;
+  local._[1][1] -= local._[0][1]*skew;
   len = sqrt(local._[1][0]*local._[1][0] +
 	     local._[1][1]*local._[1][1]); /* Get y scale from 2nd row */
   if (scale) {
     scale->y = len < PRECISION_LIMIT ? 0.0 : len;
   }
 
-  if (!shearxy && !rotation) {
+  if (!skewxy && !rotation) {
     return;
   }
 
   local._[1][0] /= len;			 /* Normalize 2nd row */
   local._[1][1] /= len;
-  shear /= len;
-  if (shearxy) {
-    *shearxy = ABS(shear) < PRECISION_LIMIT ? 0.0 : shear;
-    //printf("shear %f\n", *shearxy);
+  skew /= len;
+  if (skewxy) {
+    *skewxy = ABS(skew) < PRECISION_LIMIT ? 0.0 : skew;
+    //printf("skew %f\n", *skewxy);
   }
 
   if (!rotation) {
     return;
   }
 
-  //printf("Matrix after scale & shear extracted\n");
+  //printf("Matrix after scale & skew extracted\n");
   //ZnPrintTransfo(&local);
   /* Get rotation */
   /* Check for a coordinate system flip. If det of upper-left 2x2
@@ -462,7 +467,7 @@ ZnTransfoDecompose(ZnTransfo	*t,
  *
  * ZnTransfoEqual --
  *	Return True if t1 and t2 are equal (i.e they have the same
- *	rotation, shear scales and translations). If include_translation
+ *	rotation, skew scales and translations). If include_translation
  *	is True the translations are considered in the test.
  *
  *************************************************************************
@@ -492,14 +497,14 @@ ZnTransfoEqual(ZnTransfo	*t1,
 /*
  *************************************************************************
  *
- * ZnTransfoHasShear --
- *	Return True if t has a shear factor in x or y or describe a
+ * ZnTransfoHasSkew --
+ *	Return True if t has a skew factor in x or y or describe a
  *	rotation or both.
  *
  *************************************************************************
  */
 ZnBool
-ZnTransfoHasShear(ZnTransfo	*t)
+ZnTransfoHasSkew(ZnTransfo	*t)
 {
   return t->_[0][1] != 0.0 || t->_[1][0] != 0.0;
 }
@@ -575,7 +580,7 @@ ZnTransformPoints(ZnTransfo	*t,
   }
   else {
     unsigned int i;
-    
+
     for (i = 0; i < num; i++) {
       xp[i].x = t->_[0][0]*p[i].x + t->_[1][0]*p[i].y + t->_[2][0];
       xp[i].y = t->_[0][1]*p[i].x + t->_[1][1]*p[i].y + t->_[2][1];
@@ -692,6 +697,58 @@ ZnRotateDeg(ZnTransfo	*t,
 	    ZnReal	angle)
 {
   return ZnRotateRad(t, ZnDegRad(angle));
+}
+
+
+/*
+ *************************************************************************
+ *
+ * ZnSkewRad --
+ *	Skew the given transformation by x_angle and y_angle radians
+ *	counter-clockwise around the origin. Returns the resulting
+ *	transformation.
+ *
+ *************************************************************************
+ */
+ZnTransfo *
+ZnSkewRad(ZnTransfo	*t,
+	  ZnReal	skew_x,
+	  ZnReal	skew_y)
+{
+  register ZnReal	sx = tan(skew_x);
+  register ZnReal	sy = tan(skew_y);
+  register ZnReal	tmp;
+
+  tmp = t->_[0][0];
+  t->_[0][0] = tmp + t->_[0][1]*sx;
+  t->_[0][1] = tmp*sy + t->_[0][1];
+  tmp = t->_[1][0];
+  t->_[1][0] = tmp + t->_[1][1]*sx;
+  t->_[1][1] = tmp*sy + t->_[1][1];
+  tmp = t->_[2][0];
+  t->_[2][0] = tmp + t->_[2][1]*sx;
+  t->_[2][1] = tmp*sy + t->_[2][1];
+
+  return t;
+}
+
+
+/*
+ *************************************************************************
+ *
+ * ZnSkewDeg --
+ *	Skew the given transformation by x_angle and y_angle degrees
+ *	counter-clockwise around the origin. Returns the resulting
+ *	transformation.
+ *
+ *************************************************************************
+ */
+ZnTransfo *
+ZnSkewDeg(ZnTransfo	*t,
+	  ZnReal	skew_x,
+	  ZnReal	skew_y)
+{
+  return ZnSkewRad(t, ZnDegRad(skew_x), ZnDegRad(skew_y));
 }
 
   

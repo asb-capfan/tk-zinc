@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: Item.c,v 1.74 2003/10/13 08:07:37 lecoanet Exp $
+ * $Id: Item.c,v 1.76 2003/12/11 08:18:23 lecoanet Exp $
  */
 
 /*
@@ -47,7 +47,7 @@
 #include <string.h>
 
 
-static const char rcsid[] = "$Id: Item.c,v 1.74 2003/10/13 08:07:37 lecoanet Exp $";
+static const char rcsid[] = "$Id: Item.c,v 1.76 2003/12/11 08:18:23 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -2205,9 +2205,14 @@ static void
 Invalidate(ZnItem	item,
 	   int		reason)
 {
-  if (ISSET(item->inv_flags, ZN_TRANSFO_FLAG)) {
+  /* 
+   * Why this test has to be so an abrupt shortcut ?
+   * It precludes addition of meaningful reasons
+   * by subsequent invalidations .
+   *
+     if (ISSET(item->inv_flags, ZN_TRANSFO_FLAG)) {
     return;
-  }
+    }*/
 
   if (ISSET(reason, ZN_COORDS_FLAG) ||
       ISSET(reason, ZN_TRANSFO_FLAG)) {
@@ -2290,6 +2295,7 @@ InvalidateItems(ZnItem		group,
  * SetTransfo
  * TranslateItem
  * ScaleItem
+ * SkewItem
  * RotateItem -- Methods
  *	Set of functions that deal with item transform. They take care
  *	of all details including managing NULL transforms and invalidating
@@ -2347,6 +2353,19 @@ ScaleItem(ZnItem	item,
     item->transfo = ZnTransfoNew();
   }
   ZnScale(item->transfo, sx, sy);
+  Invalidate(item, ZN_TRANSFO_FLAG);
+}
+
+
+static void
+SkewItem(ZnItem	item,
+	 ZnReal	x_skew,
+	 ZnReal	y_skew)
+{
+  if (!item->transfo) {
+    item->transfo = ZnTransfoNew();
+  }
+  ZnSkewRad(item->transfo, x_skew, y_skew);
   Invalidate(item, ZN_TRANSFO_FLAG);
 }
 
@@ -2467,6 +2486,7 @@ struct _ZnITEM ZnITEM = {
   SetTransfo,
   TranslateItem,
   ScaleItem,
+  SkewItem,
   RotateItem,
   Invalidate,
   InvalidateItems,

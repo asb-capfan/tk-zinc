@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: WidgetInfo.h,v 1.29 2003/10/05 13:36:04 lecoanet Exp $
+ * $Id: WidgetInfo.h,v 1.30 2003/11/28 13:35:29 lecoanet Exp $
  */
 
 /*
@@ -176,11 +176,13 @@ typedef struct _ZnWInfo {
   ZnList		clip_stack;
   
   /* Others */
-  ZnGradient		*fore_color;		/* Default gradient used in new items */
+  ZnGradient		*fore_color;		/* Default gradient used in new items	*/
   ZnGradient		*back_color;		/* Color of the widget background.	*/
   ZnGradient		*bbox_color;		/* Color used to draw bboxes (debug).	*/
   Cursor		cursor;			/* Cursor displayed in zinc window.	*/
   ZnBool		draw_bboxes;		/* Draw item's bboxes (debug).		*/
+  ZnBool		follow_pointer;		/* Process pointer motion events to	*/
+						/* emit enter/leave events.		*/
   int			light_angle;
   
   int			pick_aperture;		/* size of pick aperture in pixels	*/

@@ -7,7 +7,7 @@ use strict;
 my $TkLibDir = $Tk::library;
 my $platform = $Tk::platform;
 
-my $VERSION = 3.295;
+my $VERSION = 3.296;
 
 
 if (!$TkLibDir)

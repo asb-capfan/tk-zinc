@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Transfo.h,v 1.3 2003/04/16 09:49:22 lecoanet Exp $
+ * $Id: Transfo.h,v 1.4 2003/12/11 08:20:06 lecoanet Exp $
  */
 
 /*
@@ -71,13 +71,13 @@ ZnTransfoDecompose(ZnTransfo	*t,
 		   ZnPoint	*scale,
 		   ZnPoint	*trans,
 		   ZnReal	*rotation,
-		   ZnReal	*shearxy);
+		   ZnReal	*skewxy);
 ZnBool
 ZnTransfoEqual(ZnTransfo	*t1,
 	       ZnTransfo	*t2,
 	       ZnBool		include_translation);
 ZnBool
-ZnTransfoHasShear(ZnTransfo	*t);
+ZnTransfoHasSkew(ZnTransfo	*t);
 ZnBool
 ZnTransfoIsTranslation(ZnTransfo	*t);
 ZnPoint *
@@ -107,6 +107,13 @@ ZnRotateRad(ZnTransfo	*t,
 ZnTransfo *
 ZnRotateDeg(ZnTransfo	*t,
 	    ZnReal	angle);
-
+ZnTransfo *
+ZnSkewRad(ZnTransfo	*t,
+	  ZnReal	skew_x,
+	  ZnReal	skew_y);
+ZnTransfo *
+ZnSkewDeg(ZnTransfo	*t,
+	  ZnReal	skew_x,
+	  ZnReal	skew_y);
 
 #endif	/* _Transfo_h */

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Track.c,v 1.70 2003/10/02 09:12:51 lecoanet Exp $
+ * $Id: Track.c,v 1.71 2003/11/28 13:40:54 lecoanet Exp $
  */
 
 /*
@@ -41,7 +41,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Track.c,v 1.70 2003/10/02 09:12:51 lecoanet Exp $";
+static const char rcsid[] = "$Id: Track.c,v 1.71 2003/11/28 13:40:54 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -1097,7 +1097,7 @@ Draw(ZnItem	item)
   XGCValues	values;
   History	hist;
   unsigned int	h_side_size, side_size, width=0, height=0;
-  unsigned int	i, nb_hist, num_acc_pos, visible_history_size;
+  unsigned int	i, nb_hist, num_acc_pos;
   int		x, y;
 
   /* Draw the marker */
@@ -1221,12 +1221,12 @@ Draw(ZnItem	item)
       XChangeGC(wi->dpy, wi->gc, GCLineWidth | GCLineStyle, &values);
     }
     num_acc_pos = MIN(track->visible_history_size, ZnListSize(track->history));
-    visible_history_size = MIN(track->visible_history_size-1, 0);
     hist = ZnListArray(track->history);
     side_size = MAX(width, height);
 
     for (i = 0, nb_hist = 0; i < num_acc_pos; i++) {
-      if (ISSET(track->flags, LAST_AS_FIRST_BIT) && (i == visible_history_size)) {
+      if (ISSET(track->flags, LAST_AS_FIRST_BIT) &&
+	  (i == track->visible_history_size-1)) {
 	values.foreground = ZnGetGradientPixel(track->symbol_color, 0.0);
 	XChangeGC(wi->dpy, wi->gc, GCForeground, &values);
       }
@@ -1330,7 +1330,7 @@ Render(ZnItem	item)
   TrackItem	c_item;
   History	hist;
   unsigned int	h_side_size, side_size, width=0, height=0;
-  unsigned int	i, j, nb_hist, num_acc_pos, visible_history_size;
+  unsigned int	i, j, nb_hist, num_acc_pos;
   unsigned short alpha;
   XColor	*color;
   ZnPoint	*points;
@@ -1487,7 +1487,6 @@ Render(ZnItem	item)
     glLineWidth(1.0);    
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     num_acc_pos = MIN(track->visible_history_size, ZnListSize(track->history));
-    visible_history_size = MIN(track->visible_history_size-1, 0);
     hist = ZnListArray(track->history);
     side_size = MAX(width, height);
     /*
@@ -1497,7 +1496,8 @@ Render(ZnItem	item)
     glDisable(GL_LINE_SMOOTH);
     glDisable(GL_POINT_SMOOTH);
     for (i = 0, nb_hist = 0; i < num_acc_pos; i++) {
-      if (ISSET(track->flags, LAST_AS_FIRST_BIT) && (i == visible_history_size)) {
+      if (ISSET(track->flags, LAST_AS_FIRST_BIT) &&
+	  (i == track->visible_history_size-1)) {
 	color = ZnGetGradientColor(track->symbol_color, 0.0, &alpha);
 	alpha = ZnComposeAlpha(alpha, wi->alpha);
 	glColor4us(color->red, color->green, color->blue, alpha);

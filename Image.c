@@ -39,7 +39,7 @@
 #endif
 
 
-static const char rcsid[] = "$Id: Image.c,v 1.32 2003/10/13 08:05:58 lecoanet Exp $";
+static const char rcsid[] = "$Id: Image.c,v 1.33 2003/11/28 13:27:34 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -964,8 +964,8 @@ ZnImageTex(ZnImage	image,
       alpha_off = block.offset[3] - block.offset[0];
 #endif
       /*printf("width %d, height: %d redoff: %d, greenoff: %d, blueoff: %d, alphaoff: %d\n",
-	     block.width, block.height, block.offset[0], block.offset[1], block.offset[2],
-	     block.offset[3]);*/
+	     block.width, block.height, block.offset[0], green_off,
+	     blue_off, alpha_off);*/
       pixels = block.pixelPtr;
       bptr = bits->t_bits;
   
@@ -1360,7 +1360,6 @@ ZnGetTexFont(ZnWInfo	*wi,
   static int	inited = 0;
   Tcl_HashEntry	*entry;
   int		new;
-  unsigned char	*glisto = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_abcdefghijmklmnopqrstuvwxyz{|}~°ÀÂÇÈÉÊËÎÏÔÙÛÜàâçèéêëîïôùûü~`";
   unsigned char *glist=NULL, *glist2=NULL;
   TexGlyphInfo	*tgi;
   unsigned int	i, j;
@@ -1402,7 +1401,11 @@ ZnGetTexFont(ZnWInfo	*wi,
     }
     txf->ascent = fontinfo->ascent;
     txf->descent = fontinfo->descent;
-    txf->num_glyphs = strlen(glisto);
+    /*
+     * Try to use all glyphs in a font except the first 32
+     * control chars.
+     */
+    txf->num_glyphs = MAX_CHAR-MIN_CHAR+1;
 
     /*
      * Initial size of texture.
@@ -1439,7 +1442,10 @@ ZnGetTexFont(ZnWInfo	*wi,
     }
     
     glist = ZnMalloc((txf->num_glyphs+1) * sizeof(unsigned char));
-    strcpy(glist, glisto);
+    for (i = 0; i < txf->num_glyphs; i++) {
+      glist[i] = i+MIN_CHAR;
+    }
+    glist[txf->num_glyphs] = 0;
     qsort(glist, txf->num_glyphs, sizeof(unsigned char), glyphCompare);
     /*
      * Keep a cache a the sorted list in case we need to

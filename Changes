@@ -1,3 +1,51 @@
+zinc-tk (3.2.96) unstable; urgency=low
+
+  * Fixed a bad redraw of maps (traces) and adapted for floating
+    point MapInfos.
+  * MapInfo coordinates converted to floating point. This should
+    greatly improve map usefullness in Zinc.
+  * Fixed an erroneous clipping shape when specified with
+    an unaligned rectangle or an icon.
+  * Fixed a core dump in curve when -closed 1 under X.
+  * Added tcompose, tset, skew transformation commands.
+  * The transform command now accept the reserved tag 'device' as
+    source and destination. This specifies the device coordinate
+    space. A named transform can be given as source and destination.
+  * The tsave command accept the reserved tag 'identity' as source.
+    It can also take a named transform as source.
+  * Zinc is now able to use all font glyphs above 0x20 in a
+    256 glyph font.
+  * The smooth method reports a list of line segment vertices
+    instead of the incorrect list of bezier segment vertices.
+  * Added a -followpointer widget option to optimize pointer
+    motion processing (suppress enter/leave processing).
+  * The coords method correctly updates the control flags when
+    replacing the whole vertex list.
+  * Fixed a problem a the invalidation code which prevented
+    item with a transform update pending from being correctly
+    processed. All item specific invalidation flags were
+    ignored after a transform operation on the item.
+  * The -lastasfirst attribute of tracks failed to work causing
+    a mis-coloring of the history when -lastasfirst was turned on.
+  * Corrected a potential problem in the processing of end of lines
+    in multi-lines texts.
+  * Update of the refman, tanks C. Mertz.
+  * Fixed the Makefile.in to build a correct pkgIndex.tcl when
+    installing, it lacked an entry for loading the Tkzinc
+    library itself.
+  * Debug.pm :  A control bar and zoom/translate new functionalities
+    have been added. finditems(), tree(), snapshot() functions become
+    deprecated. Initialisation is done using the new init() function.
+    (D. Etienne).
+  * zinc-demo (perl variant) : the pathtag demo has been corrected.
+    Should be more explict now (C. Mertz)
+  * A first contribution by zentara : TripleRotatingWheel.
+  * New tests (perl variant) : find method with 'overlaped', 'enclosing',
+    'withtype', pathtags. More images tests. Tests for text items.
+    Tests for openGL fonts with multiple sizes (C. Mertz).
+	
+ -- Patrick Lecoanet <lecoanet@ath.cena.fr>  Fri,  28 Nov 2003 13:37:48 +0200
+	
 zinc-tk (3.2.95) unstable; urgency=low
 
   * Configuration of image and bitmap valued attibutes is now

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Map.c,v 1.53 2003/10/02 12:03:43 lecoanet Exp $
+ * $Id: Map.c,v 1.54 2003/12/11 08:17:51 lecoanet Exp $
  */
 
 /*
@@ -40,7 +40,7 @@
 #include <stdio.h>
 
 
-static const char rcsid[] = "$Id: Map.c,v 1.53 2003/10/02 12:03:43 lecoanet Exp $";
+static const char rcsid[] = "$Id: Map.c,v 1.54 2003/12/11 08:17:51 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -464,7 +464,6 @@ ComputeCoordinates(ZnItem	item,
   MapItem		map = (MapItem) item;
   ZnMapInfoId		map_info;
   ZnMapInfoLineStyle	line_style;
-  int			line_width;
   ZnMapInfoTextStyle	text_style;
   char			symbol;
   char			*text;
@@ -486,10 +485,11 @@ ComputeCoordinates(ZnItem	item,
   ZnPoint		tmp_from, tmp_to;
   XArc			arc;
   ZnBBox		bbox, bbox_inter, zn_bbox;
-  int			x_from_w, y_from_w, x_to_w, y_to_w;
-  int			radius, start_angle, extend;
-  int			radius_w;
-  ZnMapInfoPoint		new_marks;
+  ZnPos			x_from_w, y_from_w, x_to_w, y_to_w;
+  ZnPos			start_angle, extend;
+  ZnDim			radius_w, line_width;
+  int			radius;
+  ZnPoint		*new_marks;
   unsigned int		n_new_marks;
   Tk_Font		text_font;
   int			sym_w2=0, sym_h2=0;
@@ -952,17 +952,17 @@ ComputeCoordinates(ZnItem	item,
   ZnListAssertSize(map->marks, num_marks);
   
   ZnAddPointsToBBox(&item->item_bounding_box,
-		    (ZnPoint *) ZnListArray(map->vectors),
-		    ZnListSize(map->vectors));
+		    ZnListArray(map->vectors), ZnListSize(map->vectors));
   ZnAddPointsToBBox(&item->item_bounding_box,
-		    (ZnPoint *) ZnListArray(map->dashed_vectors),
-		    ZnListSize(map->dashed_vectors));
+		    ZnListArray(map->dashed_vectors), ZnListSize(map->dashed_vectors));
   ZnAddPointsToBBox(&item->item_bounding_box,
-		    (ZnPoint *) ZnListArray(map->dotted_vectors),
-		    ZnListSize(map->dotted_vectors));
+		    ZnListArray(map->dotted_vectors), ZnListSize(map->dotted_vectors));
   ZnAddPointsToBBox(&item->item_bounding_box,
-		    (ZnPoint *) ZnListArray(map->mixed_vectors),
-		    ZnListSize(map->mixed_vectors));
+		    ZnListArray(map->mixed_vectors), ZnListSize(map->mixed_vectors));
+  item->item_bounding_box.orig.x -= 0.5;
+  item->item_bounding_box.orig.y -= 0.5;
+  item->item_bounding_box.corner.x += 0.5;
+  item->item_bounding_box.corner.y += 0.5;
 }
 
 
@@ -1005,6 +1005,7 @@ Draw(ZnItem	item)
   char		tmp_str[] = ".";
   XGCValues	values;
   unsigned int	i, cnt;
+  ZnDim		line_width_w;
   int		line_width;
 
   if (map->map_info == NULL) {
@@ -1070,12 +1071,16 @@ Draw(ZnItem	item)
       points = (ZnPoint *) ZnListArray(map->vectors);
       for (i = 0; i < cnt; i += 2) {
 	if (ZnLineInBBox(&points[i], &points[i+1], &wi->damaged_area) >= 0) {
-          ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &line_width, NULL,
+          ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &line_width_w, NULL,
 			 NULL, NULL, NULL);
+	  line_width = (int) line_width_w;
           if (line_width != values.line_width) {
             values.line_width = line_width;
             XChangeGC(wi->dpy, wi->gc, GCLineWidth, &values);
           }
+	  /*printf("Dessin d'une ligne de %d %d à %d %d\n",
+		 (int)points[i].x, (int)points[i].y,
+		 (int)points[i+1].x, (int)points[i+1].y);*/
 	  XDrawLine(wi->dpy, wi->draw_buffer, wi->gc,
 		    (int) points[i].x,
 		    (int) points[i].y,
@@ -1099,7 +1104,8 @@ Draw(ZnItem	item)
       points = (ZnPoint *) ZnListArray(map->dashed_vectors);
       for (i = 0; i < cnt; i += 2) {
 	if (ZnLineInBBox(&points[i], &points[i+1], &wi->damaged_area) >= 0) {
-          ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &line_width, NULL, NULL, NULL, NULL);
+          ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &line_width_w, NULL, NULL, NULL, NULL);
+	  line_width = (int) line_width_w;	  
           if (line_width != values.line_width) {
             values.line_width = line_width;
             XChangeGC(wi->dpy, wi->gc, GCLineWidth, &values);
@@ -1128,7 +1134,8 @@ Draw(ZnItem	item)
       points = (ZnPoint *) ZnListArray(map->dotted_vectors);
       for (i = 0; i < cnt; i += 2) {
 	if (ZnLineInBBox(&points[i], &points[i+1], &wi->damaged_area) >= 0) {
-          ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &line_width, NULL, NULL, NULL, NULL);
+          ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &line_width_w, NULL, NULL, NULL, NULL);
+	  line_width = (int) line_width_w;
           if (line_width != values.line_width) {
             values.line_width = line_width;
             XChangeGC(wi->dpy, wi->gc, GCLineWidth, &values);
@@ -1156,7 +1163,8 @@ Draw(ZnItem	item)
       points = (ZnPoint *) ZnListArray(map->mixed_vectors);
       for (i = 0; i < cnt; i += 2) {
 	if (ZnLineInBBox(&points[i], &points[i+1], &wi->damaged_area) >= 0) {
-          ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &line_width, NULL, NULL, NULL, NULL);
+          ZnMapInfoGetLine(map_info, i/2, NULL, NULL, &line_width_w, NULL, NULL, NULL, NULL);
+	  line_width = (int) line_width_w;
           if (line_width != values.line_width) {
             values.line_width = line_width;
             XChangeGC(wi->dpy, wi->gc, GCLineWidth, &values);
@@ -1318,8 +1326,9 @@ Render(ZnItem	item)
   char		*text;
   char		tmp_str[] = ".";
   unsigned int	i, cnt;
+  int		w, h;
   XColor	*color;
-  int		line_width, new_width, w, h;
+  ZnDim		line_width, new_width;
   unsigned short alpha;
 
   if (!map->map_info) {
@@ -1344,8 +1353,8 @@ Render(ZnItem	item)
   }
   else { /* Not filled */
     if (ZnListSize(map->vectors)) {
-      line_width = 1;
-      glLineWidth((GLfloat) line_width);
+      line_width = 1.0;
+      glLineWidth(line_width);
       ZnSetLineStyle(wi, ZN_LINE_SIMPLE);
       cnt = ZnListSize(map->vectors);
       points = ZnListArray(map->vectors);
@@ -1356,7 +1365,7 @@ Render(ZnItem	item)
 			 NULL, NULL, NULL);
           if (new_width != line_width) {
 	    line_width = new_width;
-	    glLineWidth((GLfloat) line_width);
+	    glLineWidth(line_width);
           }
 	  glVertex2d(points[i].x, points[i].y);
 	  glVertex2d(points[i+1].x, points[i+1].y);
@@ -1365,8 +1374,8 @@ Render(ZnItem	item)
       glEnd();
     }
     if (ZnListSize(map->dashed_vectors)) {
-      line_width = 1;
-      glLineWidth((GLfloat) line_width);
+      line_width = 1.0;
+      glLineWidth(line_width);
       ZnSetLineStyle(wi, ZN_LINE_DASHED);
       cnt = ZnListSize(map->dashed_vectors);
       points = ZnListArray(map->dashed_vectors);
@@ -1377,7 +1386,7 @@ Render(ZnItem	item)
 			 NULL, NULL, NULL);
           if (new_width != line_width) {
 	    line_width = new_width;
-	    glLineWidth((GLfloat) line_width);
+	    glLineWidth(line_width);
           }
 	  glVertex2d(points[i].x, points[i].y);
 	  glVertex2d(points[i+1].x, points[i+1].y);
@@ -1387,8 +1396,8 @@ Render(ZnItem	item)
       glDisable(GL_LINE_STIPPLE);
     }
     if (ZnListSize(map->dotted_vectors)) {
-      line_width = 1;
-      glLineWidth((GLfloat) line_width);
+      line_width = 1.0;
+      glLineWidth(line_width);
       ZnSetLineStyle(wi, ZN_LINE_DOTTED);
       cnt = ZnListSize(map->dotted_vectors);
       points = ZnListArray(map->dotted_vectors);
@@ -1399,7 +1408,7 @@ Render(ZnItem	item)
 			 NULL, NULL, NULL);
           if (new_width != line_width) {
 	    line_width = new_width;
-	    glLineWidth((GLfloat) line_width);
+	    glLineWidth(line_width);
           }
 	  glVertex2d(points[i].x, points[i].y);
 	  glVertex2d(points[i+1].x, points[i+1].y);
@@ -1409,8 +1418,8 @@ Render(ZnItem	item)
       glDisable(GL_LINE_STIPPLE);
     }
     if (ZnListSize(map->mixed_vectors)) {
-      line_width = 1;
-      glLineWidth((GLfloat) line_width);
+      line_width = 1.0;
+      glLineWidth(line_width);
       ZnSetLineStyle(wi, ZN_LINE_MIXED);
       cnt = ZnListSize(map->mixed_vectors);
       points = ZnListArray(map->mixed_vectors);
@@ -1421,7 +1430,7 @@ Render(ZnItem	item)
 			 NULL, NULL, NULL);
           if (new_width != line_width) {
 	    line_width = new_width;
-	    glLineWidth((GLfloat) line_width);
+	    glLineWidth(line_width);
           }
 	  glVertex2d(points[i].x, points[i].y);
 	  glVertex2d(points[i+1].x, points[i+1].y);
@@ -1432,26 +1441,26 @@ Render(ZnItem	item)
     }
 
     if (ZnListSize(map->arcs)) {
-      line_width = 1;
-      glLineWidth((GLfloat) line_width);
+      line_width = 1.0;
+      glLineWidth(line_width);
     }
     if (ZnListSize(map->dashed_arcs)) {
-      line_width = 1;
-      glLineWidth((GLfloat) line_width);
+      line_width = 1.0;
+      glLineWidth(line_width);
       glLineStipple(1, 0xF0F0);
       glEnable(GL_LINE_STIPPLE);
       glDisable(GL_LINE_STIPPLE);
     }
     if (ZnListSize(map->dotted_arcs)) {
-      line_width = 1;
-      glLineWidth((GLfloat) line_width);
+      line_width = 1.0;
+      glLineWidth(line_width);
       glLineStipple(1, 0x18C3);
       glEnable(GL_LINE_STIPPLE);
       glDisable(GL_LINE_STIPPLE);
     }
     if (ZnListSize(map->mixed_arcs)) {
-      line_width = 1;
-      glLineWidth((GLfloat) line_width);
+      line_width = 1.0;
+      glLineWidth(line_width);
       glLineStipple(1, 0x27FF);
       glEnable(GL_LINE_STIPPLE);
       glDisable(GL_LINE_STIPPLE);
@@ -1479,7 +1488,7 @@ Render(ZnItem	item)
 
     if (map->symbol_patterns) {
       ZnImage sym, *syms = ZnListArray(map->symbol_patterns);
-      int     w, h, num_syms = ZnListSize(map->symbol_patterns);
+      int     num_syms = ZnListSize(map->symbol_patterns);
       
       cnt = ZnListSize(map->symbols);
       points = ZnListArray(map->symbols);

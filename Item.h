@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Item.h,v 1.40 2003/10/02 09:07:52 lecoanet Exp $
+ * $Id: Item.h,v 1.41 2003/12/11 08:18:12 lecoanet Exp $
  */
 
 /*
@@ -313,6 +313,7 @@ extern struct _ZnITEM {
   void (*SetTransfo)(ZnItem item, struct _ZnTransfo *t);
   void (*TranslateItem)(ZnItem item, ZnReal tx, ZnReal ty);
   void (*ScaleItem)(ZnItem item, ZnReal sx, ZnReal sy);
+  void (*SkewItem)(ZnItem item, ZnReal x_skew, ZnReal y_skew);
   void (*RotateItem)(ZnItem item, ZnReal angle, ZnPoint *p);
   void (*Invalidate)(ZnItem item, int reason);
   void (*InvalidateItems)(ZnItem group, ZnItemClass item_class);

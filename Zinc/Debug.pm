@@ -4,12 +4,12 @@
 #
 #        Author : Daniel Etienne <etienne@cena.fr>
 #
-# $Id: Debug.pm,v 1.40 2003/10/07 13:00:57 etienne Exp $
+# $Id: Debug.pm,v 1.43 2003/12/11 10:34:28 etienne Exp $
 #---------------------------------------------------------------------------
 package Tk::Zinc::Debug;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.40 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.43 $ =~ /(\d+)\.(\d+)/);
 
 use strict 'vars';
 use vars qw(@ISA @EXPORT @EXPORT_OK $WARNING $endoptions);
@@ -17,110 +17,349 @@ use Carp;
 use English;
 require Exporter;
 use File::Basename;
-use Tk::LabFrame;
 use Tk::Dialog;
 use Tk::Tree;
 use Tk::ItemStyle;
 use Tk::Pane;
 use Tk::FBox;
+use Tk::Balloon;
 
 @ISA = qw(Exporter);
-@EXPORT = qw(finditems snapshot tree);
-@EXPORT_OK = qw(finditems snapshot tree);
+@EXPORT = qw(finditems snapshot tree init);
+@EXPORT_OK = qw(finditems snapshot tree init);
 
 my ($itemstyle, $groupstyle, $step);
-my (%help_tl, $result_tl, $result_fm, $search_tl, $helptree_tl, $coords_tl,
-    $helpcoords_tl, $searchtree_tl, $tree_tl, $tree, $transfo_tl);
+my ($result_tl, $result_fm, $search_tl, $helptree_tl, $coords_tl,
+    $helpcoords_tl, $searchtree_tl, $tree_tl, $tree);
 my $showitemflag;
 my ($x0, $y0);
 my ($help_print, $imagecounter, $saving) = (0, 0, 0);
 my %searchEntryValue;
 my $searchTreeEntryValue;
-my %enclosedModBtn;
-my %overlapModBtn;
-my %treeModBtn;
-my %searchKey;
-my %snapKey;
-my %treeKey;
-my %keys;
-my %seq;
 my %wwidth;
 my %wheight;
 my $preload;
 my %defaultoptions;
-my %focus;
 my %instances;
 my @instances;
 my %cmdoptions;
 my $initobjectfunction;
+my %userbindings;
+my $selectedzinc;
+my $control_tl;
+my %button;
+my %on_command;
+my %off_command;
+my @znpackinfo;
 
+#---------------------------------------------------------------------------
+#
+# Initialisation functions for plugin usage
+#
+#---------------------------------------------------------------------------
+
+# Hack to overload the Tk::Zinc::InitObject method
+#
 BEGIN {
+    
     # test if Tk::Zinc::Debug is loaded using the -M perl option
     $preload = 1 if (caller(2))[2] == 0;
     return unless $preload;
     # parse Tk::Zinc::Debug options
     require Getopt::Long;
     Getopt::Long::Configure('pass_through');
-    Getopt::Long::GetOptions(\%cmdoptions,
-	       'itemModBtn=s', 'tkey=s', 'optionsToDisplay=s', 'optionsFormat=s',
-	       'color=s', 'enclosedModBtn=s', 'overlapModBtn=s', 'searchKey=s',
-	       'skey=s', 'verbosity=s', 'basename=s',
-	       );
+    Getopt::Long::GetOptions(\%cmdoptions, 'optionsToDisplay=s', 'optionsFormat=s',
+			     'snapshotBasename=s');
     # save current Tk::Zinc::InitObject function; it will be invoked in
     # overloaded one (see below)
     use Tk;
     use Tk::Zinc;
     $initobjectfunction = Tk::Zinc->can('InitObject');
     
-}
+} # end BEGIN
 
 
-# Hack to capture the instance of zinc. Tk::Zinc::Debug functions are invoked here.
-# Note that created bindings might be overloaded by the application.
+# Hack to capture the instance(s) of zinc. Tk::Zinc::Debug init function
+# is invoked here.
+#
 sub Tk::Zinc::InitObject {
-    print "Tk::Zinc::Debug is ON\n";
+    
     # invoke function possibly overloaded in other modules
     &$initobjectfunction(@_) if $initobjectfunction;
     return unless $preload;
     my $zinc = $_[0];
-    my @options = ();
-    push (@options, -itemModBtn => [split(/,/, $cmdoptions{itemModBtn})])
-	if $cmdoptions{itemModBtn};
-    push (@options, -tkey => $cmdoptions{tkey}) if $cmdoptions{tkey};
-    push (@options, -optionsToDisplay => $cmdoptions{optionsToDisplay})
-	if $cmdoptions{optionsToDisplay};
-    push (@options, -optionsFormat => $cmdoptions{optionsFormat})
-	if $cmdoptions{optionsFormat};
-      #print "options=@options\n";
-    &tree($zinc, @options);
-    @options = ();
-    push (@options, -color => $cmdoptions{color}) if $cmdoptions{color};
-    push (@options, -enclosedModBtn => [split(/,/, $cmdoptions{enclosedModBtn})])
-	if $cmdoptions{enclosedModBtn};
-    push (@options, -overlapModBtn => [split(/,/, $cmdoptions{overlapModBtn})])
-	if $cmdoptions{overlapModBtn};
-    &finditems($zinc, @options);
-    @options = ();
-    push (@options, -searchKey => $cmdoptions{searchKey}) if $cmdoptions{searchKey};
-    push (@options, -skey => $cmdoptions{skey}) if $cmdoptions{skey};
-    push (@options, -verbosity => $cmdoptions{verbosity}) if $cmdoptions{verbosity};
-    push (@options, -basename => $cmdoptions{basename}) if $cmdoptions{basename};
-    &snapshot($zinc, @options);
-}
-
+    &init($zinc);
+   
+} # end Tk::Zinc::InitObject
 
 
 #---------------------------------------------------------------------------
-# tree : display items hierarchy
+#
+# Initialisation function
+#
 #---------------------------------------------------------------------------
+
+sub init {
+
+    my $zinc = shift;
+    my %options = @_;
+    for my $opt (keys(%options)) {
+        carp "in Tk::Zinc::Debug initialisation function, unknown option $opt\n"
+            unless $opt eq '-optionsToDisplay' or $opt eq '-optionsFormat'
+		or $opt eq '-snapshotBasename' ;
+    }
+    $cmdoptions{optionsToDisplay} = $options{-optionsToDisplay} if
+	not defined $cmdoptions{optionsToDisplay} and
+	    defined $options{-optionsToDisplay};
+    $cmdoptions{optionsFormat} = $options{-optionsFormat} if
+	not defined $cmdoptions{optionsFormat} and
+	    defined $options{-optionsFormat};
+    $cmdoptions{snapshotBasename} = $options{-snapshotBasename} if
+	not defined $cmdoptions{snapshotBasename} and
+	    defined $options{-snapshotBasename};
+	
+    &newinstance($zinc);
+    return if Tk::Exists($control_tl);
+    print "Tk::Zinc::Debug is ON\n";
+    my $bitmaps = &createBitmaps($zinc);
+    $control_tl = $zinc->Toplevel;
+    $control_tl->title("Tk::Zinc::Debug (V $VERSION)");
+    my $fm1 = $control_tl->Frame()->pack(-side => 'left', -padx => 0);
+    my $fm2 = $control_tl->Frame()->pack(-side => 'left', -padx => 20);
+    my $fm3 = $control_tl->Frame()->pack(-side => 'left', -padx => 0);
+    
+    for (qw(zn findenclosed findoverlap tree item id snapshot)) {
+	$button{$_} = $fm1->Checkbutton(-image => $bitmaps->{$_},
+					-indicatoron => 0,
+					-foreground => 'gray20')->pack(-side => 'left');
+    }
+    for (qw(zoomminus zoomplus move)) {
+	$button{$_} = $fm2->Checkbutton(-image => $bitmaps->{$_},
+					-indicatoron => 0,
+					-foreground => 'gray20')->pack(-side => 'left');
+    }
+    for (qw(balloon close)) {
+	$button{$_} = $fm3->Checkbutton(-image => $bitmaps->{$_},
+					-indicatoron => 0,
+					-foreground => 'gray20')->pack(-side => 'left');
+    }
+    my $bg = $button{zn}->cget(-background);
+    for (values(%button)) {
+	$_->configure(-selectcolor => $bg);
+    }
+    my $balloonhelp = &balloonhelp();
+    $button{balloon}->toggle;
+    $control_tl->withdraw();
+    $button{zn}->configure(-command => \&focuscommand);
+    $button{balloon}->configure(-command => sub {
+				    if ($button{balloon}->{Value} == 0) {
+					$balloonhelp->configure(-state => 'none');
+				    } else {
+					$balloonhelp->configure(-state => 'balloon');
+				    }
+			 });
+    #--------------------------------------------------
+    # on/off commands for exclusive modes :
+    #--------------------------------------------------
+    
+    # findenclosed mode
+    $on_command{findenclosed} = sub {
+	&savebindings($selectedzinc);
+	$button{findenclosed}->{Value} = 1;
+	$selectedzinc->Tk::bind("<ButtonPress-1>",
+				[\&startrectangle, 'simple', 'Enclosed',
+				       'sienna']);
+	$selectedzinc->Tk::bind("<B1-Motion>", \&resizerectangle);
+	$selectedzinc->Tk::bind("<ButtonRelease-1>",
+				[\&stoprectangle, 'enclosed', 'Enclosed search']);
+    };
+    $off_command{findenclosed} = sub {
+	$button{findenclosed}->{Value} = 0;
+	&restorebindings($selectedzinc);
+	$selectedzinc->remove("zincdebugrectangle", "zincdebuglabel");
+    };
+    # findoverlap mode
+    $on_command{findoverlap} = sub {
+	&savebindings($selectedzinc);
+	$button{findoverlap}->{Value} = 1;
+	$selectedzinc->Tk::bind("<ButtonPress-1>", [\&startrectangle, 'mixed', 'Overlap',
+					'sienna']);
+	$selectedzinc->Tk::bind("<B1-Motion>", \&resizerectangle);
+	$selectedzinc->Tk::bind("<ButtonRelease-1>",
+				[\&stoprectangle, 'overlapping', 'Overlap search']);
+    };
+    $off_command{findoverlap} = sub {
+	$button{findoverlap}->{Value} = 0;
+	&restorebindings($selectedzinc);
+	$selectedzinc->remove("zincdebugrectangle", "zincdebuglabel");
+    };
+    # item mode
+    $on_command{item} = sub {
+	&savebindings($selectedzinc);
+	$button{item}->{Value} = 1;
+	$selectedzinc->Tk::bind("<ButtonPress-1>", [\&findintree]);
+    };
+    $off_command{item} = sub {
+	$button{item}->{Value} = 0;
+	&restorebindings($selectedzinc);
+    };
+    # move mode
+    $on_command{move} = sub {
+	&savebindings($selectedzinc);
+	$button{move}->{Value} = 1;
+	my ($x0, $y0);
+	$selectedzinc->Tk::bind('<ButtonPress-1>', sub {
+	    my $ev = $selectedzinc->XEvent;
+	    ($x0, $y0) = ($ev->x, $ev->y);
+	});
+	$selectedzinc->Tk::bind('<B1-Motion>', sub {
+	    my $ev = $selectedzinc->XEvent;
+	    my ($x, $y) = ($ev->x, $ev->y);
+	    $selectedzinc->translate(1, $x-$x0, $y-$y0) if defined $x0;
+	    ($x0, $y0) = ($x, $y);
+	});
+    };
+    $off_command{move} = sub {
+	$button{move}->{Value} = 0;
+	&restorebindings($selectedzinc);
+    };
+    # zn mode
+    $on_command{zn} = sub {
+	$button{zn}->{Value} = 1;
+	for my $zinc (&instances) {
+	    $zinc->remove("zincdebugrectangle", "zincdebuglabel");
+	    &savebindings($zinc);
+	    my $r;
+	    $zinc->Tk::bind("<ButtonPress-1>", sub {
+		$zinc->update;
+		my ($w, $h) = ($zinc->cget(-width), $zinc->cget(-height));
+		$zinc->tsave(1, 'transfoTopgroup', 1);
+		$r = $zinc->add('rectangle', 1, [30, 30, $w-30, $h-30],
+				-linecolor => 'red',
+				-linewidth => 10);
+		$zinc->trestore($r, 'transfoTopgroup');
+		$zinc->raise($r);
+		$selectedzinc = $zinc;
+	    });
+	    $zinc->Tk::bind("<ButtonRelease-1>", sub {
+		$zinc->remove($r);
+	    });
+	}
+    };
+    $off_command{zn} = sub {
+	$button{zn}->{Value} = 0;
+        for my $zinc (&instances) {
+	    &restorebindings($zinc);
+	}
+    };
+
+    my @but = qw(findenclosed findoverlap item move zn);
+    for my $name (@but) {
+	$button{$name}->configure(-command => sub {
+	    if ($button{$name}->{Value} == 1) {
+		for my $other (@but) {
+		    &{$off_command{$other}} unless $other eq $name;
+		}
+	    &{$on_command{$name}};
+	    } else {
+		&{$off_command{$name}};
+	    }});
+    }
+
+    $button{id}->configure(-command => sub {
+	$button{id}->update;
+	&searchentry($zinc);
+	$button{id}->toggle;
+    });
+    
+    $button{snapshot}->configure(-command => sub {
+	$button{snapshot}->update;
+	&printWindow($zinc);
+	$button{snapshot}->toggle;
+    });
+    
+    $button{zoomminus}->configure(-command => sub {
+	$button{zoomminus}->update;
+	my $w = $selectedzinc->cget(-width);
+	my $h = $selectedzinc->cget(-height);
+	$selectedzinc->translate(1, -$w/2, -$h/2);
+	$selectedzinc->scale(1, 1/1.1, 1/1.1);
+	$selectedzinc->translate(1, $w/2, $h/2);
+	$button{zoomminus}->toggle;
+	});
+    
+    $button{zoomplus}->configure(-command => sub {
+	$button{zoomplus}->update;
+	my $w = $selectedzinc->cget(-width);
+	my $h = $selectedzinc->cget(-height);
+	$selectedzinc->translate(1, -$w/2, -$h/2);
+	$selectedzinc->scale(1, 1.1, 1.1);
+	$selectedzinc->translate(1, $w/2, $h/2);
+	$button{zoomplus}->toggle;
+	});
+        
+    $button{tree}->configure(-command => sub {
+	$button{tree}->update;
+	&showtree($selectedzinc);
+	$button{tree}->toggle;
+	});
+    
+    $button{close}->configure(-command => sub {
+	$button{close}->update;
+	$control_tl->withdraw();
+	&restorebindings($selectedzinc);
+	for my $name (@but) {
+	    &{$off_command{$name}};
+	}
+	$button{close}->toggle;
+    });
+    
+} # end init
+
+
+#---------------------------------------------------------------------------
+#
+# Deprecated functions
+#
+#---------------------------------------------------------------------------
+
 sub tree {
     
+    carp "in Tk::Zinc::Debug module, tree() function is deprecated.\n";
+    &init($_[0]);
+    
+} # end tree
+
+
+sub finditems {
+    
+    carp "in Tk::Zinc::Debug module, finditems() function is deprecated.\n";
+    &init($_[0]);
+    
+} # end finditems
+
+
+
+sub snapshot {
+    
+    carp "in Tk::Zinc::Debug module, snapshot() function is deprecated.\n";
+    &init($_[0]);
+
+} # end snapshot
+
+
+#---------------------------------------------------------------------------
+#
+# Functions related to items tree
+#
+#---------------------------------------------------------------------------
+
+# build or rebuild the items tree
+sub showtree {
+    
     my $zinc = shift;
-    unless ($zinc) {
-	carp "In Tk::Zinc::Debug module, tree() function, widget must be specified\n";
-	return;
-    }
-    &newinstance($zinc);
+    my $optionstodisplay = $cmdoptions{optionsToDisplay};
+    my $optionsFormat = $cmdoptions{optionsFormat};
     # styles definition
     $itemstyle =
 	$zinc->ItemStyle('text', -stylename => "item", -foreground => 'black')
@@ -128,230 +367,11 @@ sub tree {
     $groupstyle =
 	$zinc->ItemStyle('text', -stylename => "group", -foreground => 'black')
 	    unless $groupstyle;
-    
-    # options 
-    my %options = @_;
-    for my $opt (keys(%options)) {
-	carp "in Tk::Zinc::Debug module, tree() function, unknown option $opt\n"
-	    unless ($opt eq '-itemModBtn' or $opt eq '-key' or $opt eq '-tkey' or
-		    $opt eq '-optionsToDisplay' or $opt eq '-optionsFormat');
-    }
-    
-    # unset previous bindings;
-    $zinc->Tk::bind('<'.$treeKey{$zinc}.'>', '') if $treeKey{$zinc};
-    if ($treeModBtn{$zinc}) {
-	my $seq;
-	if ($treeModBtn{$zinc}->[0]) {
-	    $seq = $treeModBtn{$zinc}->[0]."-".$treeModBtn{$zinc}->[1];
-	} else {
-	    $seq = $treeModBtn{$zinc}->[1];
 
-	}
-	$zinc->Tk::bind('<'.$seq.'>', '');
-    }
-    if ($options{-tkey}) {
-	$treeKey{$zinc} = $options{-tkey};
-    } elsif ($options{-key}) {
-	$treeKey{$zinc} = $options{-key};
-    } else {
-	$treeKey{$zinc} = 'Control-t';
-    }
-    $treeModBtn{$zinc} = ($options{-itemModBtn}) ? $options{-itemModBtn} :
-	['Control', 2];
-    $options{-optionsFormat} = 'column' unless $options{-optionsFormat};
-    if ($options{-optionsFormat} ne 'row' and $options{-optionsFormat} ne 'column') {
-	carp "in Tk::Zinc::Debug module, tree() function, expected values for ".
-	    "-optionsFormat are 'row' or 'column'. Option is set to 'column'\n";
-	$options{-optionsFormat} = 'column';
-    }
-    # binding for building tree
-    $zinc->Tk::bind('<'.$treeKey{$zinc}.'>',
-			      [\&showtree, $options{-optionsToDisplay},
-			       $options{-optionsFormat}]);
-    # binding for displaying item in tree
-    my $seq;
-    if ($treeModBtn{$zinc}->[0]) {
-	$seq = $treeModBtn{$zinc}->[0]."-".$treeModBtn{$zinc}->[1];
-    } else {
-	$seq = $treeModBtn{$zinc}->[1];
-    }
-    $zinc->Tk::bind("<".$seq.">", [\&findintree, $options{-optionsToDisplay},
-			   $options{-optionsFormat}]);
-    # binding for general help
-    $zinc->toplevel->Tk::bind('<Key-Escape>', \&showgeneralhelp);
-    
-} # end tree
-
-
-#---------------------------------------------------------------------------
-# finditems : scan items which are enclosed in a rectangular area first
-# drawn by drag & drop or all items which overlap it
-#---------------------------------------------------------------------------
-sub finditems {
-    
-    my $zinc = shift;
-    unless ($zinc) {
-	carp "In Tk::Zinc::Debug module, finditems() function, widget must be specified\n";
-	return;
-    }
-    &newinstance($zinc);
-    # options 
-    my %options = @_;
-    for my $opt (keys(%options)) {
-	carp "in Tk::Zinc::Debug module, finditems() function, unknown option $opt\n"
-	    unless ($opt eq '-color' or $opt eq '-enclosedModBtn' or
-		    $opt eq '-overlapModBtn' or $opt eq '-searchKey');
-    }
-    # unset previous bindings;
-    my $ekb = $enclosedModBtn{$zinc};
-    if ($ekb) {
-	if ($ekb->[0]) {
-	    $zinc->Tk::bind("<".$ekb->[0]."-".$ekb->[1].">", '');
-	    $zinc->Tk::bind("<".$ekb->[0]."-B".$ekb->[1]."-Motion>", '');
-	    $zinc->Tk::bind("<".$ekb->[0]."-B".$ekb->[1]."-ButtonRelease>", '');
-	} else {
-	    $zinc->Tk::bind("<".$ekb->[1].">", '');
-	    $zinc->Tk::bind("<B".$ekb->[1]."-Motion>", '');
-	    $zinc->Tk::bind("<B".$ekb->[1]."-ButtonRelease>", '');
-	}
-    }
-    my $okb = $overlapModBtn{$zinc};
-    if ($okb) {
-	if ($okb->[0]) {
-	    $zinc->Tk::bind("<".$okb->[0]."-".$okb->[1].">", '');
-	    $zinc->Tk::bind("<".$okb->[0]."-B".$okb->[1]."-Motion>", '');
-	    $zinc->Tk::bind("<".$okb->[0]."-B".$okb->[1]."-ButtonRelease>", '');
-	} else {
-	    $zinc->Tk::bind("<".$okb->[1].">", '');
-	    $zinc->Tk::bind("<B".$okb->[1]."-Motion>", '');
-	    $zinc->Tk::bind("<B".$okb->[1]."-ButtonRelease>", '');
-	}
-    }
-    
-    my $color = ($options{-color}) ? $options{-color} : 'sienna';
-    $enclosedModBtn{$zinc} = ($options{-enclosedModBtn}) ? $options{-enclosedModBtn} :
-	['Control', 3];
-    $overlapModBtn{$zinc} = ($options{-overlapModBtn}) ? $options{-overlapModBtn} :
-	['Shift', 3];
-    $searchKey{$zinc} = ($options{-searchKey}) ? $options{-searchKey} : 'Control-f';
-    # bindings for Enclosed search
-    $ekb = $enclosedModBtn{$zinc};
-    if ($ekb) {
-	if ($ekb->[0]) {
-	    $zinc->Tk::bind("<".$ekb->[0]."-".$ekb->[1].">",
-			    [\&startrectangle, 'simple', 'Enclosed', $color]);
-	    $zinc->Tk::bind("<".$ekb->[0]."-B".$ekb->[1]."-Motion>", \&resizerectangle);
-	    $zinc->Tk::bind("<".$ekb->[0]."-B".$ekb->[1]."-ButtonRelease>",
-			    [\&stoprectangle, 'enclosed', 'Enclosed search']);
-	} else {
-	    $zinc->Tk::bind("<".$ekb->[1].">",
-			    [\&startrectangle, 'simple', 'Enclosed', $color]);
-	    $zinc->Tk::bind("<B".$ekb->[1]."-Motion>", \&resizerectangle);
-	    $zinc->Tk::bind("<B".$ekb->[1]."-ButtonRelease>",
-			    [\&stoprectangle, 'enclosed', 'Enclosed search']);
-	}
-    }
-    # bindings for Overlap search
-    $okb = $overlapModBtn{$zinc};
-    if ($okb) {
-	if ($okb->[0]) {
-	    $zinc->Tk::bind("<".$okb->[0]."-".$okb->[1].">",
-			    [\&startrectangle, 'mixed', 'Overlap', $color]);
-	    $zinc->Tk::bind("<".$okb->[0]."-B".$okb->[1]."-Motion>", \&resizerectangle);
-	    $zinc->Tk::bind("<".$okb->[0]."-B".$okb->[1]."-ButtonRelease>",
-			    [\&stoprectangle, 'overlapping', 'Overlap search']);
-	} else {
-	    $zinc->Tk::bind("<".$okb->[1].">",
-			    [\&startrectangle, 'mixed', 'Overlap', $color]);
-	    $zinc->Tk::bind("<B".$okb->[1]."-Motion>", \&resizerectangle);
-	    $zinc->Tk::bind("<B".$okb->[1]."-ButtonRelease>",
-			    [\&stoprectangle, 'overlapping', 'Overlap search']);
-	}
-    }
-    # binding for search entry
-    $zinc->Tk::bind('<'.$searchKey{$zinc}.'>', \&searchentry);
-    # binding for general help
-    $zinc->toplevel->Tk::bind('<Key-Escape>', \&showgeneralhelp);
-    
-} # end finditems
-
-
-
-#---------------------------------------------------------------------------
-# snapshot : snapshot the application window, in order to illustrate a
-# graphical bug for example
-#---------------------------------------------------------------------------
-sub snapshot {
-    
-    my $zinc = shift;
-    unless ($zinc) {
-	carp "In Tk::Zinc::Debug module, snapshot() function, widget must be specified\n";
-	return;
-    }
-    &newinstance($zinc);
-    # options 
-    my %options = @_;
-    for my $opt (keys(%options)) {
-	carp "in Tk::Zinc::Debug module, snapshot() function, unknown option $opt\n"
-	    unless ($opt eq '-key' or $opt eq '-skey' or
-		    $opt eq '-verbosity' or $opt eq '-basename');
-    }
-    # unset previous bindings;
-    $zinc->Tk::bind("<".$snapKey{$zinc}.">", '') if $snapKey{$zinc};
-    
-    if ($options{-skey}) {
-	$snapKey{$zinc} = $options{-skey};
-    } elsif ($options{-key}) {
-	$snapKey{$zinc} = $options{-key};
-    } else {
-	$snapKey{$zinc} = 'Control-s';
-    }
-    my $snapshotVerbosity = (defined $options{-verbosity}) ? $options{-verbosity} : 1;
-    my $snapshotBasename = ($options{-basename}) ? $options{-basename} : "zincsnapshot";
-    # binding for printing a full zinc window
-    $zinc->Tk::bind("<".$snapKey{$zinc}.">",
-  		    [\&printWindow , $snapshotBasename, $snapshotVerbosity]);
-    # binding for general help
-    $zinc->toplevel->Tk::bind('<Key-Escape>', \&showgeneralhelp);
-
-} # end snapshot
-
-
-#---------------------------------------------------------------------------
-#
-# TREE PRIVATE FUNCTIONS
-#
-#---------------------------------------------------------------------------
-sub findintree {
-    my ($zinc, $optionstodisplay, $optionsFormat) = @_;
-    if (not Tk::Exists($tree_tl)) {
-	&showtree($zinc, $optionstodisplay, $optionsFormat);
-    }
-    my $ev = $zinc->XEvent;
-    ($x0, $y0) = ($ev->x, $ev->y);
-    my @atomicgroups = &unsetAtomicity($zinc);
-    my $item = $zinc->find('closest', $x0, $y0);
-    &restoreAtomicity($zinc, @atomicgroups);
-    return unless $item > 1;
-    my @ancestors = reverse($zinc->find('ancestors', $item));
-    my $path = join('.', @ancestors).".".$item;
-    $tree->see($path);
-    $tree->selectionClear;
-    $tree->anchorSet($path);
-    $tree->selectionSet($path);
-    &surrounditem($zinc, $item);
-    $tree->focus;
-
-} # end findintree
-
-
-
-sub showtree {
-    my ($zinc, $optionstodisplay, $optionsFormat) = @_;
     $WARNING = 0;
     my @optionstodisplay = split(/,/, $optionstodisplay);
     $WARNING = 1;
-    $tree_tl->destroy if $tree_tl and Tk::Exists($search_tl);
+    &hidetree();
     $tree_tl = $zinc->Toplevel;
     $tree_tl->minsize(280, 200);
     $tree_tl->title("Zinc Items Tree");
@@ -435,11 +455,51 @@ sub showtree {
 		-expand => 1,
 		);
 
-
 } # end showtree
 
 
+# destroy the items tree
+sub hidetree {
+    
+    $tree_tl->destroy if $tree_tl and Tk::Exists($tree_tl);
+    
+} # end hidetree
+
+
+# find a pointed item in the items tree
+sub findintree {
+    
+    my $zinc = shift;
+    if (not Tk::Exists($tree_tl)) {
+	&showtree($zinc);
+    }
+    my $ev = $zinc->XEvent;
+    ($x0, $y0) = ($ev->x, $ev->y);
+    my @atomicgroups = &unsetAtomicity($zinc);
+    my $item = $zinc->find('closest', $x0, $y0);
+    &restoreAtomicity($zinc, @atomicgroups);
+    return unless $item > 1;
+    my @ancestors = reverse($zinc->find('ancestors', $item));
+    my $path = join('.', @ancestors).".".$item;
+    # tree is rebuilded unless path exists
+    unless ($tree->info('exists', $path)) {
+	$tree_tl->destroy;
+	#print "path=$path rebuild tree\n";
+	&showtree($zinc);
+    }
+    $tree->see($path);
+    $tree->selectionClear;
+    $tree->anchorSet($path);
+    $tree->selectionSet($path);
+    &surrounditem($zinc, $item);
+    $tree->focus;
+
+} # end findintree
+
+
+# build perl code corresponding to a branch of the items tree
 sub buildCode {
+    
     my $zinc = shift;
     my $tree = shift;
     my @code;
@@ -483,8 +543,9 @@ sub buildCode {
 } # end buildCode
 
 
-
+# build a node of tree (corresponding to a TkZinc group item)
 sub buildGroup {
+    
     my $zinc = shift;
     my $item = shift;
     my $group = shift;
@@ -509,7 +570,9 @@ sub buildGroup {
 } # end buildGroup
 
 
+# build a leaf of tree (corresponding to a TkZinc non-group item)
 sub buildItem {
+    
     my $zinc = shift;
     my $item = shift;
     my $group = shift;
@@ -574,7 +637,9 @@ sub buildItem {
 } # end buildItem
 
 
+# add an information field to an item of the tree
 sub buildField {
+    
     my $zinc = shift;
     my $item = shift;
     my $field = shift;
@@ -591,6 +656,7 @@ sub buildField {
 
 
 sub buildOptions {
+    
     my $zinc = shift;
     my $item = shift;
     my $field = shift;
@@ -629,6 +695,7 @@ sub buildOptions {
 
 
 sub searchInTree {
+    
     my $zinc = shift;
     $searchtree_tl->destroy if $searchtree_tl and Tk::Exists($searchtree_tl);
     $searchtree_tl = $zinc->Toplevel;
@@ -736,6 +803,7 @@ sub extractinfo {
 
 
 sub scangroup {
+    
     my ($zinc, $tree, $group, $path, $format, @optionstodisplay) = @_;
     my @items = $zinc->find('withtag', "$group.");
     for my $item (@items) {
@@ -764,17 +832,22 @@ sub scangroup {
 
 } # end scangroup
 
+
 #---------------------------------------------------------------------------
 #
-# AREA SEARCH PRIVATE FUNCTIONS
+# Functions related to search in a rectangular area
 #
 #---------------------------------------------------------------------------
+
 # begin to draw rectangular area for search
 sub startrectangle {
+    
     my ($zinc, $style, $text, $color) = @_;
     $zinc->remove("zincdebugrectangle", "zincdebuglabel");
     my $ev = $zinc->XEvent;
     ($x0, $y0) = ($ev->x, $ev->y);
+    # store and name the inverted transformation of top group
+    $zinc->tsave(1, 'zoom+move', 1);
     $zinc->add('rectangle', 1, [$x0, $y0, $x0, $y0],
 	       -linecolor => $color,
 	       -linewidth => 2,
@@ -788,12 +861,16 @@ sub startrectangle {
 	       -text => $text,
 	       -tags => ["zincdebuglabel"],
 	       );
+    # apply to new rectangle the (inverted) transformation stored below
+    $zinc->trestore("zincdebugrectangle", 'zoom+move');
+    $zinc->trestore("zincdebuglabel", 'zoom+move');
   
 } # end startrectangle
 
 
 # resize the rectangular area for search
 sub resizerectangle {
+    
     my $zinc = shift;
     my $ev = $zinc->XEvent;
     my ($x, $y) = ($ev->x, $ev->y);
@@ -819,14 +896,16 @@ sub resizerectangle {
 } # end resizerectangle
 
 
-
 # stop drawing rectangular area for search
 sub stoprectangle {
+    
     my ($zinc, $searchtype, $text) = @_;
     return unless ($zinc->find('withtag', "zincdebugrectangle"));
 
     my @atomicgroups = &unsetAtomicity($zinc);
-    my @coords = $zinc->coords0("zincdebugrectangle");
+    $zinc->update;
+    my ($c0, $c1) = $zinc->coords("zincdebugrectangle");
+    my @coords = (@$c0, @$c1);
     my @items;
     for my $item ($zinc->find($searchtype, @coords, 1, 1)) {
 	push (@items, $item) unless $zinc->hastag($item, "zincdebugrectangle") or
@@ -842,10 +921,10 @@ sub stoprectangle {
 } # end stoprectangle
 
 
-
 # in order to avoid find problems with group atomicity, we set all -atomic
 # attributes to 0
 sub unsetAtomicity {
+    
     my $zinc = shift;
     my @groups = $zinc->find('withtype', 'group');
     my @atomicgroups;
@@ -860,8 +939,8 @@ sub unsetAtomicity {
 } # end unsetAtomicity
 
 
-
 sub restoreAtomicity {
+    
     my $zinc = shift;
     my @atomicgroups = @_;
     for my $group (@atomicgroups) {
@@ -871,9 +950,14 @@ sub restoreAtomicity {
 } # end restoreAtomicity
 
 
+#---------------------------------------------------------------------------
+#
+# Function related to item's id search 
+#
+#---------------------------------------------------------------------------
 
-# display search entry field
 sub searchentry {
+    
     my $zinc = shift;
     $search_tl->destroy if $search_tl and Tk::Exists($search_tl);
     $search_tl = $zinc->Toplevel;
@@ -908,13 +992,14 @@ sub searchentry {
 
 #---------------------------------------------------------------------------
 #
-# RESULTS DISPLAY PRIVATE FUNCTIONS
+# Functions related to results tables display
 #
 #---------------------------------------------------------------------------
 
 # display in a toplevel the result of search ; a new toplevel destroyes the
 # previous one
 sub showresult {
+    
     my ($label, $zinc, @items) = @_;
     # toplevel (re-)creation
     $result_tl->destroy if Tk::Exists($result_tl);
@@ -957,12 +1042,11 @@ sub showresult {
 		     -fill => 'both',
 		     -expand => 1,
 		     );
-
 } # end showresult
 
-
-
+# display table containing additionnal options/values
 sub showalloptions {
+    
     my ($zinc, $item, $fmp) = @_;
     my $tl = $fmp->Toplevel;
     my $title = "All options of item $item";
@@ -1031,16 +1115,18 @@ sub showalloptions {
 } # end showalloptions
 
 
-
+# display device coords table
 sub showdevicecoords {
+    
     my ($zinc, $item) = @_;
     &showcoords($zinc, $item, 1);
 
 } # end showdevicecoords
 
 
-
+# display coords table
 sub showcoords {
+    
     my ($zinc, $item, $deviceflag) = @_;
     my $bgcolor = 'ivory';
     my $bgcolor2 = 'gray75';
@@ -1080,7 +1166,7 @@ sub showcoords {
 	    ## The first item of the list is not a reference, so the
 	    ## list is guarranted to be a flat list (x, y, ...)
 	    ## normaly of only one pair of (x y)
-	    @coords = $zinc->transform($item, 1, [@coords])
+	    @coords = $zinc->transform($item, 'device', [@coords])
 		if $deviceflag;
 	    for (my $j=0; $j < @coords; $j += 2) {
 		push(@{$contour[$i]}, [$coords[$j], $coords[$j+1]]);
@@ -1091,7 +1177,7 @@ sub showcoords {
 	    ## other elements of the list
 	    for (my $j=0; $j < @coords; $j ++) {
 		my @c = @{$coords[$j]};
-		@c = $zinc->transform($item, 1, [@c])
+		@c = $zinc->transform($item, 'device', [@c])
 		    if $deviceflag;
 		push(@{$contour[$i]}, [@c]);
 	    }
@@ -1169,135 +1255,15 @@ sub showcoords {
 	    $_->bind('<3>', [\&showcontourpt, $zinc, 'red',
 			     $item, $j, $deviceflag, \@lab, @{$contour[$i]}]);
 	    $j++;
-    }
+	}
 
     }
-
 
 } # end showcoords
 
-sub showcontour {
-    my ($widget, $zinc, $color, $item, $contourcoords, $deviceflag) = @_;
-    if ($deviceflag) {
-	$zinc->add('curve', 1, $contourcoords,
-		   -filled => 0,
-		   -linecolor => $color,
-		   -tags => ['zincdebugcontour']);
-
-    } else {
-	$zinc->add('curve', 1, [$zinc->transform($item, 1, $contourcoords)],
-		   -filled => 0,
-		   -linecolor => $color,
-		   -tags => ['zincdebugcontour']);
-    }
-    
-} # end showcontour
-
-sub hidecontour {
-    my ($zinc) = @_;
-    $zinc->remove('zincdebugcontour');
-    
-} # end hidecontour
-
-sub showcontourpts {
-    my ($widget, $zinc, $color, $item, $contourcoords, $deviceflag) = @_;
-    my $i = 0;
-    for my $coords (@$contourcoords) {
-	my ($x, $y);
-	if ($deviceflag) {
-	    ($x, $y) = @$coords;
-	} else {
-	    ($x, $y) = $zinc->transform($item, 1, $coords);
-	}
-	if ($i == 0) {
-	    $zinc->add('arc', 1, [$x-10, $y-10, $x+10, $y+10],
-		       -filled => 0,
-		       -linewidth => 1,
-		       -linecolor => $color,
-		       -tags => ['zincdebugcontour']);
-	} elsif ($i == @$contourcoords -1) {
-	    $zinc->add('arc', 1, [$x-10, $y-10, $x+10, $y+10],
-		       -filled => 0,
-		       -linewidth => 1,
-		       -linecolor => $color,
-		       -tags => ['zincdebugcontour']);
-	    $zinc->add('arc', 1, [$x-13, $y-13, $x+13, $y+13],
-		       -filled => 0,
-		       -linewidth => 1,
-		       -linecolor => $color,
-		       -tags => ['zincdebugcontour']);
-	}
-	my $dx = 3;
-	if (@$coords > 2) {
-	    $zinc->add('rectangle', 1, [$x-$dx, $y-$dx, $x+$dx, $y+$dx],
-		       -filled => 0,
-		       -linewidth => 1,
-		       -linecolor => $color,
-		       -tags => ['zincdebugcontour']);
-	} else {
-	    $zinc->add('rectangle', 1, [$x-$dx, $y-$dx, $x+$dx, $y+$dx],
-		       -filled => 1,
-		       -linewidth => 1,
-		       -fillcolor => $color,
-		       -linecolor => $color,
-		       -tags => ['zincdebugcontour']);
-	}
-	$i++;
-    }
-    
-} # end showcontourpts
-
-
-sub showcontourpt {
-    my ($widget, $zinc, $color, $item, $index, $deviceflag, $labels, @contour) = @_;
-    $widget->focus;
-    if ($index < 0 or $index >= @contour) {
-	$widget->bell;
-	return;
-    }
-    &hidecontour($zinc);
-    my $bgcolor = ($labels->[0]->configure(-background))[3];
-    for (@$labels) {
-	$_->configure(-background => $bgcolor);
-    }
-    $labels->[$index]->configure(-background => 'bisque');
-    my @coords = @{$contour[$index]};
-    my ($x, $y);
-    if ($deviceflag) {
-	($x, $y) = @coords;
-    } else {
-	($x, $y) = $zinc->transform($item, 1, [@coords]);
-    }
-    my $dx = 3;
-    if (@coords > 2) {
-	$zinc->add('rectangle', 1, [$x-$dx, $y-$dx, $x+$dx, $y+$dx],
-		   -filled => 0,
-		   -linewidth => 1,
-		   -linecolor => $color,
-		   -tags => ['zincdebugcontour']);
-    } else {
-	$zinc->add('rectangle', 1, [$x-$dx, $y-$dx, $x+$dx, $y+$dx],
-		   -filled => 1,
-		   -linewidth => 1,
-		   -fillcolor => $color,
-		   -linecolor => $color,
-		   -tags => ['zincdebugcontour']);
-    }
-    $widget->bind('<Key-Down>', [\&showcontourpt, $zinc, $color,
-				 $item, $index+1, $deviceflag, $labels, @contour]);
-    $widget->bind('<Key-Right>', [\&showcontourpt, $zinc, $color,
-				 $item, $index+1, $deviceflag, $labels, @contour]);
-    $widget->bind('<Key-Up>', [\&showcontourpt, $zinc, $color,
-				$item, $index-1, $deviceflag, $labels, @contour]);
-    $widget->bind('<Key-Left>', [\&showcontourpt, $zinc, $color,
-				$item, $index-1, $deviceflag, $labels, @contour]);
-
-    
-} # end showcontourpt
-
-
 # display in a toplevel group's attributes
 sub showgroupattributes {
+    
     my ($zinc, $item) = @_;
     my $tl = $zinc->Toplevel;
     my $title = "About group $item";
@@ -1393,7 +1359,7 @@ sub showgroupattributes {
     # device coords
     $fm->Label(-text => 'Device coords', -relief => 'ridge')
 	->grid(-row => $r, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    @coords = $zinc->transform($item, 1, [@coords]);
+    @coords = $zinc->transform($item, 'device', [@coords]);
     if (@coords == 2) {
 	my $x0 = int($coords[0]);
 	my $y0 = int($coords[1]);
@@ -1447,6 +1413,7 @@ sub showgroupattributes {
 
 # display in a toplevel the content of a group item
 sub showgroupcontent {
+    
     my ($zinc, $group) = @_;
     my $tl = $zinc->Toplevel;
     
@@ -1477,341 +1444,12 @@ sub showgroupcontent {
 
 } # end showgroupcontent
 
-# display the bbox of a group item
-sub showbbox {
-    my ($btn, $zinc, $item) = @_;
-    my @bbox  = $zinc->bbox($item);
-    if (scalar @bbox == 4) {
-	# If item is visible, rectangle is drawm surround it.
-	# Else, a warning is displayed.
-	unless (&itemisoutside($zinc, @bbox)) {
-	    my $i = -2;
-	    for ('white', 'blue', 'white') {
-		$zinc->add('rectangle', 1,
-			   [$bbox[0] + $i, $bbox[1] + $i,
-			    $bbox[2] - $i, $bbox[3] - $i],
-			   -linecolor => $_,
-			   -linewidth => 1,
-			   -tags => ['zincdebugbbox']);
-		$i += 2;
-	    }
-	}
-    }
-    $zinc->raise('zincdebugbbox');
-
-} # end showgroupbbox
-
-
-sub hidebbox {
-    my ($btn, $zinc) = @_;
-    $zinc->remove("zincdebugbbox");
-
-} # end hidegroupbbox
-
-
-# highlight an item (by cloning it and hiding other found items)
-# why cloning? because we can't simply make visible an item which
-# belongs to an invisible group.
-sub highlightitem {
-    my ($btn, $zinc, $item, $level) = @_;
-    #print "highlightitem\n";
-    return if $showitemflag or $item == 1;
-    $showitemflag = 1;
-    
-    &surrounditem($zinc, $item, $level);
-    
-    $btn->bind('<ButtonRelease>', [\&undohighlightitem, $zinc]) if $btn;
-
-} # end highlightitem
-
-
-sub showtransfo {
-    my ($btn, $zinc, $item, $level) = @_;
-
-    my $anim = &highlighttransfo($zinc, $item, $level);
-
-    $btn->bind('<ButtonRelease>', [\&undohighlighttransfo, $zinc, $anim]) if $btn;
-
-} # end showtransfo
-
-
-
-
-sub itemisoutside {
-    my $zinc = shift;
-    my @bbox = @_;
-    return unless @bbox == 4;
-    my $outflag;
-    $WARNING = 0;
-    if ($bbox[2] < 0) {
-	if ($bbox[1] >  $wheight{$zinc}) {
-	    $outflag = 'left+bottom';
-	} elsif ($bbox[3] < 0) {
-	    $outflag = 'left+top';
-	} else {
-	    $outflag = 'left';
-	} 
-    } elsif ($bbox[0] > $wwidth{$zinc}) {
-	if ($bbox[1] >  $wheight{$zinc}) {
-	    $outflag = 'right+bottom';
-	} elsif ($bbox[3] < 0) {
-	    $outflag = 'right+top';
-	} else {
-	    $outflag = 'right';
-	}
-    } elsif ($bbox[3] < 0) {
-	$outflag = 'top';
-    } elsif ($bbox[1] > $wheight{$zinc}) {
-	$outflag = 'bottom';
-    }
-    #print "outflag=$outflag bbox=@bbox\n";
-    return 0 unless $outflag;
-    my $g = $zinc->add('group', 1, -tags => ['zincdebug']);
-    my $hw = 110;
-    my $hh = 80;
-    my $r = 5;
-    $zinc->add('rectangle', $g, [-$hw, -$hh, $hw, $hh],
-	       -filled => 1,
-	       -linecolor => 'sienna',
-	       -linewidth => 3,
-	       -fillcolor => 'bisque',
-	       -priority => 1,
-	       );
-    $zinc->add('text', $g,
-	       -position => [0, 0],
-	       -color => 'sienna',
-	       -font => '-b&h-lucida-bold-i-normal-sans-34-240-*-*-p-*-iso8859-1',
-	       -anchor => 'center',
-	       -priority => 2,
-	       -text => "Item is\noutside\nwindow\n");
-    my ($x, $y);
-    if ($outflag eq 'bottom') {
-	$x = $bbox[0] + ($bbox[2]-$bbox[0])/2;
-	$x = $hw + 10 if $x < $hw + 10;
-	$x = $wwidth{$zinc} - $hw - 10 if $x > $wwidth{$zinc} - $hw - 10;
-	$y = $wheight{$zinc} - $hh - 10;
-    } elsif ($outflag eq 'top') {
-	$x = $bbox[0] + ($bbox[2]-$bbox[0])/2;
-	$x = $hw + 10 if $x < $hw + 10;
-	$x = $wwidth{$zinc} - $hw - 10if $x > $wwidth{$zinc} - $hw - 10;
-	$y = $hh + 10;
-    } elsif ($outflag eq 'left') {
-	$x = $hw + 10;
-	$y = $bbox[1] + ($bbox[3]-$bbox[1])/2;
-	$y = $hh + 10 if $y < $hh + 10;
-	$y = $wheight{$zinc} - $hh - 10 if $y > $wheight{$zinc} - $hh - 10;
-    } elsif ($outflag eq 'right') {
-	$x = $wwidth{$zinc} - $hw - 10;
-	$y = $bbox[1] + ($bbox[3]-$bbox[1])/2;
-	$y = $hh + 10 if $y < $hh + 10;
-	$y = $wheight{$zinc} - $hh - 10 if $y > $wheight{$zinc} - $hh - 10;
-    } elsif ($outflag eq 'left+top') {
-	$x = $hw + 10;
-	$y = $hh + 10;
-    } elsif ($outflag eq 'left+bottom') {
-	$x = $hw + 10;
-	$y = $wheight{$zinc} - $hh - 10;
-    } elsif ($outflag eq 'right+top') {
-	$x = $wwidth{$zinc} - $hw - 10;
-	$y = $hh + 10;
-    } elsif ($outflag eq 'right+bottom') {
-	$x = $wwidth{$zinc} - $hw - 10;
-	$y = $wheight{$zinc} - $hh - 10;
-    }
-    $zinc->coords($g, [$x, $y]);
-    $zinc->raise('zincdebug');
-    
-} # end itemisoutside
-
-
-sub highlighttransfo {
-    my ($zinc, $item, $level) = @_;
-    $zinc->remove("zincdebug");
-    my $g = $zinc->add('group', 1);
-    my $g0 = $zinc->add('group', $g, -alpha => 0);
-    my $g1 = $zinc->add('group', $g);
-    # clone item and reset its transformation
-    my $clone0 = $zinc->clone($item, -visible => 1, -tags =>['zincdebug']);
-    $zinc->treset($clone0);
-    # clone item and preserve its transformation
-    my $clone1 = $zinc->clone($item, -visible => 1, -tags => ['zincdebug']);
-    # move clones is dedicated group
-    $zinc->chggroup($clone0, $g0, 1);
-    $zinc->chggroup($clone1, $g1, 1);
-    # create a rectangle around 
-    my @bbox0  = $zinc->bbox($g);
-    if (scalar @bbox0 == 4) {
-	my @bbox = $zinc->transform(1, $g, [@bbox0]);
-	# If item is visible, rectangle is drawm surround it.
-	# Else, a warning is displayed.
-	unless (&itemisoutside($zinc, @bbox0)) {
-	    my $r = $zinc->add('rectangle', $g,
-			       [$bbox[0] - 10, $bbox[1] - 10,
-				$bbox[2] + 10, $bbox[3] + 10],
-			       -filled => 1,
-			       -linewidth => 0,
-			       -tags => ['zincdebug'],
-			       -fillcolor => "gray90");
-	    $zinc->itemconfigure($r, -fillcolor => "gray50") if $level == 1;
-	    $zinc->itemconfigure($r, -fillcolor => "gray20") if $level == 2;
-	    my $i = 0;
-	    for ('white', 'green', 'white') {
-		$zinc->add('rectangle', $g,
-			   [$bbox[0] - 5 - 2*$i, $bbox[1] - 5 - 2*$i,
-			    $bbox[2] + 5 + 2*$i, $bbox[3] + 5 + 2*$i],
-			   -linecolor => $_,
-			   -linewidth => 1,
-			   -tags => ['zincdebug']);
-		$i++;
-	    }
-	}
-    }
-    # raise
-    $zinc->raise('zincdebug');
-    $zinc->raise($clone0);
-    $zinc->raise($clone1);
-    # animation
-    my $anim;
-    if ($zinc->cget(-render) == 0) {
-	$anim = $zinc->after(150, [sub {
-	    $zinc->itemconfigure($g1, -visible => 0);
-	    $zinc->itemconfigure($g0, -visible => 1);
-	    $zinc->update;
-	}]);
-    } else {
-	my $maxsteps = 5;
-	$step = $maxsteps;
-	$anim = $zinc->repeat(100, [sub {
-	    return if $step < 0;
-	    $zinc->itemconfigure($g1, -alpha => ($step)*100/$maxsteps);
-	    $zinc->itemconfigure($g0, -alpha => ($maxsteps-$step)*100/$maxsteps);
-	    $zinc->update;
-	    $step--;
-	}]);
-
-
-    }
-    return $anim;
-
-} # end highlighttransfo
-
-
-sub undohighlighttransfo {
-    my ($btn, $zinc, $anim) = @_;
-    $btn->bind('ReleaseButton', '') if $btn;
-    $zinc->remove('zincdebug');
-    $zinc->afterCancel($anim);
-
-} # end undohighlightitem
-
-
-# draw a rectangle arround the selected item
-sub surrounditem {
-    my ($zinc, $item, $level) = @_;
-    $zinc->remove("zincdebug");
-    # get item ancestors
-    my @itemancestors = reverse($zinc->find('ancestors', $item));
-    # skip group 1
-    shift(@itemancestors);
-    # create item's tree with good transformations
-    my $topgroup = 1;
-    for my $g (@itemancestors) {
-	my $gc = $zinc->add('group', $topgroup, -tags => ['zincdebug']);
-	$zinc->tsave($g, "mytrans");
-	my @c = $zinc->coords($g);
-	$zinc->trestore($gc, "mytrans");
-	$zinc->coords($gc, [@c]);
-	$zinc->tdelete("mytrans");
-	$topgroup = $gc;
-    }
-    # cloning
-    my $clone = $zinc->clone($item, -visible => 1, -tags => ['zincdebug']);
-    # move in topgroup  
-    $zinc->chggroup($clone, $topgroup);
-    # create a rectangle around 
-    my @bbox0  = $zinc->bbox($clone);
-    if (scalar @bbox0 == 4) {
-	my @bbox = $zinc->transform(1, $topgroup, [@bbox0]);
-	# If item is visible, rectangle is drawm surround it.
-	# Else, a warning is displayed.
-	unless (&itemisoutside($zinc, @bbox0)) {
-	    if (defined($level) and $level > 0) {
-		my $r = $zinc->add('rectangle', $topgroup,
-				   [$bbox[0] - 10, $bbox[1] - 10,
-				    $bbox[2] + 10, $bbox[3] + 10],
-				   -linewidth => 0,
-				   -filled => 1,
-				   -tags => ['zincdebug'],
-				   -fillcolor => "gray20");
-		$zinc->itemconfigure($r, -fillcolor => "gray80") if $level == 1;
-	    } 
-	    my $i = 0;
-	    for ('white', 'red', 'white') {
-		$zinc->add('rectangle', $topgroup,
-			   [$bbox[0] - 5 - 2*$i, $bbox[1] - 5 - 2*$i,
-			    $bbox[2] + 5 + 2*$i, $bbox[3] + 5 + 2*$i],
-			   -linecolor => $_,
-			   -linewidth => 1,
-			   -tags => ['zincdebug']);
-		$i++;
-	    }
-	}
-    }
-    # raise
-    $zinc->raise('zincdebug');
-    $zinc->raise($clone);
-   
-} # end surrounditem
-
-
-sub undohighlightitem {
-    my ($btn, $zinc) = @_;
-    #print "undohighlightitem\n";
-    $btn->bind('ReleaseButton', '') if $btn;
-    $zinc->remove('zincdebug');
-    $showitemflag = 0;
-
-} # end undohighlightitem
-
-
-
-sub showbanner {
-    my $fm = shift;
-    my $i = shift;
-    my $bgcolor = 'ivory';
-    $fm->Label(-text => 'Id', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Type', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Group', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 3, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Priority', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 4, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Sensitive', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 5, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Visible', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 6, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Coords', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 7, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Device coords', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 8, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Bounding box', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 9, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label(-text => 'Tags', -background => $bgcolor, -relief => 'ridge')
-	->grid(-row => $i, -col => 10, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
-    $fm->Label()->grid(-row => 1, -col => 11, -pady => 10);
-     
-} # end showbanner
-
 
 # display in a grid the values of most important attributes 
 sub showattributes {
+    
     my ($zinc, $fm, $items) = @_;
-    unless ($wwidth{$zinc} > 1) {
-        $zinc->update;
-	my $geom = $zinc->geometry =~ /(\d+)x(\d+)+/=~ /(\d+)x(\d+)+/;
-	($wwidth{$zinc}, $wheight{$zinc}) = ($1, $2);
-    }
+    &getsize($zinc);
     my $bgcolor = 'ivory';
     my $i = 1;
     &showbanner($fm, $i++);
@@ -1885,7 +1523,7 @@ sub showattributes {
 		->grid(-row => $i, -col => 7, -sticky => 'nswe', -ipadx => 5);
 	}
 	# device coords
-	@coords = $zinc->transform($item, 1, [@coords]);
+	@coords = $zinc->transform($item, 'device', [@coords]);
 	if (!ref $coords[0]) {
 	    my $x0 = int($coords[0]);
 	    my $y0 = int($coords[1]);
@@ -1940,17 +1578,482 @@ sub showattributes {
     
 } # end showattributes
 
+
+sub showbanner {
+    
+    my $fm = shift;
+    my $i = shift;
+    my $bgcolor = 'ivory';
+    $fm->Label(-text => 'Id', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 1, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Type', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 2, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Group', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 3, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Priority', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 4, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Sensitive', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 5, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Visible', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 6, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Coords', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 7, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Device coords', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 8, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Bounding box', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 9, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label(-text => 'Tags', -background => $bgcolor, -relief => 'ridge')
+	->grid(-row => $i, -col => 10, -ipady => 10, -ipadx => 5, -sticky => 'nswe');
+    $fm->Label()->grid(-row => 1, -col => 11, -pady => 10);
+     
+} # end showbanner
+
+
 #---------------------------------------------------------------------------
 #
-# SNAPSHOT FUNCTIONS
+# Functions related to contours display
+#
+#---------------------------------------------------------------------------
+
+# display contour (as simple curve)
+sub showcontour {
+    my ($widget, $zinc, $color, $item, $contourcoords, $deviceflag) = @_;
+    if ($deviceflag) {
+	$zinc->add('curve', 1, $contourcoords,
+		   -filled => 0,
+		   -linecolor => $color,
+		   -tags => ['zincdebugcontour']);
+
+    } else {
+	$zinc->add('curve', 1, [$zinc->transform($item, 1, $contourcoords)],
+		   -filled => 0,
+		   -linecolor => $color,
+		   -tags => ['zincdebugcontour']);
+    }
+    $zinc->raise('zincdebugcontour');
+    
+} # end showcontour
+
+
+sub hidecontour {
+    
+    my ($zinc) = @_;
+    $zinc->remove('zincdebugcontour');
+    
+} # end hidecontour
+
+
+# display contours points (one rectangle per point)
+sub showcontourpts {
+    my ($widget, $zinc, $color, $item, $contourcoords, $deviceflag) = @_;
+    my $i = 0;
+    for my $coords (@$contourcoords) {
+	my ($x, $y);
+	if ($deviceflag) {
+	    ($x, $y) = @$coords;
+	} else {
+	    ($x, $y) = $zinc->transform($item, 1, $coords);
+	}
+	if ($i == 0) {
+	    $zinc->add('arc', 1, [$x-10, $y-10, $x+10, $y+10],
+		       -filled => 0,
+		       -linewidth => 1,
+		       -linecolor => $color,
+		       -tags => ['zincdebugcontour']);
+	} elsif ($i == @$contourcoords -1) {
+	    $zinc->add('arc', 1, [$x-10, $y-10, $x+10, $y+10],
+		       -filled => 0,
+		       -linewidth => 1,
+		       -linecolor => $color,
+		       -tags => ['zincdebugcontour']);
+	    $zinc->add('arc', 1, [$x-13, $y-13, $x+13, $y+13],
+		       -filled => 0,
+		       -linewidth => 1,
+		       -linecolor => $color,
+		       -tags => ['zincdebugcontour']);
+	}
+	my $dx = 3;
+	if (@$coords > 2) {
+	    $zinc->add('rectangle', 1, [$x-$dx, $y-$dx, $x+$dx, $y+$dx],
+		       -filled => 0,
+		       -linewidth => 1,
+		       -linecolor => $color,
+		       -tags => ['zincdebugcontour']);
+	} else {
+	    $zinc->add('rectangle', 1, [$x-$dx, $y-$dx, $x+$dx, $y+$dx],
+		       -filled => 1,
+		       -linewidth => 1,
+		       -fillcolor => $color,
+		       -linecolor => $color,
+		       -tags => ['zincdebugcontour']);
+	}
+	$i++;
+    }
+    $zinc->raise('zincdebugcontour');
+    
+} # end showcontourpts
+
+
+# display one point of a contour (as a rectangle)
+sub showcontourpt {
+    
+    my ($widget, $zinc, $color, $item, $index, $deviceflag, $labels, @contour) = @_;
+    $widget->focus;
+    if ($index < 0 or $index >= @contour) {
+	$widget->bell;
+	return;
+    }
+    &hidecontour($zinc);
+    my $bgcolor = ($labels->[0]->configure(-background))[3];
+    for (@$labels) {
+	$_->configure(-background => $bgcolor);
+    }
+    $labels->[$index]->configure(-background => 'bisque');
+    my @coords = @{$contour[$index]};
+    my ($x, $y);
+    if ($deviceflag) {
+	($x, $y) = @coords;
+    } else {
+	($x, $y) = $zinc->transform($item, 1, [@coords]);
+    }
+    my $dx = 3;
+    if (@coords > 2) {
+	$zinc->add('rectangle', 1, [$x-$dx, $y-$dx, $x+$dx, $y+$dx],
+		   -filled => 0,
+		   -linewidth => 1,
+		   -linecolor => $color,
+		   -tags => ['zincdebugcontour']);
+    } else {
+	$zinc->add('rectangle', 1, [$x-$dx, $y-$dx, $x+$dx, $y+$dx],
+		   -filled => 1,
+		   -linewidth => 1,
+		   -fillcolor => $color,
+		   -linecolor => $color,
+		   -tags => ['zincdebugcontour']);
+    }
+    $widget->bind('<Key-Down>', [\&showcontourpt, $zinc, $color,
+				 $item, $index+1, $deviceflag, $labels, @contour]);
+    $widget->bind('<Key-Right>', [\&showcontourpt, $zinc, $color,
+				 $item, $index+1, $deviceflag, $labels, @contour]);
+    $widget->bind('<Key-Up>', [\&showcontourpt, $zinc, $color,
+				$item, $index-1, $deviceflag, $labels, @contour]);
+    $widget->bind('<Key-Left>', [\&showcontourpt, $zinc, $color,
+				$item, $index-1, $deviceflag, $labels, @contour]);
+    $zinc->raise('zincdebugcontour');
+
+} # end showcontourpt
+
+
+#---------------------------------------------------------------------------
+#
+# Functions related to items graphical presentation
+#
+#---------------------------------------------------------------------------
+
+# display the bbox of a group item
+sub showbbox {
+    
+    my ($btn, $zinc, $item) = @_;
+    $zinc->tsave(1, 'zoom+move', 1);
+    my @bbox  = $zinc->bbox($item);
+    if (scalar @bbox == 4) {
+	# If item is visible, rectangle is drawm surround it.
+	# Else, a warning is displayed.
+	unless (&itemisoutside($zinc, @bbox)) {
+	    my $i = -2;
+	    for ('white', 'blue', 'white') {
+		$zinc->add('rectangle', 1,
+			   [$bbox[0] + $i, $bbox[1] + $i,
+			    $bbox[2] - $i, $bbox[3] - $i],
+			   -linecolor => $_,
+			   -linewidth => 1,
+			   -tags => ['zincdebugbbox']);
+		$i += 2;
+	    }
+	}
+    }
+    $zinc->trestore('zincdebugbbox', 'zoom+move');
+    $zinc->raise('zincdebugbbox');
+
+} # end showbbox
+
+
+sub hidebbox {
+    
+    my ($btn, $zinc) = @_;
+    $zinc->remove("zincdebugbbox");
+
+} # end hidebbox
+
+
+# display a message box when an item is not visible because outside window
+sub itemisoutside {
+    
+    my $zinc = shift;
+    my @bbox = @_;
+    return unless @bbox == 4;
+    &getsize($zinc);
+    #print "bbox=(@bbox) wheight=$wheight{$zinc} wwidth=$wwidth{$zinc}\n";
+    my $outflag;
+    $WARNING = 0;
+    if ($bbox[2] < 0) {
+	if ($bbox[1] >  $wheight{$zinc}) {
+	    $outflag = 'left+bottom';
+	} elsif ($bbox[3] < 0) {
+	    $outflag = 'left+top';
+	} else {
+	    $outflag = 'left';
+	} 
+    } elsif ($bbox[0] > $wwidth{$zinc}) {
+	if ($bbox[1] >  $wheight{$zinc}) {
+	    $outflag = 'right+bottom';
+	} elsif ($bbox[3] < 0) {
+	    $outflag = 'right+top';
+	} else {
+	    $outflag = 'right';
+	}
+    } elsif ($bbox[3] < 0) {
+	$outflag = 'top';
+    } elsif ($bbox[1] > $wheight{$zinc}) {
+	$outflag = 'bottom';
+    }
+    #print "outflag=$outflag bbox=@bbox\n";
+    return 0 unless $outflag;
+    # create first group which will be translated. We will apply to this group
+    # the reverse transformation of topgroup. 
+    my $g = $zinc->add('group', 1, -tags => ['zincdebug']);
+    # create child group which won't be affected by ancestor's scale.
+    my $g1 = $zinc->add('group', $g, -composescale => 0);
+    my $hw = 110;
+    my $hh = 80;
+    my $r = 5;
+    $zinc->add('rectangle', $g1, [-$hw, -$hh, $hw, $hh],
+	       -filled => 1,
+	       -linecolor => 'sienna',
+	       -linewidth => 3,
+	       -fillcolor => 'bisque',
+	       -priority => 1,
+	       );
+    $zinc->add('text', $g1,
+	       -position => [0, 0],
+	       -color => 'sienna',
+	       -font => '-b&h-lucida-bold-i-normal-sans-34-240-*-*-p-*-iso8859-1',
+	       -anchor => 'center',
+	       -priority => 2,
+	       -text => "Item is\noutside\nwindow\n");
+    my ($x, $y);
+    if ($outflag eq 'bottom') {
+	$x = $bbox[0] + ($bbox[2]-$bbox[0])/2;
+	$x = $hw + 10 if $x < $hw + 10;
+	$x = $wwidth{$zinc} - $hw - 10 if $x > $wwidth{$zinc} - $hw - 10;
+	$y = $wheight{$zinc} - $hh - 10;
+    } elsif ($outflag eq 'top') {
+	$x = $bbox[0] + ($bbox[2]-$bbox[0])/2;
+	$x = $hw + 10 if $x < $hw + 10;
+	$x = $wwidth{$zinc} - $hw - 10if $x > $wwidth{$zinc} - $hw - 10;
+	$y = $hh + 10;
+    } elsif ($outflag eq 'left') {
+	$x = $hw + 10;
+	$y = $bbox[1] + ($bbox[3]-$bbox[1])/2;
+	$y = $hh + 10 if $y < $hh + 10;
+	$y = $wheight{$zinc} - $hh - 10 if $y > $wheight{$zinc} - $hh - 10;
+    } elsif ($outflag eq 'right') {
+	$x = $wwidth{$zinc} - $hw - 10;
+	$y = $bbox[1] + ($bbox[3]-$bbox[1])/2;
+	$y = $hh + 10 if $y < $hh + 10;
+	$y = $wheight{$zinc} - $hh - 10 if $y > $wheight{$zinc} - $hh - 10;
+    } elsif ($outflag eq 'left+top') {
+	$x = $hw + 10;
+	$y = $hh + 10;
+    } elsif ($outflag eq 'left+bottom') {
+	$x = $hw + 10;
+	$y = $wheight{$zinc} - $hh - 10;
+    } elsif ($outflag eq 'right+top') {
+	$x = $wwidth{$zinc} - $hw - 10;
+	$y = $hh + 10;
+    } elsif ($outflag eq 'right+bottom') {
+	$x = $wwidth{$zinc} - $hw - 10;
+	$y = $wheight{$zinc} - $hh - 10;
+    }
+    # apply the reverse transformation of topgroup to group $g
+    $zinc->tsave(1, 'transfo', 1);
+    $zinc->trestore($g, 'transfo');
+    # then translate group $g1
+    $zinc->coords($g1, [$x, $y]);
+    $zinc->raise('zincdebug');
+    
+} # end itemisoutside
+
+
+
+# highlight an item (by cloning it and hiding other found items)
+# why cloning? because we can't simply make visible an item which
+# belongs to an invisible group.
+sub highlightitem {
+    
+    my ($btn, $zinc, $item, $level) = @_;
+    return if $showitemflag or $item == 1;
+    $showitemflag = 1;
+    &surrounditem($zinc, $item, $level);
+    
+    $btn->bind('<ButtonRelease>', [\&undohighlightitem, $zinc]) if $btn;
+
+} # end highlightitem
+
+
+sub undohighlightitem {
+    
+    my ($btn, $zinc) = @_;
+    #print "undohighlightitem\n";
+    $btn->bind('ReleaseButton', '') if $btn;
+    $zinc->remove('zincdebug');
+    $showitemflag = 0;
+
+} # end undohighlightitem
+
+
+sub surrounditem {
+    
+    my ($zinc, $item, $level) = @_;
+    $zinc->remove("zincdebug");
+    # cloning
+    my $clone = $zinc->clone($item, -visible => 1, -tags => ['zincdebug']);
+    $zinc->tsave(1, 'zoom+move', 1);
+    $zinc->chggroup($clone, 1, 1);
+    my @bbox = $zinc->bbox($clone);
+    # create a rectangle around 
+    if (scalar @bbox == 4) {
+	# If item is visible, rectangle is drawm surround it.
+	# Else, a warning is displayed.
+	unless (&itemisoutside($zinc, @bbox)) {
+	    if (defined($level) and $level > 0) {
+		my $r = $zinc->add('rectangle', 1,
+				   [$bbox[0] - 10, $bbox[1] - 10,
+				    $bbox[2] + 10, $bbox[3] + 10],
+				   -linewidth => 0,
+				   -filled => 1,
+				   -tags => ['zincdebug', 'zincdebugdecorator'],
+				   -fillcolor => "gray20");
+		$zinc->itemconfigure($r, -fillcolor => "gray80") if $level == 1;
+	    } 
+	    my $i = 0;
+	    for ('white', 'red', 'white') {
+		$zinc->add('rectangle', 1,
+			   [$bbox[0] - 5 - 2*$i, $bbox[1] - 5 - 2*$i,
+			    $bbox[2] + 5 + 2*$i, $bbox[3] + 5 + 2*$i],
+			   -linecolor => $_,
+			   -linewidth => 1,
+			   -tags => ['zincdebug', 'zincdebugdecorator']);
+		$i++;
+	    }
+	}
+    }
+    # raise
+    $zinc->trestore('zincdebugdecorator', 'zoom+move');
+    $zinc->raise('zincdebug');
+    $zinc->raise($clone);
+
+} # end surrounditem
+
+
+# functions related to transformation animations
+sub showtransfo {
+    
+    my ($btn, $zinc, $item, $level) = @_;
+    my $anim = &highlighttransfo($zinc, $item, $level);
+    $btn->bind('<ButtonRelease>', [\&undohighlighttransfo, $zinc, $anim]) if $btn;
+
+} # end showtransfo
+
+
+sub highlighttransfo {
+    
+    my ($zinc, $item, $level) = @_;
+    $zinc->remove("zincdebug");
+    my $g = $zinc->add('group', 1);
+    my $g0 = $zinc->add('group', $g, -alpha => 0);
+    my $g1 = $zinc->add('group', $g);
+    # clone item and reset its transformation
+    my $clone0 = $zinc->clone($item, -visible => 1, -tags =>['zincdebug']);
+    $zinc->treset($clone0);
+    # clone item and preserve its transformation
+    my $clone1 = $zinc->clone($item, -visible => 1, -tags => ['zincdebug']);
+    # move clones is dedicated group
+    $zinc->chggroup($clone0, $g0, 1);
+    $zinc->chggroup($clone1, $g1, 1);
+    # create a rectangle around 
+    my @bbox0  = $zinc->bbox($g);
+    if (scalar @bbox0 == 4) {
+	$zinc->tsave(1, 'transfo', 1);
+	my @bbox = $zinc->transform(1, $g, [@bbox0]);
+	# If item is visible, rectangle is drawm surround it.
+	# Else, a warning is displayed.
+	unless (&itemisoutside($zinc, @bbox0)) {
+	    my $r = $zinc->add('rectangle', $g,
+			       [$bbox[0] - 10, $bbox[1] - 10,
+				$bbox[2] + 10, $bbox[3] + 10],
+			       -filled => 1,
+			       -linewidth => 0,
+			       -tags => ['zincdebug'],
+			       -fillcolor => "gray90");
+	    $zinc->itemconfigure($r, -fillcolor => "gray50") if $level == 1;
+	    $zinc->itemconfigure($r, -fillcolor => "gray20") if $level == 2;
+	    $zinc->trestore($r, 'transfo');
+	}
+    }
+    # raise
+    $zinc->raise($g);
+    $zinc->raise($g0);
+    $zinc->raise($g1);
+    # animation
+    my $anim;
+    if ($zinc->cget(-render) == 0) {
+	$anim = $zinc->after(150, [sub {
+	    $zinc->itemconfigure($g1, -visible => 0);
+	    $zinc->itemconfigure($g0, -visible => 1);
+	    $zinc->update;
+	}]);
+    } else {
+	my $maxsteps = 5;
+	$step = $maxsteps;
+	$anim = $zinc->repeat(100, [sub {
+	    return if $step < 0;
+	    $zinc->itemconfigure($g1, -alpha => ($step)*100/$maxsteps);
+	    $zinc->itemconfigure($g0, -alpha => ($maxsteps-$step)*100/$maxsteps);
+	    $zinc->update;
+	    $step--;
+	}]);
+
+
+    }
+    return $anim;
+
+} # end highlighttransfo
+
+
+sub undohighlighttransfo {
+    
+    my ($btn, $zinc, $anim) = @_;
+    $btn->bind('ReleaseButton', '') if $btn;
+    $zinc->remove('zincdebug');
+    $zinc->afterCancel($anim);
+
+} # end undohighlighttransfo
+
+
+#---------------------------------------------------------------------------
+#
+# Snapshot functions
 #
 #---------------------------------------------------------------------------
 
 # print a zinc window in png format
 sub printWindow {
+    
     exit if $saving;
     $saving = 1;
-    my ($zinc,$basename,$verbosity) = @_;
+    my ($zinc) = @_;
+    my $basename = $cmdoptions{snapshotBasename};
     my $id = $zinc->id;
     my $filename = $basename . $imagecounter . ".png";
     $imagecounter++;
@@ -1966,8 +2069,7 @@ sub printWindow {
 	}
     else {
 	my $dir = `pwd`; chomp ($dir);
-	print "Tk::Zinc::Debug: Zinc window snapshot saved in $dir". "/$filename\n"
-	    if $verbosity;
+	print "Tk::Zinc::Debug: Zinc window snapshot saved in $dir". "/$filename\n";
     }
 
 } # end printWindow
@@ -1975,6 +2077,7 @@ sub printWindow {
 
 # display complete help screen
 sub showErrorWhilePrinting {
+    
     my ($zinc, $res) = @_;
     my $dir = `pwd`; chomp ($dir);
     $help_print->destroy if $help_print and Tk::Exists($help_print);
@@ -1994,176 +2097,13 @@ sub showErrorWhilePrinting {
 
 #---------------------------------------------------------------------------
 #
-# HELP FUNCTIONS
+# Help functions
 #
 #---------------------------------------------------------------------------
-# display complete help screen
-sub showgeneralhelp {
-    if (@instances == 1) {
-	&showinstancehelp($instances[0], "Tk::Zinc::Debug help", 1);
-    } elsif (@instances > 1) {
-	$help_tl{gene}->destroy if $help_tl{gene} and Tk::Exists($help_tl{gene});
-	$help_tl{gene} = $instances[0]->Toplevel;
-	$help_tl{gene}->title("Tk::Zinc::Debug general help");
-
-	my $text = $help_tl{gene}->Scrolled('Text', -font =>
-					     scalar $instances[0]->cget(-font),
-					     -wrap => 'word',
-					     -foreground => 'gray10',
-					     -width => 50,
-					     -height => 15,
-					     -scrollbars => 'osoe',
-					     );
-	$text->tagConfigure('keyword', -foreground => 'darkblue');
-	$text->tagConfigure('title', -foreground => 'ivory',
-			    -background => 'gray60',
-			    -spacing1 => 3,
-			    -spacing3 => 3);
-
-	my $fm = $text->Frame;
-	for (my $i=0; $i < @instances; $i++) {
-	    my $j = $i + 1;
-	    $fm->Label(-text => 'Instance #'.$j)->grid(-row => $j, -column => 1);
-	    $fm->Button(-text => 'Show',
-			-cursor  => 'top_left_arrow',
-			-command => [\&showinstance, $instances[$i]],
-			)->grid(-row => $j, -column => 2);
-	    
-	    $fm->Button(-text => 'Take focus',
-			-cursor  => 'top_left_arrow',
-			-command => [\&takefocus, $instances[$i]],
-			)->grid(-row => $j, -column => 3);
-	    
-	    $fm->Button(-text => 'Help',
-			-cursor  => 'top_left_arrow',
-			-command => [\&showinstancehelp, $instances[$i],
-				     'Tk::Zinc::Debug help about instance #'.$j],
-			)->grid(-row => $j, -column => 4);
-	    #&showinstancehelp($_);
-	}
-	$text->insert('end', "Several instances of Zinc widget are managed. ");
-	$text->insert('end', "They are listed in the following table. \n\n\n");
-	$text->window('create', 'end', -window => $fm);
-	$text->insert('end', "\n\n\nStrike <");
-	$text->insert('end', 'Escape', 'keyword');
-	$text->insert('end', "> key to display this help message again.");
-
-	$help_tl{gene}->Button(-command => sub {$help_tl{gene}->destroy},
-			    -text => 'Close')->pack(-side => 'bottom',
-						 -pady => 10);
-	$text->pack(-side => 'top', -pady => 10, -padx => 10);
-    }
-} # end showgeneralhelp
-
-sub showinstancehelp {
-    my $zinc = shift;
-    my $title = shift;
-    my $singleflag = shift;
-    &takefocus($zinc);
-    $help_tl{$zinc}->destroy if $help_tl{$zinc} and Tk::Exists($help_tl{$zinc});
-    if ($singleflag) {
-	$help_tl{$zinc} = $zinc->Toplevel;
-    } else {
-	$help_tl{$zinc} = $help_tl{gene}->Toplevel;
-	$help_tl{$zinc}->transient($help_tl{gene}) unless $singleflag;
-    }
-    $help_tl{$zinc}->title($title);
-
-    my $text = $help_tl{$zinc}->Scrolled('Text', -font => scalar $zinc->cget(-font),
-					 -wrap => 'word',
-					 -foreground => 'gray10',
-					 -width => 50,
-					 -height => 32,
-					 -scrollbars => 'osoe',
-					 );
-    $text->tagConfigure('keyword', -foreground => 'darkblue');
-    $text->tagConfigure('title', -foreground => 'ivory',
-			-background => 'gray60',
-			-spacing1 => 3,
-			-spacing3 => 3);
-    my $zincnb = scalar keys(%instances);
-   if ($treeKey{$zinc}) {
-	$text->insert('end', " To display the items tree\n", 'title');
-	$text->insert('end', "\nUse the <");
-	$text->insert('end', $treeKey{$zinc}, 'keyword');
-	$text->insert('end', "> sequence.\n\n");
-
-	$text->insert('end', " To generate perl code\n", 'title');
-	$text->insert('end', "\nUse the <");
-	$text->insert('end', $treeKey{$zinc}, 'keyword');
-	$text->insert('end', "> sequence to display the item tree. Then select a branch of the tree ");
-	$text->insert('end', "and press on the ");
-	$text->insert('end', "Build code", 'keyword');
-	$text->insert('end', " button.\n\n");
-	
-    }
-    if ($enclosedModBtn{$zinc}) {
-	my $eseq = $enclosedModBtn{$zinc}->[0]."-Button".$enclosedModBtn{$zinc}->[1];
-	my $oseq = $overlapModBtn{$zinc}->[0]."-Button".$overlapModBtn{$zinc}->[1];
-	$eseq =~ s/^-//;
-	$oseq =~ s/^-//;
-	$text->insert('end', " To analyse a particular area\n", 'title');
-	$text->insert('end', "\nWith <");
-	$text->insert('end', $oseq, 'keyword');
-	$text->insert('end', "> sequence, create a rectangular area to parse items ");
-	$text->insert('end', "which overlap it.\n");
-	$text->insert('end', "\nWith <");
-	$text->insert('end',  $eseq, 'keyword');
-	$text->insert('end', "> sequence, create a rectangular area to parse items ");
-	$text->insert('end', "which are enclosed in it.\n\n");
-    }
-    if ($treeKey{$zinc} or $enclosedModBtn{$zinc}) {
-	$text->insert('end', "To analyse a specific item.\n", 'title');
-	if ($enclosedModBtn{$zinc}) {
-	    $text->insert('end', "\nWith <");
-	    $text->insert('end', $searchKey{$zinc}, 'keyword');
-	    $text->insert('end', "> sequence, locate a specific item entering ".
-			  "its tagOrId.\n");
-	}
-	if ($treeKey{$zinc}) {
-	    my $tseq = $treeModBtn{$zinc}->[0]."-Button".$treeModBtn{$zinc}->[1];
-	    $tseq =~ s/^-//;
-	    $text->insert('end', "\nWith <");
-	    $text->insert('end', $tseq, 'keyword');
-	    $text->insert('end', "> sequence, select a particular item in the ".
-			  "application window and locate it in the tree.\n");
-	}
-	$text->insert('end', "\n");
-    }
-
-    if ($snapKey{$zinc}) {
-	$text->insert('end', "To snapshot the application window.\n", 'title');
-	$text->insert('end', "\nWith <");
-	$text->insert('end', $snapKey{$zinc}, 'keyword');
-	$text->insert('end', "> sequence you can acquire " .
-		      "a snapshot of the full zinc window. ".
-		      "It will be saved in the current directory ".
-		      "with the name zincsnapshot<n>.png ".
-		      "The ImageMagic package must be installed.\n");
-    }
-    my $fm = $help_tl{$zinc}->Frame->pack(-side => 'bottom',
-					  -pady => 5,
-					  -expand => 1,
-					  -fill => 'none');
-    $fm->Button(-text => 'Show',
-		-cursor  => 'top_left_arrow',
-		-command => [\&showinstance, $zinc],
-		)->pack(-side => 'left', -padx => 10) unless $singleflag;
-	    
-    $fm->Button(-text => 'Take focus',
-		-cursor  => 'top_left_arrow',
-		-command => [\&takefocus, $zinc],
-		)->pack(-side => 'left', -padx => 10);
-	    
-    $fm->Button(-command => sub {$help_tl{$zinc}->destroy},
-			    -text => 'Close')->pack(-side => 'left', -padx => 10);
-    $text->pack(-side => 'top', -pady => 10, -padx => 10);
-    
-} # end showsinstancehelp
-
 
 # display help about tree
 sub showHelpAboutTree {
+    
     my $zinc = shift;
     $helptree_tl->destroy if $helptree_tl and Tk::Exists($helptree_tl);
     $helptree_tl = $tree_tl->Toplevel;
@@ -2212,11 +2152,12 @@ sub showHelpAboutTree {
 			 -text => 'Close')->pack(-side => 'bottom',
 						 -pady => 10);
     $text->pack->pack(-side => 'top', -pady => 10, -padx => 10);
+
 } # end showHelpAboutTree
 
 
-
 sub showHelpAboutAttributes {
+    
     my $zinc = shift;
     $helptree_tl->destroy if $helptree_tl and Tk::Exists($helptree_tl);
     $helptree_tl = $zinc->Toplevel;
@@ -2265,7 +2206,9 @@ sub showHelpAboutAttributes {
 
 } # end showHelpAboutAttributes
 
+
 sub showHelpAboutCoords {
+    
     my $zinc = shift;
     $helpcoords_tl->destroy if $helpcoords_tl and Tk::Exists($helpcoords_tl);
     $helpcoords_tl = $zinc->Toplevel;
@@ -2321,6 +2264,7 @@ sub showHelpAboutCoords {
 
 
 sub infoAboutHighlighting {
+    
     my $text = shift;
     $text->insert('end', "By default, using ");
     $text->insert('end', "left mouse button", "keyword");
@@ -2336,12 +2280,276 @@ sub infoAboutHighlighting {
 } # end infoAboutHighlighting
 
 
+sub balloonhelp {
+    
+    my $b = $control_tl->Balloon(-balloonposition => 'widget',
+				 -font => '6x13');
+    $b->attach($button{zn},-balloonmsg =>
+	       "Widget instance selector. Use it when \n".
+	       "your application takes more than one  \n".
+	       "TkZinc instance. When this mode is on,\n".
+	       "select the TkZinc instance you want   \n".
+	       "inspect just by clicking on it.       ");
+    $b->attach($button{findenclosed}, -balloonmsg =>
+	       "Inspect all items *enclosed* in a  \n".
+	       "rectangular area. When this mode is\n".
+	       "selected, draw rectangle using left\n".
+	       "mouse button.                      ");
+    $b->attach($button{findoverlap}, -balloonmsg =>
+	       "Inspect all items which *overlap* \n".
+	       "a rectangular area. When this mode\n".
+	       "is selected, draw rectangle using \n".
+	       "left mouse button.                ");
+    $b->attach($button{tree}, -balloonmsg =>
+	       "Display the items hierarchy.");
+    $b->attach($button{item}, -balloonmsg =>
+	       "Locate an item in the items tree.  \n".
+	       "When this mode is on, select in   \n".
+	       "your application the item you want\n".
+	       "to inspect just by clicking on it.");
+    $b->attach($button{id}, -balloonmsg =>
+	       "Open an entry field in which you will  \n".
+	       "enter an item's id you want to inspect.");
+    $b->attach($button{snapshot}, -balloonmsg =>
+	       "Snapshot the application window.");
+    $b->attach($button{zoomminus}, -balloonmsg =>
+	       "Shrink the top group.");
+    $b->attach($button{zoomplus}, -balloonmsg =>
+	       "Expand the top group.");
+    $b->attach($button{move}, -balloonmsg =>
+	       "Translate the top group. When this\n".
+	       "mode is selected, move the top    \n".
+	       "group using left mouse button.    ");
+    $b->attach($button{balloon},-balloonmsg =>
+	       "Balloon help toggle.");
+    $b->attach($button{close},-balloonmsg =>
+	       "Close this buttons bar.");
+    return $b;
+
+} # end balloonhelp
+
+
+
 #---------------------------------------------------------------------------
 #
-# EDITION FUNCTION
+# Bitmaps creation for the buttons of the control bar 
 #
 #---------------------------------------------------------------------------
+
+sub createBitmaps {
+
+    my $zinc = shift;
+    my $bitmaps;
+    
+    $bitmaps->{close} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define close_width 29
+#define close_height 29
+static unsigned char close_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x08, 0x00,
+   0x00, 0x07, 0x1c, 0x00, 0x00, 0x0e, 0x0e, 0x00, 0x00, 0x1c, 0x07, 0x00,
+   0x00, 0xb8, 0x03, 0x00, 0x00, 0xf0, 0x01, 0x00, 0x00, 0xe0, 0x00, 0x00,
+   0x00, 0xf0, 0x01, 0x00, 0x00, 0xb8, 0x03, 0x00, 0x00, 0x1c, 0x07, 0x00,
+   0x00, 0x0e, 0x0e, 0x00, 0x00, 0x07, 0x1c, 0x00, 0x00, 0x02, 0x08, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+EOF
+    $bitmaps->{zn} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define focus_width 29
+#define focus_height 29
+static unsigned char focus_bits[] = {
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0xe0, 0x3f, 0x00, 0x00, 0x60, 0x38, 0x00, 0x00,
+  0x20, 0x18, 0x00, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x00, 0x8e, 0x33, 0x00,
+  0x00, 0x06, 0x7b, 0x00, 0x00, 0x07, 0x67, 0x00, 0x80, 0x03, 0x63, 0x00,
+  0xc0, 0x01, 0x63, 0x00, 0xc0, 0x00, 0x63, 0x00, 0xe0, 0x20, 0x63, 0x00,
+  0x70, 0x30, 0x63, 0x00, 0xf0, 0xbf, 0xe7, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
+EOF
+    $bitmaps->{findenclosed} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define findenclosed_width 29
+#define findenclosed_height 29
+static unsigned char findenclosed_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00,
+   0xfc, 0xff, 0xff, 0x03, 0xfc, 0xff, 0xff, 0x03, 0x3c, 0x00, 0x00, 0x03,
+   0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03,
+   0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03,
+   0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03,
+   0x18, 0x80, 0x00, 0x03, 0x18, 0x00, 0x01, 0x03, 0x18, 0x00, 0x22, 0x03,
+   0x18, 0x00, 0x24, 0x03, 0x18, 0x00, 0x28, 0x03, 0x18, 0x00, 0x20, 0x03,
+   0x18, 0x00, 0x3e, 0x03, 0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03,
+   0xf8, 0xff, 0xff, 0x03, 0xf8, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+EOF
+    $bitmaps->{findoverlap} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define findoverlap_width 29
+#define findoverlap_height 29
+static unsigned char findoverlap_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00,
+   0xfc, 0xb6, 0x6d, 0x03, 0xfc, 0xb6, 0x6d, 0x03, 0x3c, 0x00, 0x00, 0x00,
+   0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+   0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+   0x18, 0x00, 0x00, 0x03, 0x18, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+   0x18, 0x80, 0x00, 0x03, 0x18, 0x00, 0x01, 0x03, 0x00, 0x00, 0x22, 0x00,
+   0x18, 0x00, 0x24, 0x03, 0x18, 0x00, 0x28, 0x03, 0x00, 0x00, 0x20, 0x00,
+   0x18, 0x00, 0x3e, 0x03, 0x18, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+   0xd8, 0xb6, 0x6d, 0x03, 0xd8, 0xb6, 0x6d, 0x03, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+EOF
+    $bitmaps->{tree} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define tree_width 29
+#define tree_height 29
+static unsigned char tree_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0xf0, 0x07, 0x00, 0x00, 0x10, 0x04, 0x00, 0x00, 0x10, 0x04, 0x00,
+   0xc0, 0x1f, 0x04, 0x00, 0x40, 0x10, 0x04, 0x00, 0x40, 0x10, 0x04, 0x00,
+   0x40, 0xf0, 0x07, 0x00, 0x40, 0x00, 0x00, 0x00, 0x40, 0x00, 0xe0, 0x0f,
+   0x40, 0x00, 0x20, 0x08, 0x7c, 0x00, 0x20, 0x08, 0x40, 0x00, 0x3f, 0x08,
+   0x40, 0x00, 0x21, 0x08, 0x40, 0x00, 0x21, 0x08, 0x40, 0x00, 0xe1, 0x0f,
+   0x40, 0x00, 0x01, 0x00, 0x40, 0x00, 0x01, 0x00, 0xc0, 0xff, 0x01, 0x00,
+   0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00,
+   0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x5f, 0x01, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+EOF
+    $bitmaps->{item} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define item_width 29
+#define item_height 29
+static unsigned char item_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x08, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00, 0xf0, 0x00, 0x00, 0x00,
+   0xe0, 0x03, 0x00, 0x00, 0xe0, 0x07, 0x00, 0x00, 0xc0, 0x1f, 0x00, 0x00,
+   0xc0, 0x7f, 0x00, 0x00, 0x80, 0xff, 0x01, 0x00, 0x00, 0xff, 0x03, 0x00,
+   0x00, 0xff, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x00, 0xfe, 0x00, 0x00,
+   0x00, 0xdc, 0x01, 0x00, 0x00, 0x8c, 0x03, 0x00, 0x00, 0x08, 0x07, 0x00,
+   0x00, 0x00, 0x0e, 0x00, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x00, 0x38, 0x00,
+   0x00, 0x00, 0x70, 0x00, 0x00, 0x00, 0xe0, 0x00, 0x00, 0x00, 0x40, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+EOF
+    $bitmaps->{id} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define id_width 29
+#define id_height 29
+static unsigned char id_bits[] = {
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x0e, 0x00, 0x00, 0x06, 0x0c, 0x00,
+  0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x87, 0x0f, 0x00,
+  0x00, 0xc6, 0x0c, 0x00, 0x00, 0x66, 0x0c, 0x00, 0x00, 0x66, 0x0c, 0x00,
+  0x00, 0x66, 0x0c, 0x00, 0x00, 0x66, 0x0c, 0x00, 0x00, 0x66, 0x0c, 0x00,
+  0x00, 0xc6, 0x0c, 0x00, 0x00, 0x8f, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
+EOF
+    $bitmaps->{snapshot} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define snapshot_width 29
+#define snapshot_height 29
+static unsigned char snapshot_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x03, 0x1f, 0x00,
+   0x80, 0x03, 0x11, 0x00, 0xe0, 0xff, 0xf1, 0x00, 0xf0, 0xff, 0xff, 0x01,
+   0xf0, 0xff, 0xff, 0x01, 0xf0, 0xff, 0xff, 0x01, 0xf0, 0x0f, 0xfe, 0x01,
+   0xf0, 0xe7, 0xfc, 0x01, 0xf0, 0x13, 0xf9, 0x01, 0xf0, 0x09, 0xf2, 0x01,
+   0xf0, 0x05, 0xf4, 0x01, 0xf0, 0x05, 0xf4, 0x01, 0xf0, 0x05, 0xf4, 0x01,
+   0xf0, 0x09, 0xf2, 0x01, 0xf0, 0x13, 0xf9, 0x01, 0xf0, 0xe7, 0xfc, 0x01,
+   0xf0, 0x0f, 0xfe, 0x01, 0xf0, 0xff, 0xff, 0x01, 0xe0, 0xff, 0xff, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+EOF
+    $bitmaps->{zoomminus} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define zoomminus_width 29
+#define zoomminus_height 29
+static unsigned char zoomminus_bits[] = {
+   0x00, 0x0e, 0x00, 0x00, 0xc0, 0x71, 0x00, 0x00, 0x30, 0x80, 0x01, 0x00,
+   0x08, 0x00, 0x02, 0x00, 0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x04, 0x00,
+   0x02, 0x00, 0x08, 0x00, 0x02, 0x00, 0x08, 0x00, 0x02, 0x00, 0x08, 0x00,
+   0xe1, 0xff, 0x10, 0x00, 0xe1, 0xff, 0x10, 0x00, 0xe1, 0xff, 0x10, 0x00,
+   0x02, 0x00, 0x08, 0x00, 0x02, 0x00, 0x08, 0x00, 0x02, 0x00, 0x08, 0x00,
+   0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x08, 0x00, 0x02, 0x00,
+   0x30, 0x80, 0x05, 0x00, 0xc0, 0x71, 0x28, 0x00, 0x00, 0x0e, 0x70, 0x00,
+   0x00, 0x00, 0xf8, 0x00, 0x00, 0x00, 0xf0, 0x01, 0x00, 0x00, 0xe0, 0x03,
+   0x00, 0x00, 0xc0, 0x07, 0x00, 0x00, 0x80, 0x0f, 0x00, 0x00, 0x00, 0x1f,
+   0x00, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x00, 0x04};
+EOF
+
+    $bitmaps->{zoomplus} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define zoomplus_width 29
+#define zoomplus_height 29
+static unsigned char zoomplus_bits[] = {
+   0x00, 0x0e, 0x00, 0x00, 0xc0, 0x71, 0x00, 0x00, 0x30, 0x80, 0x01, 0x00,
+   0x08, 0x00, 0x02, 0x00, 0x04, 0x00, 0x04, 0x00, 0x04, 0x0e, 0x04, 0x00,
+   0x02, 0x0e, 0x08, 0x00, 0x02, 0x0e, 0x08, 0x00, 0x02, 0x0e, 0x08, 0x00,
+   0xe1, 0xff, 0x10, 0x00, 0xe1, 0xff, 0x10, 0x00, 0xe1, 0xff, 0x10, 0x00,
+   0x02, 0x0e, 0x08, 0x00, 0x02, 0x0e, 0x08, 0x00, 0x02, 0x0e, 0x08, 0x00,
+   0x04, 0x0e, 0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x08, 0x00, 0x02, 0x00,
+   0x30, 0x80, 0x05, 0x00, 0xc0, 0x71, 0x28, 0x00, 0x00, 0x0e, 0x70, 0x00,
+   0x00, 0x00, 0xf8, 0x00, 0x00, 0x00, 0xf0, 0x01, 0x00, 0x00, 0xe0, 0x03,
+   0x00, 0x00, 0xc0, 0x07, 0x00, 0x00, 0x80, 0x0f, 0x00, 0x00, 0x00, 0x1f,
+   0x00, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x00, 0x04};
+EOF
+
+    $bitmaps->{move} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define hand_width 29
+#define hand_height 29
+static unsigned char hand_bits[] = {
+   0x00, 0xe0, 0x00, 0x00, 0x00, 0x10, 0x01, 0x00, 0x80, 0x13, 0x0f, 0x00,
+   0x40, 0x12, 0x11, 0x00, 0x40, 0x14, 0x11, 0x00, 0x40, 0x14, 0xd1, 0x01,
+   0x80, 0x14, 0x31, 0x02, 0x80, 0x14, 0x31, 0x02, 0x80, 0x18, 0x31, 0x02,
+   0x80, 0x18, 0x31, 0x02, 0x00, 0x11, 0x31, 0x02, 0x00, 0x11, 0x11, 0x01,
+   0x1c, 0x11, 0x11, 0x01, 0x22, 0x01, 0x11, 0x01, 0x42, 0x01, 0x10, 0x01,
+   0x84, 0x01, 0x00, 0x01, 0x88, 0x01, 0x00, 0x01, 0x08, 0x01, 0x00, 0x02,
+   0x08, 0x02, 0x00, 0x02, 0x10, 0x00, 0x00, 0x02, 0x20, 0x00, 0x00, 0x02,
+   0x20, 0x00, 0x00, 0x02, 0x40, 0x00, 0x00, 0x02, 0x40, 0x00, 0x00, 0x01,
+   0x80, 0x00, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x06, 0x40, 0x00,
+   0x00, 0x08, 0x40, 0x00, 0x00, 0x08, 0x40, 0x00};
+EOF
+
+    $bitmaps->{balloon} = $zinc->toplevel->Bitmap(-data => <<EOF);
+#define balloon_width 29
+#define balloon_height 29
+static unsigned char balloon_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe0, 0xff, 0xff, 0x00,
+   0x10, 0x00, 0x00, 0x01, 0x08, 0x00, 0x00, 0x02, 0x08, 0x00, 0x00, 0x02,
+   0x08, 0x00, 0x00, 0x02, 0x08, 0x00, 0x00, 0x02, 0x08, 0x00, 0x00, 0x02,
+   0x08, 0x00, 0x00, 0x02, 0x08, 0x00, 0x00, 0x02, 0x08, 0x00, 0x00, 0x02,
+   0x08, 0x00, 0x00, 0x02, 0x08, 0x00, 0x00, 0x02, 0x08, 0x00, 0x00, 0x02,
+   0x10, 0x00, 0x00, 0x01, 0xe0, 0xe0, 0xff, 0x00, 0x00, 0x11, 0x00, 0x00,
+   0x00, 0x09, 0x00, 0x00, 0x80, 0x04, 0x00, 0x00, 0x80, 0x02, 0x00, 0x00,
+   0x40, 0x01, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00,
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+EOF
+
+    return $bitmaps;
+   
+} # end  createBitmaps
+
+
+#---------------------------------------------------------------------------
+#
+# Miscellaneous
+#
+#---------------------------------------------------------------------------
+
+sub getsize {
+    
+    my $zinc = shift;
+    unless (defined $wwidth{$zinc} and $wwidth{$zinc} > 1) {
+        $zinc->update;
+	my $geom = $zinc->geometry =~ /(\d+)x(\d+)+/=~ /(\d+)x(\d+)+/;
+	($wwidth{$zinc}, $wheight{$zinc}) = ($1, $2);
+    }
+    
+} # end getsize
+
+
 sub entryoption {
+    
     my ($fm, $item, $zinc, $option, $def, $widthmax, $widthmin, $height) = @_;
     my $arrayflag;
     unless ($def) {
@@ -2353,6 +2561,7 @@ sub entryoption {
 	    $def = $def[0];
 	}
     }
+    $def = "" unless defined $def;
     my $i0;
     my $e;
     if ($def =~ /\n/) {
@@ -2407,40 +2616,63 @@ sub entryoption {
 } # end entryoption
 
 
-sub showinstance {
-    my $zinc = shift;
-    my $a = $zinc->itemcget(1, -alpha);
-    my $b = ($a > 40) ? 10 : 100;
-    $zinc->itemconfigure(1, -alpha => $b);
-    $zinc->update;
-    $zinc->after(100);
-    $zinc->itemconfigure(1, -alpha => $a);
-    $zinc->update;
-
-} # end showinstance
+sub instances {
+    
+    return @instances;
+    
+} # end instances
 
 
-sub takefocus {
-    my $zinc = shift;
-    $zinc->Tk::focus;
+sub savebindings {
 
-} # end takefocus
+    my ($zinc) = @_;
+    for my $seq ('ButtonPress-1', 'B1-Motion', 'ButtonRelease-1') {
+	$userbindings{$zinc}->{$seq} = $zinc->Tk::bind('<'.$seq.'>')
+	    unless defined $userbindings{$zinc}->{$seq};
+	$userbindings{$zinc}->{$seq} = "" unless defined $userbindings{$zinc}->{$seq};
+	#print "savebindings seq=$seq cb=$userbindings{$zinc}->{$seq}\n";
+	$zinc->Tk::bind('<'.$seq.'>', "");
+    }
+    
+} # end savebindings
+
+
+sub restorebindings {
+
+    my ($zinc) = @_;
+    for my $seq ('ButtonPress-1', 'B1-Motion', 'ButtonRelease-1') {
+	next unless defined $userbindings{$zinc}->{$seq};
+	$zinc->Tk::bind('<'.$seq.'>', $userbindings{$zinc}->{$seq});
+	#print "restorebindings seq=$seq cb=$userbindings{$zinc}->{$seq}\n";
+	delete $userbindings{$zinc}->{$seq};
+    }
+    
+} # end restorebindings
 
 
 sub newinstance {
+    
     my $zinc = shift;
     return if $instances{$zinc};
-    &takefocus($zinc);
+    $zinc->toplevel->Tk::bind('<Key-Escape>', sub {
+	$button{zn}->destroy() if @instances == 1 and Tk::Exists($button{zn});
+	$control_tl->deiconify();
+	$control_tl->raise();
+    });
     $instances{$zinc} = 1;    
     push(@instances, $zinc);
+    $zinc->Tk::focus;
+    $selectedzinc = $zinc;
     
 } # end newinstance
+
+
 
 1;
 
 __END__
 
-
+    
 =head1 NAME
 
 Tk::Zinc::Debug - a perl module for analysing a Zinc application. 
@@ -2448,109 +2680,72 @@ Tk::Zinc::Debug - a perl module for analysing a Zinc application.
 
 =head1 SYNOPSIS
 
- perl -MTk::Zinc::Debug zincscript [zincscript-opts] [zincdebug-opts]
+ perl -MTk::Zinc::Debug zincscript [zincscript-opts] [Debug-initopts]
     
      or
     
  use Tk::Zinc::Debug;
  my $zinc = MainWindow->new()->Zinc()->pack;
- finditems($zinc, [options]);
- tree($zinc, [options]);
- snapshot($zinc, [options]);
+ Tk::Zinc::Debug::init($zinc, [options]);
 
 
 =head1 DESCRIPTION
 
-Tk::Zinc::Debug provides an interface to help developers to debug or analyse Zinc applications.
+Tk::Zinc::Debug provides an interface to help developers to inspect Zinc applications.
 
-With B<finditems()> function, you are able to scan all items which are enclosed in a rectangular area you have first drawn by drag & drop, or all items which overlap it. Result is a Tk table which presents details (options, coordinates, ...) about found items; you can also highlight a particular item, even if it's not visible, by clicking on its corresponding button in the table. You can also display particular item's features by entering this id in dedicated entry field
+Press the B<Escape> key in the toplevel of your application to display the Tk::Zinc::Debug buttons bar.
 
-B<tree()> function displays items hierarchy. You can find a particular item's position in the tree and you can highlight items and see their features as described above. You can also generate the perl code corresponding to a selected branch. However there are some limitations : transformations and images can't be reproduced.
 
-With B<snapshot()> function, you are able to snapshot the application window, in order to illustrate a graphical bug for example.
+Features :
+
+=over
     
-Press B<Escape> key in the toplevel of the application to have some help about available input sequences.
+=item B<o> scan a rectangular area
 
-B<If you load Tk::Zinc::Debug using the -M perl option, nothing needs to be added to your code>. By default, all the previous specific functions are invoked with their default attributes for each instance of Zinc widget. You can overload these by passing the same options to the command. Note that perl arrays must be transformed to comma separated string. For example:
-   perl -M Tk::Zinc::Debug zincscript -optionsToDisplay '-tags'
-   -optionsFormat row -itemModBtn Control,1
+Scan all items which are enclosed in a rectangular area you have first drawn by drag & drop, or all items which overlap it. Result is a Tk table which presents details (options, coordinates, ...) about found items; you can also highlight a particular item, even if it's not visible, by clicking on its corresponding button in the table. You can also display particular item's features by entering this id in dedicated entry field
+
+=item B<o> display items hierarchy
+
+You can find a particular item's position in the tree and you can highlight items and see their features as described above. You can also generate the perl code corresponding to a selected branch. However there are some limitations : transformations and images can't be reproduced.
+
+=item B<o> snapshot the application window
+
+In order to illustrate a graphical bug for example.
+    
+=item B<o> zoom/translate the top group
+    
+=back
 
 
-=head1 FUNCTIONS 
+=head2 Loading Tk::Zinc::Debug as a plugin
+    
+If you load Tk::Zinc::Debug using the -M perl option, B<nothing needs to be added to your code>. In this case, the B<init()> function is automatically invoked with its default attributes for each instance of Zinc widget. You can overload these by passing the same options to the command. 
+
+=head1 FUNCTION
 
 
 =over
 
-=item B<finditems>($zinc, ?option => value, ...?)
+=item B<init>($zinc, ?option => value, ...?)
 
 This function creates required Tk bindings to permit items search. You can specify the following options :
 
 =over
 
-=item E<32>E<32>E<32>B<-color> => color
-
-Defines color of search area contour. Default to 'sienna'.
-
-=item E<32>E<32>E<32>B<-enclosedModBtn> => [Mod, Btn]
-
-Defines input sequence used to process "enclosed" search. Default to ['Control', 3]. B<Mod> can be set to undef.
-
-=item E<32>E<32>E<32>B<-overlapModBtn> => [Mod, Btn]
-
-Defines input sequence used to process "overlap" search. Default to ['Shift', 3]. B<Mod> can be set to undef.
-
-=item E<32>E<32>E<32>B<-searchKey> => key
-
-Defines input key used to process particular search. Default to 'Control-f'.
-
-=back
-
-=item B<tree>($zinc, ?option => value, ...?)
-
-This function creates required Tk bindings to build items tree. You can specify the following options :
-
-=over
-
-=item E<32>E<32>E<32>B<-tkey|-key> => key
-
-Defines input sequence used to build and display items tree. Default to 'Control-t'.
-
-=item E<32>E<32>E<32>B<-itemModBtn> => [Mod, Btn]
-
-Defines input sequence used to select an item in the application window in order to display its position in the item's tree. Default to ['Control', 2]. B<Mod> can be set to undef.
-
 =item E<32>E<32>E<32>B<-optionsToDisplay> => opt1[,..,optN]
 
-Used to display some option's values associated to items of tree. Expected argument is a string of commas separated options.
-
+Used to display some option's values associated to items of the tree. Expected argument is a string of commas separated options.
 
 =item E<32>E<32>E<32>B<-optionsFormat> => row | column
 
 Defines the display format of option's values. Default is 'column'.
-
-=back
-
     
-=item B<snapshot>($zinc, ?option => value, ...?)
+=item E<32>E<32>E<32>B<-snapshotBasename> => string
 
-This function creates required Tk binding to snapshot the application window. You can specify the following options :
-
-=over
-
-=item E<32>E<32>E<32>B<-skey|-key> => key
-
-Defines input key used to process a snapshot of the zinc window. Default to ['Control-s'].
-
-=item E<32>E<32>E<32>B<-verbosity> => boolean
-
-Defines if snapshot should print a message on the terminal. Default to true.
-
-=item E<32>E<32>E<32>B<-basename> => "a_string"
-
-Defines the basename used for the file containing the snaphshot. The filename will be <currentdir>/basename<n>.png  Defaulted to zincsnapshot.
-
+Defines the basename used for the file containing the snaphshot. The filename will be <current­dir>/basename<n>.png  Defaulted to 'zincsnapshot'.
 
 =back
+
 
 =back
     
@@ -2561,6 +2756,8 @@ Daniel Etienne <etienne@cena.fr>
 
     
 =head1 HISTORY
+
+Oct 14 2003 : add a control bar, and zoom/translate new functionalities. finditems(), tree(), snapshot() functions become deprecated, initialisation is done using the new init() function.
 
 Oct 07 2003 : contours of curves can be displayed and explored.
 

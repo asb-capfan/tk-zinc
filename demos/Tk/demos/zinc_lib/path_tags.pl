@@ -1,10 +1,10 @@
 #!/usr/bin/perl -w
-# $Id: path_tags.pl,v 1.7 2003/09/15 12:25:05 mertz Exp $
+# $Id: path_tags.pl,v 1.8 2003/10/14 09:01:52 mertz Exp $
 # this pathtatg demo have been developped by C. Mertz mertz@cena.fr
 # with the help of Daniel Etienne etienne@cena.fr
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -37,7 +37,8 @@ use strict;
 #the same objects are cloned and put in an other hierarchy where
 #gr_top is replaced by gr_other_top
 
-my $defaultForecolor = "sienna";
+my $defaultForecolor = "grey80";
+my $selectedColor = "yellow";
 my $mw = MainWindow->new();
 
 ###########################################
@@ -60,7 +61,7 @@ or experiment your own tags in the input field');
 ###########################################
 
 my $zinc = $mw->Zinc(-width => 850, -height => 360, -font => "10x20",
-		     -borderwidth => 0, -backcolor => "white",
+		     -borderwidth => 0, -backcolor => "black",
 		     -forecolor => $defaultForecolor,
 		     )->pack;
 
@@ -88,10 +89,9 @@ $resultfm->Label(-font => "10x20",
 my $explan_txt = $resultfm->Label(-font => "10x20",
 				  -relief => 'flat',
 				  -width => 70,
-				  -height => 3,
+				  -height => 3.5,
 				  -text => '...',
 				  -justify => 'left',
-#				  -anchor => 'w',
 				  -wraplength => '16c',
 				  )->pack(-side => 'left');
 
@@ -235,6 +235,11 @@ sub createSubHierarchy {
 	       -position => [360,220]);
 }
 
+## modifying the priority so that all rectangles and text will be visible
+map { $_, $zinc->itemconfigure($_,-priority => 20)} ($zinc->find('withtype', 'text', ".top*"));
+map { $_, $zinc->itemconfigure($_,-priority => 20)} ($zinc->find('withtype', 'text', ".other_top*"));
+map { $_, $zinc->itemconfigure($_,-priority => 20)} ($zinc->find('withtype', 'group', ".top*"));
+map { $_, $zinc->itemconfigure($_,-priority => 20)} ($zinc->find('withtype', 'group', ".other_top*"));
 
 # converts a list of items ids in a list of sorted tags (the first tag of each item)
 sub items2tags {
@@ -253,7 +258,7 @@ sub items2tags {
 ###    a text item for the group name (i.e. its first tag)
 
 ## backgrounds used to fill rectangles representing groups
-my @backgrounds = qw(grey90 grey82 grey75 grey68 grey60 grey52 grey45);
+my @backgrounds = qw(grey25 grey35 grey43 grey50 grey55);
 
 sub drawHierarchy {
     my ($group,$level) = @_;
@@ -305,10 +310,6 @@ sub displayPathtag {
 #    print "selected: @tags\n";
     $explan_txt->configure(-text => $explanation ? "$explanation\n" : "");
 	
-#    print "selected= ";
-#    foreach (@selected) { print $_, " ", $zinc->type($_), " ",
-#			  join (",",$zinc->gettags($_)), " / ";}
-#    print "\n";
     ## unselecting all items 
     foreach my $item ($zinc->find('withtype', 'text')) {
 	$zinc->itemconfigure($item, -color => $defaultForecolor);
@@ -322,9 +323,9 @@ sub displayPathtag {
 	my $type = $zinc->type($item);
 #	print $item, " ", $zinc->type($item), " ", join (",",$zinc->gettags($item)), "\n";
 	if ($type eq 'text') {
-	    $zinc->itemconfigure($item, -color => "black");
+	    $zinc->itemconfigure($item, -color => $selectedColor);
 	} elsif ($type eq 'rectangle') {
-	    $zinc->itemconfigure($item, -linecolor => "black");
+	    $zinc->itemconfigure($item, -linecolor => $selectedColor);
 	} elsif ($type eq 'group') {
 	    my $tag = ($zinc->gettags($item))[0];
 	    ## as there is 2 // hierachy, we must refine the tag used
@@ -332,14 +333,14 @@ sub displayPathtag {
 	    ## NB: this is due to differences between the group hierarchy
 	    ##     and the graphical object hierarchy used for this demo
 	    if ($zinc->find('ancestors',$item,'top')) {
-		$zinc->itemconfigure(".top*frame_$tag", -linecolor => "black");
-		$zinc->itemconfigure(".top*title_$tag", -color => "black");
+		$zinc->itemconfigure(".top*frame_$tag", -linecolor => $selectedColor);
+		$zinc->itemconfigure(".top*title_$tag", -color => $selectedColor);
 	    } elsif ($zinc->find('ancestors',$item,'other_top')) {
-		$zinc->itemconfigure(".other_top*frame_$tag", -linecolor => "black");
-		$zinc->itemconfigure(".other_top*title_$tag", -color => "black");
+		$zinc->itemconfigure(".other_top*frame_$tag", -linecolor => $selectedColor);
+		$zinc->itemconfigure(".other_top*title_$tag", -color => $selectedColor);
 	    } else {
-		$zinc->itemconfigure("frame_$tag", -linecolor => "black");
-		$zinc->itemconfigure("title_$tag", -color => "black");
+		$zinc->itemconfigure("frame_$tag", -linecolor => $selectedColor);
+		$zinc->itemconfigure("title_$tag", -color => $selectedColor);
 	    }
 	}
     }

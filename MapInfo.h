@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: MapInfo.h,v 1.12 2003/04/16 09:49:22 lecoanet Exp $
+ * $Id: MapInfo.h,v 1.13 2003/12/11 08:16:15 lecoanet Exp $
  */
 
 /*
@@ -37,6 +37,7 @@ extern "C" {
 
 #include "Types.h"
 #include "List.h"
+#include "Geo.h"
   
 
 /*
@@ -62,35 +63,33 @@ typedef enum {
   ZnMapInfoUnderlinedText
 } ZnMapInfoTextStyle;
 
-typedef struct {
-  int	x, y;
-} ZnMapInfoPointStruct, *ZnMapInfoPoint;
-  
   
 void ZnMapInfoGetLine(ZnMapInfoId map_info, unsigned int index, ZnPtr *tag,
-		      ZnMapInfoLineStyle *line_style, int *line_width,
-		      int *x_from, int *y_from, int *x_to, int *y_to);
+		      ZnMapInfoLineStyle *line_style, ZnDim *line_width,
+		      ZnPos *x_from, ZnPos *y_from,
+		      ZnPos *x_to, ZnPos *y_to);
 unsigned int ZnMapInfoNumLines(ZnMapInfoId map_info);
 void ZnMapInfoGetMarks(ZnMapInfoId map_info, unsigned int index,
-		       ZnMapInfoPoint *marks, unsigned int *num_marks);
+		       ZnPoint **marks, unsigned int *num_marks);
 void ZnMapInfoGetSymbol(ZnMapInfoId map_info, unsigned int index, ZnPtr *tag,
-			int *x, int *y, char *symbol);
+			ZnPos *x, ZnPos *y, char *symbol);
 unsigned int ZnMapInfoNumSymbols(ZnMapInfoId map_info);
 void ZnMapInfoGetText(ZnMapInfoId map_info, unsigned int index, ZnPtr *tag,
-		      ZnMapInfoTextStyle *text_style, ZnMapInfoLineStyle *line_style,
-		      int *x, int *y, char **text);
+		      ZnMapInfoTextStyle *text_style,
+		      ZnMapInfoLineStyle *line_style,
+		      ZnPos *x, ZnPos *y, char **text);
 unsigned int ZnMapInfoNumTexts(ZnMapInfoId map_info);
 void ZnMapInfoGetArc(ZnMapInfoId map_info, unsigned int index, ZnPtr *tag,
-		     ZnMapInfoLineStyle *line_style, int *line_width,
-		     int *center_x, int *center_y, int *radius,
-		     int *start_angle, int *extend);
+		     ZnMapInfoLineStyle *line_style, ZnDim *line_width,
+		     ZnPos *center_x, ZnPos *center_y, ZnDim *radius,
+		     ZnReal *start_angle, ZnReal *extend);
 unsigned int ZnMapInfoNumArcs(ZnMapInfoId map_info);
 
 
 typedef void (*ZnMapInfoChangeProc)(ClientData client_data, ZnMapInfoId map_info);
 
-ZnMapInfoId ZnGetMapInfo(Tcl_Interp *interp, char *name, ZnMapInfoChangeProc proc,
-			 ClientData client_data);
+ZnMapInfoId ZnGetMapInfo(Tcl_Interp *interp, char *name,
+			 ZnMapInfoChangeProc proc, ClientData client_data);
 void ZnFreeMapInfo(ZnMapInfoId map_info, ZnMapInfoChangeProc proc,
 		   ClientData client_data);
 

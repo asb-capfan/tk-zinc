@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Fri Dec  2 14:47:42 1994
  *
- * $Id: Rectangle.c,v 1.60 2003/10/02 12:46:10 lecoanet Exp $
+ * $Id: Rectangle.c,v 1.61 2003/12/11 08:14:20 lecoanet Exp $
  */
 
 /*
@@ -37,7 +37,7 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Rectangle.c,v 1.60 2003/10/02 12:46:10 lecoanet Exp $";
+static const char rcsid[] = "$Id: Rectangle.c,v 1.61 2003/12/11 08:14:20 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -345,17 +345,17 @@ ComputeCoordinates(ZnItem	item,
     item->item_bounding_box.corner.x += lw2;
     item->item_bounding_box.corner.y += lw2;
   }
-  item->item_bounding_box.orig.x -= 1;
-  item->item_bounding_box.orig.y -= 1;
-  item->item_bounding_box.corner.x += 1;
-  item->item_bounding_box.corner.y += 1;
+  item->item_bounding_box.orig.x -= 0.5;
+  item->item_bounding_box.orig.y -= 0.5;
+  item->item_bounding_box.corner.x += 0.5;
+  item->item_bounding_box.corner.y += 0.5;
   
   delta = rect->dev[0].y - rect->dev[1].y;
   delta = ABS(delta);
   aligned = delta < X_PRECISION_LIMIT;
-  delta = rect->dev[0].x - rect->dev[1].x;
+  delta = rect->dev[0].x - rect->dev[3].x;
   delta = ABS(delta);
-  aligned |= delta < X_PRECISION_LIMIT;
+  aligned &= delta < X_PRECISION_LIMIT;
   ASSIGN(rect->flags, ALIGNED_BIT, aligned);
   
 #ifdef GL
@@ -777,7 +777,7 @@ GetClipVertices(ZnItem		item,
 
   if (ISSET(rect->flags, ALIGNED_BIT)) {
     ZnListAssertSize(item->wi->work_pts, 2);
-    points = (ZnPoint *) ZnListArray(item->wi->work_pts);
+    points = ZnListArray(item->wi->work_pts);
     ZnTriStrip1(tristrip, points, 2, False);
     tristrip->strips[0].fan = False;
   
@@ -799,7 +799,13 @@ GetClipVertices(ZnItem		item,
     }
   }
   else {
-    ZnTriStrip1(tristrip, rect->dev, 4, False);
+    ZnListAssertSize(item->wi->work_pts, 4);
+    points = ZnListArray(item->wi->work_pts);
+    points[0] = rect->dev[1];
+    points[1] = rect->dev[2];
+    points[2] = rect->dev[0];
+    points[3] = rect->dev[3];
+    ZnTriStrip1(tristrip, points, 4, False);
   }
 
   return ISSET(rect->flags, ALIGNED_BIT);

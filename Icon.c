@@ -33,7 +33,7 @@
 #include "WidgetInfo.h"
 
 
-static const char rcsid[] = "$Id: Icon.c,v 1.32 2003/10/03 08:25:30 lecoanet Exp $";
+static const char rcsid[] = "$Id: Icon.c,v 1.33 2003/12/11 08:12:28 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -645,7 +645,13 @@ GetClipVertices(ZnItem		item,
   ZnPoint	*points;
   
   if (item->wi->render) {
-    ZnTriStrip1(tristrip, icon->dev, 4, False);
+    ZnListAssertSize(item->wi->work_pts, 4);
+    points = ZnListArray(item->wi->work_pts);
+    points[0] = icon->dev[1];
+    points[1] = icon->dev[2];
+    points[2] = icon->dev[0];
+    points[3] = icon->dev[3];
+    ZnTriStrip1(tristrip, points, 4, False);
     
     return False;
   }

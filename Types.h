@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: Types.h,v 1.38 2003/10/08 08:08:18 lecoanet Exp $
+ * $Id: Types.h,v 1.39 2003/12/11 08:18:56 lecoanet Exp $
  */
 
 /*
@@ -91,7 +91,7 @@ extern "C" {
 #endif
 
 
-typedef double	ZnReal;	/* Keep it a double for GL. */
+typedef double	ZnReal;	/* Keep it a double for GL and Tcl. */
 typedef int	ZnBool;	/* Keep it an int to keep Tk happy */
 typedef ZnReal	ZnPos;
 typedef ZnReal	ZnDim;

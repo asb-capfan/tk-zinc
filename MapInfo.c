@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: MapInfo.c,v 1.20 2003/10/02 07:50:57 lecoanet Exp $
+ * $Id: MapInfo.c,v 1.21 2003/12/11 08:15:16 lecoanet Exp $
  */
 
 /*
@@ -42,7 +42,7 @@
 
 
 
-static const char rcsid[] = "$Id: MapInfo.c,v 1.20 2003/10/02 07:50:57 lecoanet Exp $";
+static const char rcsid[] = "$Id: MapInfo.c,v 1.21 2003/12/11 08:15:16 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -57,7 +57,7 @@ typedef struct {
   ZnPtr			tag;
   ZnMapInfoLineStyle	style;
   int			width;
-  ZnMapInfoPointStruct	center;
+  ZnPoint		center;
   unsigned int		radius;
   int			start_angle;
   int			extend;
@@ -67,15 +67,15 @@ typedef struct {
   ZnPtr			tag;
   ZnMapInfoLineStyle	style;
   int			width;
-  ZnMapInfoPointStruct	from;
-  ZnMapInfoPointStruct	to;
+  ZnPoint		from;
+  ZnPoint		to;
   unsigned int		num_marks;
-  ZnMapInfoPoint	marks;
+  ZnPoint		*marks;
 } ZnMapInfoLineStruct, *ZnMapInfoLine;
 
 typedef struct {
   ZnPtr			tag;
-  ZnMapInfoPointStruct	at;
+  ZnPoint		at;
   char          	symbol[2];
 } ZnMapInfoSymbolStruct, *ZnMapInfoSymbol;
 
@@ -83,7 +83,7 @@ typedef struct {
   ZnPtr			tag;
   ZnMapInfoTextStyle	text_style;
   ZnMapInfoLineStyle	line_style;
-  ZnMapInfoPointStruct	at;
+  ZnPoint		at;
   char          	*text;
 } ZnMapInfoTextStruct, *ZnMapInfoText;
 
@@ -123,19 +123,19 @@ typedef struct {
 static void
 ComputeLineMarks(ZnMapInfoLine	marked_line)
 {
-  double	length;
+  ZnDim	length;
+  ZnPos	x_from = marked_line->from.x;
+  ZnPos	y_from = marked_line->from.y;
+  ZnPos	x_to = marked_line->to.x;
+  ZnPos	y_to = marked_line->to.y;
+  ZnPos	delta_x = x_from - x_to;
+  ZnPos	delta_y = y_from - y_to;
+  ZnPos	step_x, step_y;
   unsigned int	j;
-  int		x_from = marked_line->from.x;
-  int		y_from = marked_line->from.y;
-  int		x_to = marked_line->to.x;
-  int		y_to = marked_line->to.y;
-  int		delta_x = x_from - x_to;
-  int		delta_y = y_from - y_to;
-  int		step_x, step_y;
 
-  length = sqrt((double)((delta_x) * (delta_x) + (delta_y) * (delta_y)));
-  step_x = (int) ((x_to - x_from) * MARKERS_SPACING / length);
-  step_y = (int) ((y_to - y_from) * MARKERS_SPACING / length);
+  length = sqrt(delta_x * delta_x + delta_y * delta_y);
+  step_x = (x_to - x_from) * MARKERS_SPACING / length;
+  step_y = (y_to - y_from) * MARKERS_SPACING / length;
   marked_line->num_marks = (int) (length / MARKERS_SPACING);
 
   /* We don't want markers at ends, so we get rid of the last one
@@ -145,7 +145,7 @@ ComputeLineMarks(ZnMapInfoLine	marked_line)
   }
 
   if (marked_line->num_marks) {
-    marked_line->marks = (ZnMapInfoPoint) ZnMalloc(marked_line->num_marks * sizeof(ZnMapInfoPointStruct));
+    marked_line->marks = ZnMalloc(marked_line->num_marks * sizeof(ZnPoint));
   }
   
   for (j = 0; j < marked_line->num_marks; j++) {
@@ -160,12 +160,13 @@ ZnMapInfoCreate(char	*name)
 {
   ZnMapInfo	new_map;
 
-  new_map = (ZnMapInfo) ZnMalloc(sizeof(ZnMapInfoStruct));
+  new_map = ZnMalloc(sizeof(ZnMapInfoStruct));
   memset((char *) new_map, 0, sizeof(ZnMapInfoStruct));
   if (!name) {
     name = "";
   }
   new_map->name = (char *) ZnMalloc(strlen(name)+1);
+  /*printf("Nouvelle MapInfo: %s\n", name);*/
   strcpy(new_map->name, name);
   
   return((ZnMapInfoId) new_map);
@@ -185,9 +186,9 @@ ZnMapInfoName(ZnMapInfoId	map_info)
 static ZnMapInfoId
 ZnMapInfoDuplicate(ZnMapInfoId	map_info)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfo	new_map;
-  int		i, num_lines, num_texts;
+  unsigned int	i, num_lines, num_texts;
   ZnMapInfoText	new_texts, cur_texts;
   ZnMapInfoLine	new_lines, cur_lines;
 
@@ -195,22 +196,21 @@ ZnMapInfoDuplicate(ZnMapInfoId	map_info)
     return ((ZnMapInfoId) NULL);
   }
   
-  new_map = (ZnMapInfo) ZnMapInfoCreate(cur_map->name);
+  new_map = ZnMapInfoCreate(cur_map->name);
 
   if (cur_map->lines) {
     new_map->lines = ZnListDuplicate(cur_map->lines);
 
-    cur_lines = (ZnMapInfoLine) ZnListArray(cur_map->lines);
-    new_lines = (ZnMapInfoLine) ZnListArray(new_map->lines);
+    cur_lines = ZnListArray(cur_map->lines);
+    new_lines = ZnListArray(new_map->lines);
     num_lines = ZnListSize(cur_map->lines);
 
     for (i = 0; i < num_lines; i++) {
       if (new_lines[i].style == ZnMapInfoLineMarked) {
-	new_lines[i].marks = (ZnMapInfoPoint) ZnMalloc(new_lines[i].num_marks *
-						       sizeof(ZnMapInfoPointStruct));
+	new_lines[i].marks = ZnMalloc(new_lines[i].num_marks * sizeof(ZnPoint));
 	memcpy((char *) new_lines[i].marks,
 	       (char *) cur_lines[i].marks,
-	       new_lines[i].num_marks * sizeof(ZnMapInfoPointStruct));
+	       new_lines[i].num_marks * sizeof(ZnPoint));
       }
     }
   }
@@ -220,12 +220,12 @@ ZnMapInfoDuplicate(ZnMapInfoId	map_info)
   if (cur_map->texts) {
     new_map->texts = ZnListDuplicate(cur_map->texts);
 
-    cur_texts = (ZnMapInfoText) ZnListArray(cur_map->texts);
-    new_texts = (ZnMapInfoText) ZnListArray(new_map->texts);
+    cur_texts = ZnListArray(cur_map->texts);
+    new_texts = ZnListArray(new_map->texts);
     num_texts = ZnListSize(cur_map->texts);
     
     for (i = 0; i < num_texts; i++) {
-      new_texts[i].text = (char *) ZnMalloc(strlen(cur_texts[i].text) + 1);
+      new_texts[i].text = ZnMalloc(strlen(cur_texts[i].text) + 1);
       strcpy(new_texts[i].text, cur_texts[i].text);
     }
   }
@@ -240,18 +240,18 @@ ZnMapInfoDuplicate(ZnMapInfoId	map_info)
 static void
 ZnMapInfoDelete(ZnMapInfoId	map_info)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
-  int		i, num_texts, num_lines;
+  ZnMapInfo	cur_map = map_info;
+  unsigned int	i, num_texts, num_lines;
   ZnMapInfoText	cur_texts;
   ZnMapInfoLine	cur_lines;
   
   if (cur_map) {
     if (cur_map->texts) {
       num_texts = ZnListSize(cur_map->texts);
-      cur_texts = (ZnMapInfoText) ZnListArray(cur_map->texts);
+      cur_texts = ZnListArray(cur_map->texts);
 
       for (i = 0; i < num_texts; i++) {
-	ZnFree((char *) cur_texts[i].text);
+	ZnFree(cur_texts[i].text);
       }
       
       ZnListFree(cur_map->texts);
@@ -259,11 +259,11 @@ ZnMapInfoDelete(ZnMapInfoId	map_info)
 
     if (cur_map->lines) {
       num_lines = ZnListSize(cur_map->lines);
-      cur_lines = (ZnMapInfoLine) ZnListArray(cur_map->lines);
+      cur_lines = ZnListArray(cur_map->lines);
 
       for (i = 0; i < num_lines; i++) {
 	if (cur_lines[i].style == ZnMapInfoLineMarked) {
-	  ZnFree((char *) cur_lines[i].marks);
+	  ZnFree(cur_lines[i].marks);
 	}
       }
 
@@ -286,7 +286,7 @@ ZnMapInfoDelete(ZnMapInfoId	map_info)
 static void
 ZnMapInfoEmpty(ZnMapInfoId	map_info)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo cur_map = map_info;
 
   if (cur_map) {
     if (cur_map->texts) {
@@ -310,13 +310,13 @@ ZnMapInfoAddLine(ZnMapInfoId	map_info,
 		 unsigned int	index,
 		 ZnPtr		tag,
 		 ZnMapInfoLineStyle line_style,
-		 int		line_width,
-		 int		x_from,
-		 int		y_from,
-		 int		x_to,
-		 int		y_to)
+		 ZnDim		line_width,
+		 ZnPos		x_from,
+		 ZnPos		y_from,
+		 ZnPos		x_to,
+		 ZnPos		y_to)
 {
-  ZnMapInfo		cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo		cur_map = map_info;
   ZnMapInfoLineStruct	line_struct;
 
   if (cur_map) {
@@ -325,7 +325,7 @@ ZnMapInfoAddLine(ZnMapInfoId	map_info,
     }
 
     line_struct.style = line_style;
-    if (line_width == 1) {
+    if (line_width == 1.0) {
       line_struct.width = 0;
     }
     else {
@@ -336,7 +336,7 @@ ZnMapInfoAddLine(ZnMapInfoId	map_info,
     line_struct.from.y = y_from;
     line_struct.to.x = x_to;
     line_struct.to.y = y_to;
-    
+    /*printf("Ajout de la ligne: %d %d %d %d\n", x_from, y_from, x_to, y_to);*/
     if (line_style == ZnMapInfoLineMarked) {
       ComputeLineMarks(&line_struct);
     }
@@ -348,27 +348,27 @@ ZnMapInfoAddLine(ZnMapInfoId	map_info,
 
 static void
 ZnMapInfoReplaceLine(ZnMapInfoId	map_info,
-		     unsigned int		index,
+		     unsigned int	index,
 		     ZnPtr		tag,
 		     ZnMapInfoLineStyle	line_style,
-		     int			line_width,
-		     int			x_from,
-		     int			y_from,
-		     int			x_to,
-		     int			y_to)
+		     ZnDim		line_width,
+		     ZnPos		x_from,
+		     ZnPos		y_from,
+		     ZnPos		x_to,
+		     ZnPos		y_to)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoLine	line_ptr;
 
   if (cur_map && cur_map->lines) {
-    line_ptr = (ZnMapInfoLine) ZnListAt(cur_map->lines, index);
+    line_ptr = ZnListAt(cur_map->lines, index);
     if (line_ptr) {
       if (line_ptr->style == ZnMapInfoLineMarked) {
-	ZnFree((char *) line_ptr->marks);
+	ZnFree(line_ptr->marks);
       }
 
       line_ptr->style = line_style;
-      if (line_width == 1) {
+      if (line_width == 1.0) {
         line_ptr->width = 0;
       }
       else {
@@ -389,17 +389,17 @@ ZnMapInfoReplaceLine(ZnMapInfoId	map_info,
 
 
 static void
-ZnMapInfoRemoveLine(ZnMapInfoId	map_info,
+ZnMapInfoRemoveLine(ZnMapInfoId		map_info,
 		    unsigned int	index)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoLine	line_ptr;
 
   if (cur_map && cur_map->lines) {
-    line_ptr = (ZnMapInfoLine) ZnListAt(cur_map->lines, index);
+    line_ptr = ZnListAt(cur_map->lines, index);
     if (line_ptr) {
       if (line_ptr->style == ZnMapInfoLineMarked) {
-	ZnFree((char *) line_ptr->marks);
+	ZnFree(line_ptr->marks);
       }
 
       ZnListDelete(cur_map->lines, index);
@@ -413,17 +413,17 @@ ZnMapInfoGetLine(ZnMapInfoId		map_info,
 		 unsigned int		index,
 		 ZnPtr			*tag,
 		 ZnMapInfoLineStyle	*line_style,
-		 int			*line_width,
-		 int			*x_from,
-		 int			*y_from,
-		 int			*x_to,
-		 int			*y_to)
+		 ZnDim			*line_width,
+		 ZnPos			*x_from,
+		 ZnPos			*y_from,
+		 ZnPos			*x_to,
+		 ZnPos			*y_to)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoLine	line_ptr;
 
   if (cur_map && cur_map->lines) {
-    line_ptr = (ZnMapInfoLine) ZnListAt(cur_map->lines, index);
+    line_ptr = ZnListAt(cur_map->lines, index);
     if (line_ptr) {
       if (tag) {
 	*tag = line_ptr->tag;
@@ -432,7 +432,7 @@ ZnMapInfoGetLine(ZnMapInfoId		map_info,
 	*line_style = line_ptr->style;
       }
       if (line_width) {
-        if (line_ptr->width == 1) {
+        if (line_ptr->width == 1.0) {
 	  *line_width = 0;
 	}
         else {
@@ -459,14 +459,14 @@ ZnMapInfoGetLine(ZnMapInfoId		map_info,
 void
 ZnMapInfoGetMarks(ZnMapInfoId	map_info,
 		  unsigned int	index,
-		  ZnMapInfoPoint 	*marks,
+		  ZnPoint 	**marks,
 		  unsigned int	*num_marks)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoLine	line_ptr;
 
   if (cur_map && cur_map->lines) {
-    line_ptr = (ZnMapInfoLine) ZnListAt(cur_map->lines, index);
+    line_ptr = ZnListAt(cur_map->lines, index);
     if (line_ptr && line_ptr->style == ZnMapInfoLineMarked) {
       if (marks) {
 	*marks = line_ptr->marks;
@@ -482,7 +482,7 @@ ZnMapInfoGetMarks(ZnMapInfoId	map_info,
 unsigned int
 ZnMapInfoNumLines(ZnMapInfoId	map_info)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
 
   if (cur_map && cur_map->lines) {
     return ZnListSize(cur_map->lines);
@@ -496,12 +496,12 @@ ZnMapInfoNumLines(ZnMapInfoId	map_info)
 static void
 ZnMapInfoAddSymbol(ZnMapInfoId	map_info,
 		   unsigned int	index,
-		   ZnPtr		tag,
-		   int		x,
-		   int		y,
+		   ZnPtr	tag,
+		   ZnPos	x,
+		   ZnPos	y,
 		   int		symbol)
 {
-  ZnMapInfo		cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo		cur_map = map_info;
   ZnMapInfoSymbolStruct	symbol_struct;
 
   if (cur_map) {
@@ -524,11 +524,11 @@ static void
 ZnMapInfoReplaceSymbol(ZnMapInfoId	map_info,
 		       unsigned int	index,
 		       ZnPtr		tag,
-		       int		x,
-		       int		y,
+		       ZnPos		x,
+		       ZnPos		y,
 		       int		symbol)
 {
-  ZnMapInfo		cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo		cur_map = map_info;
   ZnMapInfoSymbolStruct	symbol_struct;
 
   if (cur_map && cur_map->symbols) {
@@ -547,7 +547,7 @@ static void
 ZnMapInfoRemoveSymbol(ZnMapInfoId	map_info,
 		      unsigned int	index)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
 
   if (cur_map && cur_map->symbols) {
     ZnListDelete(cur_map->symbols, index);
@@ -558,16 +558,16 @@ ZnMapInfoRemoveSymbol(ZnMapInfoId	map_info,
 void
 ZnMapInfoGetSymbol(ZnMapInfoId	map_info,
 		   unsigned int	index,
-		   ZnPtr		*tag,
-		   int		*x,
-		   int		*y,
+		   ZnPtr	*tag,
+		   ZnPos	*x,
+		   ZnPos	*y,
 		   char		*symbol)
 {
-  ZnMapInfo	  cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	  cur_map = map_info;
   ZnMapInfoSymbol symbol_ptr;
 
   if (cur_map && cur_map->symbols) {
-    symbol_ptr = (ZnMapInfoSymbol) ZnListAt(cur_map->symbols, index);
+    symbol_ptr = ZnListAt(cur_map->symbols, index);
     if (symbol_ptr) {
       if (tag) {
 	*tag = symbol_ptr->tag;
@@ -589,7 +589,7 @@ ZnMapInfoGetSymbol(ZnMapInfoId	map_info,
 unsigned int
 ZnMapInfoNumSymbols(ZnMapInfoId	map_info)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo cur_map = map_info;
 
   if (cur_map && cur_map->symbols) {
     return ZnListSize(cur_map->symbols);
@@ -606,11 +606,11 @@ ZnMapInfoAddText(ZnMapInfoId	map_info,
 		 ZnPtr		tag,
 		 ZnMapInfoTextStyle text_style,
 		 ZnMapInfoLineStyle line_style,
-		 int		x,
-		 int		y,
+		 ZnPos		x,
+		 ZnPos		y,
 		 char		*text)
 {
-  ZnMapInfo		cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo		cur_map = map_info;
   ZnMapInfoTextStruct	text_struct;
 
   if (cur_map) {
@@ -623,7 +623,7 @@ ZnMapInfoAddText(ZnMapInfoId	map_info,
     text_struct.line_style = NOT_MARKED_STYLE(line_style);
     text_struct.at.x	   = x;
     text_struct.at.y	   = y;
-    text_struct.text	   = (char *) ZnMalloc(strlen(text) + 1);
+    text_struct.text	   = ZnMalloc(strlen(text) + 1);
     strcpy(text_struct.text, text);
     
     ZnListAdd(cur_map->texts, &text_struct, index);
@@ -633,19 +633,19 @@ ZnMapInfoAddText(ZnMapInfoId	map_info,
 
 static void
 ZnMapInfoReplaceText(ZnMapInfoId	map_info,
-		     unsigned int		index,
+		     unsigned int	index,
 		     ZnPtr		tag,
 		     ZnMapInfoTextStyle	text_style,
 		     ZnMapInfoLineStyle	line_style,
-		     int			x,
-		     int			y,
-		     char			*text)
+		     ZnPos		x,
+		     ZnPos		y,
+		     char		*text)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoText	text_ptr;
 
   if (cur_map && cur_map->texts) {
-    text_ptr = (ZnMapInfoText) ZnListAt(cur_map->texts, index);
+    text_ptr = ZnListAt(cur_map->texts, index);
     if (text_ptr) {
       ZnFree(text_ptr->text);
 
@@ -654,7 +654,7 @@ ZnMapInfoReplaceText(ZnMapInfoId	map_info,
       text_ptr->line_style = NOT_MARKED_STYLE(line_style);
       text_ptr->at.x	   = x;
       text_ptr->at.y	   = y;
-      text_ptr->text	   = (char *) ZnMalloc(strlen(text) + 1);
+      text_ptr->text	   = ZnMalloc(strlen(text) + 1);
       strcpy(text_ptr->text, text);
     }
   }
@@ -662,14 +662,14 @@ ZnMapInfoReplaceText(ZnMapInfoId	map_info,
 
 
 static void
-ZnMapInfoRemoveText(ZnMapInfoId	map_info,
+ZnMapInfoRemoveText(ZnMapInfoId		map_info,
 		    unsigned int	index)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoText	text_ptr;
 
   if (cur_map && cur_map->texts) {
-    text_ptr = (ZnMapInfoText) ZnListAt(cur_map->texts, index);
+    text_ptr = ZnListAt(cur_map->texts, index);
     if (text_ptr) {
       ZnFree(text_ptr->text);
 
@@ -685,15 +685,15 @@ ZnMapInfoGetText(ZnMapInfoId	map_info,
 		 ZnPtr		*tag,
 		 ZnMapInfoTextStyle *text_style,
 		 ZnMapInfoLineStyle *line_style,
-		 int		*x,
-		 int		*y,
+		 ZnPos		*x,
+		 ZnPos		*y,
 		 char		**text)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoText	text_ptr;
 
   if (cur_map && cur_map->texts) {
-    text_ptr = (ZnMapInfoText) ZnListAt(cur_map->texts, index);
+    text_ptr = ZnListAt(cur_map->texts, index);
     if (text_ptr) {
       if (tag) {
 	*tag = text_ptr->tag;
@@ -721,7 +721,7 @@ ZnMapInfoGetText(ZnMapInfoId	map_info,
 unsigned int
 ZnMapInfoNumTexts(ZnMapInfoId	map_info)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo cur_map = map_info;
 
   if (cur_map && cur_map->texts) {
     return ZnListSize(cur_map->texts);
@@ -737,14 +737,14 @@ ZnMapInfoAddArc(ZnMapInfoId	map_info,
 		unsigned int	index,
 		ZnPtr		tag,
 		ZnMapInfoLineStyle line_style,
-		int		line_width,
-		int		center_x,
-		int		center_y,
-		unsigned int	radius,
-		int		start_angle,
-		int		extend)
+		ZnDim		line_width,
+		ZnPos		center_x,
+		ZnPos		center_y,
+		ZnDim		radius,
+		ZnReal		start_angle,
+		ZnReal		extend)
 {
-  ZnMapInfo		cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo		cur_map = map_info;
   ZnMapInfoArcStruct	arc_struct;
   
   if (cur_map) {
@@ -752,19 +752,19 @@ ZnMapInfoAddArc(ZnMapInfoId	map_info,
       cur_map->arcs = ZnListNew(16, sizeof(ZnMapInfoArcStruct));
     }
 
-    arc_struct.style		= NOT_MARKED_STYLE(line_style);
-    if (line_width == 1) {
-      arc_struct.width		= 0;
+    arc_struct.style = NOT_MARKED_STYLE(line_style);
+    if (line_width == 1.0) {
+      arc_struct.width = 0;
     }
     else {
-      arc_struct.width		= line_width;
+      arc_struct.width = line_width;
     }
-    arc_struct.tag		= tag;
-    arc_struct.center.x		= center_x;
-    arc_struct.center.y		= center_y;
-    arc_struct.radius		= radius;
-    arc_struct.start_angle	= start_angle;
-    arc_struct.extend		= extend;
+    arc_struct.tag = tag;
+    arc_struct.center.x = center_x;
+    arc_struct.center.y = center_y;
+    arc_struct.radius = radius;
+    arc_struct.start_angle = start_angle;
+    arc_struct.extend = extend;
     
     ZnListAdd(cur_map->arcs, &arc_struct, index);
   }
@@ -773,35 +773,35 @@ ZnMapInfoAddArc(ZnMapInfoId	map_info,
 
 static void
 ZnMapInfoReplaceArc(ZnMapInfoId		map_info,
-		    unsigned int		index,
-		    ZnPtr			tag,
+		    unsigned int	index,
+		    ZnPtr		tag,
 		    ZnMapInfoLineStyle	line_style,
-		    int			line_width,
-		    int			center_x,
-		    int			center_y,
-		    unsigned int		radius,
-		    int			start_angle,
-		    int			extend)
+		    ZnDim		line_width,
+		    ZnPos		center_x,
+		    ZnPos		center_y,
+		    ZnDim		radius,
+		    ZnReal		start_angle,
+		    ZnReal		extend)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoArc	arc_ptr;
   
   if (cur_map && cur_map->arcs) {
-    arc_ptr = (ZnMapInfoArc) ZnListAt(cur_map->arcs, index);
+    arc_ptr = ZnListAt(cur_map->arcs, index);
     if (arc_ptr) {
-      arc_ptr->style		= NOT_MARKED_STYLE(line_style);
-      if (line_width == 1) {
-        arc_ptr->width		= 0;
+      arc_ptr->style = NOT_MARKED_STYLE(line_style);
+      if (line_width == 1.0) {
+        arc_ptr->width = 0;
       }
       else {
-        arc_ptr->width		= line_width;
+        arc_ptr->width = line_width;
       }
-      arc_ptr->tag		= tag;
-      arc_ptr->center.x		= center_x;
-      arc_ptr->center.y		= center_y;
-      arc_ptr->radius		= radius;
-      arc_ptr->start_angle	= start_angle;
-      arc_ptr->extend		= extend;      
+      arc_ptr->tag = tag;
+      arc_ptr->center.x = center_x;
+      arc_ptr->center.y = center_y;
+      arc_ptr->radius = radius;
+      arc_ptr->start_angle = start_angle;
+      arc_ptr->extend = extend;      
     }
   }
 }
@@ -811,11 +811,11 @@ static void
 ZnMapInfoRemoveArc(ZnMapInfoId	map_info,
 		   unsigned int	index)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoArc	arc_ptr;
 
   if (cur_map && cur_map->arcs) {
-    arc_ptr = (ZnMapInfoArc) ZnListAt(cur_map->arcs, index);
+    arc_ptr = ZnListAt(cur_map->arcs, index);
     if (arc_ptr) {
       ZnListDelete(cur_map->arcs, index);
     }
@@ -828,18 +828,18 @@ ZnMapInfoGetArc(ZnMapInfoId	map_info,
 		unsigned int	index,
 		ZnPtr		*tag,
 		ZnMapInfoLineStyle *line_style,
-		int		*line_width,
-		int		*center_x,
-		int		*center_y,
-		int		*radius,
-		int		*start_angle,
-		int		*extend)
+		ZnDim		*line_width,
+		ZnPos		*center_x,
+		ZnPos		*center_y,
+		ZnDim		*radius,
+		ZnReal		*start_angle,
+		ZnReal		*extend)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo	cur_map = map_info;
   ZnMapInfoArc	arc_ptr;
 
   if (cur_map && cur_map->arcs) {
-    arc_ptr = (ZnMapInfoArc) ZnListAt(cur_map->arcs, index);
+    arc_ptr = ZnListAt(cur_map->arcs, index);
     if (arc_ptr) {
       if (tag) {
 	*tag = arc_ptr->tag;
@@ -848,7 +848,7 @@ ZnMapInfoGetArc(ZnMapInfoId	map_info,
 	*line_style = arc_ptr->style;
       }
       if (line_width) {
-        if (arc_ptr->width == 1) {
+        if (arc_ptr->width == 1.0) {
 	  *line_width = 0;
 	}
         else {
@@ -877,7 +877,7 @@ ZnMapInfoGetArc(ZnMapInfoId	map_info,
 unsigned int
 ZnMapInfoNumArcs(ZnMapInfoId	map_info)
 {
-  ZnMapInfo	cur_map = (ZnMapInfo) map_info;
+  ZnMapInfo cur_map = map_info;
 
   if (cur_map && cur_map->arcs) {
     return ZnListSize(cur_map->arcs);
@@ -889,67 +889,67 @@ ZnMapInfoNumArcs(ZnMapInfoId	map_info)
 
 static void
 ZnMapInfoScale(ZnMapInfoId	map_info,
-	       double		factor)
+	       ZnReal		factor)
 {
-  ZnMapInfo	mp = (ZnMapInfo) map_info;
-  int		i, num, int_factor = (int) factor;
+  ZnMapInfo	mp = map_info;
+  int		i, num;
   ZnMapInfoLine	line_ptr;
-  ZnMapInfoSymbol	sym_ptr;
+  ZnMapInfoSymbol sym_ptr;
   ZnMapInfoText	text_ptr;
   ZnMapInfoArc	arc_ptr;
 
   if (mp && mp->lines) {
     num = ZnListSize(mp->lines);
-    line_ptr = (ZnMapInfoLine) ZnListArray(mp->lines);
+    line_ptr = ZnListArray(mp->lines);
     for (i = 0; i < num; i++, line_ptr++) {
-      line_ptr->from.x *= int_factor;
-      line_ptr->from.y *= int_factor;
-      line_ptr->to.x *= int_factor;
-      line_ptr->to.y *= int_factor;
+      line_ptr->from.x *= factor;
+      line_ptr->from.y *= factor;
+      line_ptr->to.x *= factor;
+      line_ptr->to.y *= factor;
     }
   }
   if (mp && mp->symbols) {
     num = ZnListSize(mp->symbols);
-    sym_ptr = (ZnMapInfoSymbol) ZnListArray(mp->symbols);
+    sym_ptr = ZnListArray(mp->symbols);
     for (i = 0; i < num; i++, sym_ptr++) {
-      sym_ptr->at.x *= int_factor;
-      sym_ptr->at.y *= int_factor;
+      sym_ptr->at.x *= factor;
+      sym_ptr->at.y *= factor;
     }
   }
   if (mp && mp->texts) {
     num = ZnListSize(mp->texts);
-    text_ptr = (ZnMapInfoText) ZnListArray(mp->texts);
+    text_ptr = ZnListArray(mp->texts);
     for (i = 0; i < num; i++, text_ptr++) {
-      text_ptr->at.x *= int_factor;
-      text_ptr->at.y *= int_factor;
+      text_ptr->at.x *= factor;
+      text_ptr->at.y *= factor;
     }
   }
   if (mp && mp->arcs) {
     num = ZnListSize(mp->arcs);
-    arc_ptr = (ZnMapInfoArc) ZnListArray(mp->arcs);
+    arc_ptr = ZnListArray(mp->arcs);
     for (i = 0; i < num; i++, arc_ptr++) {
-      arc_ptr->center.x *= int_factor;
-      arc_ptr->center.y *= int_factor;
-      arc_ptr->radius *= int_factor;
+      arc_ptr->center.x *= factor;
+      arc_ptr->center.y *= factor;
+      arc_ptr->radius *= factor;
     }
   }
 }
 
 static void
 ZnMapInfoTranslate(ZnMapInfoId	map_info,
-		   int		x,
-		   int		y)
+		   ZnPos	x,
+		   ZnPos	y)
 {
-  ZnMapInfo	mp = (ZnMapInfo) map_info;
+  ZnMapInfo	mp = map_info;
   int		i, num;
   ZnMapInfoLine	line_ptr;
-  ZnMapInfoSymbol	sym_ptr;
+  ZnMapInfoSymbol sym_ptr;
   ZnMapInfoText	text_ptr;
   ZnMapInfoArc	arc_ptr;
 
   if (mp && mp->lines) {
     num = ZnListSize(mp->lines);
-    line_ptr = (ZnMapInfoLine) ZnListArray(mp->lines);
+    line_ptr = ZnListArray(mp->lines);
     for (i = 0; i < num; i++, line_ptr++) {
       line_ptr->from.x += x;
       line_ptr->from.y += y;
@@ -959,7 +959,7 @@ ZnMapInfoTranslate(ZnMapInfoId	map_info,
   }
   if (mp && mp->symbols) {
     num = ZnListSize(mp->symbols);
-    sym_ptr = (ZnMapInfoSymbol) ZnListArray(mp->symbols);
+    sym_ptr = ZnListArray(mp->symbols);
     for (i = 0; i < num; i++, sym_ptr++) {
       sym_ptr->at.x += x;
       sym_ptr->at.y += y;
@@ -967,7 +967,7 @@ ZnMapInfoTranslate(ZnMapInfoId	map_info,
   }
   if (mp && mp->texts) {
     num = ZnListSize(mp->texts);
-    text_ptr = (ZnMapInfoText) ZnListArray(mp->texts);
+    text_ptr = ZnListArray(mp->texts);
     for (i = 0; i < num; i++, text_ptr++) {
       text_ptr->at.x += x;
       text_ptr->at.y += y;
@@ -975,7 +975,7 @@ ZnMapInfoTranslate(ZnMapInfoId	map_info,
   }
   if (mp && mp->arcs) {
     num = ZnListSize(mp->arcs);
-    arc_ptr = (ZnMapInfoArc) ZnListArray(mp->arcs);
+    arc_ptr = ZnListArray(mp->arcs);
     for (i = 0; i < num; i++, arc_ptr++) {
       arc_ptr->center.x += x;
       arc_ptr->center.y += y;
@@ -1047,13 +1047,14 @@ ReorderVidomap(VideoMap *vm)
  */
 
 static void
-FillMap(ZnMapInfoId map, VideoMap *vm)
+FillMap(ZnMapInfoId	map,
+	VideoMap	*vm)
 {
   int		i;
   ZnBool	has_start_pos = False;
-  int		x_cur=0, y_cur=0;
+  ZnPos		x_cur=0, y_cur=0;
   char		ch;
-  int		text_x=0, text_y=0;
+  ZnPos		text_x=0, text_y=0;
   char		text[TEXT_SIZE];
   ZnBool	in_text = False;
   ZnBool	in_mod_text = False;
@@ -1078,7 +1079,8 @@ FillMap(ZnMapInfoId map, VideoMap *vm)
       has_start_pos = True;
 	
       if (vm->symbol[i]) {
-	ZnMapInfoAddSymbol(map, ZnMapInfoNumSymbols(map), NULL, x_cur, y_cur, (char) vm->symbol[i]);
+	ZnMapInfoAddSymbol(map, ZnMapInfoNumSymbols(map), NULL, x_cur, y_cur,
+			   (char) vm->symbol[i]);
       }
       break;
 
@@ -1135,18 +1137,18 @@ FillMap(ZnMapInfoId map, VideoMap *vm)
       }
 
       if (vm->dashed)	{
-	ZnMapInfoAddLine(map, ZnMapInfoNumLines(map), NULL, ZnMapInfoLineDashed, 0,
-			 x_cur, y_cur,
+	ZnMapInfoAddLine(map, ZnMapInfoNumLines(map), NULL, ZnMapInfoLineDashed,
+			 0, x_cur, y_cur,
 			 (int) (short) vm->x[i], (int) (short) vm->y[i]);
       }
       else if (vm->marked) {
-	ZnMapInfoAddLine(map, ZnMapInfoNumLines(map), NULL, ZnMapInfoLineMarked, 0,
-			 x_cur, y_cur,
+	ZnMapInfoAddLine(map, ZnMapInfoNumLines(map), NULL, ZnMapInfoLineMarked,
+			 0, x_cur, y_cur,
 			 (int) (short) vm->x[i], (int) (short) vm->y[i]);
       }
       else {
-	ZnMapInfoAddLine(map, ZnMapInfoNumLines(map), NULL, ZnMapInfoLineSimple, 0,
-			 x_cur, y_cur,
+	ZnMapInfoAddLine(map, ZnMapInfoNumLines(map), NULL, ZnMapInfoLineSimple,
+			 0, x_cur, y_cur,
 			 (int) (short) vm->x[i], (int) (short) vm->y[i]);
       }
 
@@ -1154,7 +1156,8 @@ FillMap(ZnMapInfoId map, VideoMap *vm)
       y_cur = (int) (short) vm->y[i];
 
       if (vm->symbol[i]) {
-	ZnMapInfoAddSymbol(map, ZnMapInfoNumSymbols(map), NULL, x_cur, y_cur, (char) vm->symbol[i]);
+	ZnMapInfoAddSymbol(map, ZnMapInfoNumSymbols(map), NULL, x_cur, y_cur,
+			   (char) vm->symbol[i]);
       }
       break;
     }
@@ -1337,7 +1340,7 @@ UpdateMapInfoClients(ZnMapInfoMaster	*master)
   ZnMapInfoClient *client;
 
   num = ZnListSize(master->clients);
-  client = (ZnMapInfoClient *) ZnListArray(master->clients);
+  client = ZnListArray(master->clients);
   for (i = 0; i < num; i++, client++) {
     (*client->proc)(client->client_data, master->map_info);
   }
@@ -1510,7 +1513,7 @@ ZnFreeMapInfo(ZnMapInfoId	map_info,
     return;
   }
   master = (ZnMapInfoMaster *) Tcl_GetHashValue(entry);
-  client = (ZnMapInfoClient *) ZnListArray(master->clients);
+  client = ZnListArray(master->clients);
   num = ZnListSize(master->clients);
   for (i = 0; i < num; i++, client++) {
     if ((client->client_data == client_data) &&
@@ -1566,7 +1569,7 @@ ZnMapInfoLineStyleToString(ZnMapInfoLineStyle	line_style)
 
 static int
 ZnMapInfoLineStyleFromString(Tcl_Interp		*interp,
-			     char			*str,
+			     char		*str,
 			     ZnMapInfoLineStyle	*line_style)
 {
   int	i, num = sizeof(line_style_strings)/sizeof(char *);
@@ -1612,22 +1615,25 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
 		int		argc,		/* Number of arguments. */
 		Tcl_Obj	*CONST	args[])
 {
+  ZnPos		  x, y;
   int		  index, index2, result;
   ZnMapInfoMaster *master;
   Tcl_Obj	  *l;
 #ifdef PTK
-  static char *sub_cmd_strings[] = {
+  static char *sub_cmd_strings[] =
 #else
-  static CONST char *sub_cmd_strings[] = {
+  static CONST char *sub_cmd_strings[] =
 #endif
+  {
     "add", "count", "create", "delete", "duplicate",
     "get", "remove", "replace", "scale", "translate", NULL
   };
 #ifdef PTK
-  static char *e_type_strings[] = {
+  static char *e_type_strings[] =
 #else
-  static CONST char *e_type_strings[] = {
+  static CONST char *e_type_strings[] =
 #endif
+  {
     "arc", "line", "symbol", "text", NULL
   };
   enum		sub_cmds {
@@ -1708,8 +1714,8 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
     {
       ZnMapInfoLineStyle line_style;
       ZnMapInfoTextStyle text_style;
-      int		 i, insert;
-      int		 coords[6];
+      int		 i, insert, val;
+      ZnPos		 coords[6];
       ZnBool		 add_cmd = (enum sub_cmds) index == ZN_MI_ADD;
       int		 num_param = add_cmd ? 4 : 5;
       
@@ -1744,7 +1750,7 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
 	    return TCL_ERROR;
 	  }
 	  for (i = 0; i < 5; i++) {
-	    if (Tcl_GetIntFromObj(interp, args[num_param+i+1], &coords[i]) == TCL_ERROR) {
+	    if (Tcl_GetDoubleFromObj(interp, args[num_param+i+1], &coords[i]) == TCL_ERROR) {
 	      return TCL_ERROR;
 	    }
 	  }
@@ -1768,21 +1774,24 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
 			     add_cmd ? "x y intVal" : "index x y intVal");
 	    return TCL_ERROR;
 	  }
-	  for (i = 0; i < 3; i++) {
-	    if (Tcl_GetIntFromObj(interp, args[num_param+i], &coords[i]) == TCL_ERROR) {
+	  for (i = 0; i < 2; i++) {
+	    if (Tcl_GetDoubleFromObj(interp, args[num_param+i], &coords[i]) == TCL_ERROR) {
 	      return TCL_ERROR;
 	    }
 	  }
-	  if (coords[2] < 0) {
-	    coords[2] = 0;
+	  if (Tcl_GetIntFromObj(interp, args[num_param+2], &val) == TCL_ERROR) {
+	    return TCL_ERROR;
+	  }
+	  if (val < 0) {
+	    val = 0;
 	  }
 	  if (add_cmd) {
 	    ZnMapInfoAddSymbol(master->map_info, ZnListTail, NULL, coords[0],
-			       coords[1], (char) coords[2]);
+			       coords[1], (char) val);
 	  }
 	  else {
 	    ZnMapInfoReplaceSymbol(master->map_info, insert, NULL, coords[0],
-				   coords[1], (char) coords[2]);
+				   coords[1], (char) val);
 	  }
 	}
 	break;
@@ -1802,7 +1811,7 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
 	    return TCL_ERROR;
 	  }
 	  for (i = 0; i < 2; i++) {
-	    if (Tcl_GetIntFromObj(interp, args[num_param+i+2], &coords[i]) == TCL_ERROR) {
+	    if (Tcl_GetDoubleFromObj(interp, args[num_param+i+2], &coords[i]) == TCL_ERROR) {
 	      return TCL_ERROR;
 	    }
 	  }
@@ -1812,7 +1821,7 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
 			     Tcl_GetString(args[num_param+4]));
 	  }
 	  else {
-	    /*printf("replace text ts %d ls %d %d %d %s\n", text_style,
+	    /*printf("replace text ts %d ls %d %g %g %s\n", text_style,
 	      line_style, coords[0], coords[1], Tcl_GetString(args[num_param+4]));*/
 	    ZnMapInfoReplaceText(master->map_info, insert, NULL, text_style,
 				 line_style, coords[0], coords[1],
@@ -1832,20 +1841,23 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
 	    return TCL_ERROR;
 	  }
 	  for (i = 0; i < 6; i++) {
-	    if (Tcl_GetIntFromObj(interp, args[num_param+i+1], &coords[i]) == TCL_ERROR) {
+	    if (Tcl_GetDoubleFromObj(interp, args[num_param+i+1], &coords[i]) == TCL_ERROR) {
 	      return TCL_ERROR;
 	    }
 	  }
 	  if (coords[0] < 0) {
 	    coords[0] = 0;
 	  }
+	  if (coords[3] < 0) {
+	    coords[3] = 0;
+	  }
 	  if (add_cmd) {
 	    ZnMapInfoAddArc(master->map_info, ZnListTail, NULL, line_style, coords[0],
-			    coords[1], coords[2], (unsigned int) coords[3], coords[4], coords[5]);
+			    coords[1], coords[2], coords[3], coords[4], coords[5]);
 	  }
 	  else {
 	    ZnMapInfoReplaceArc(master->map_info, insert, NULL, line_style, coords[0],
-				coords[1], coords[2], (unsigned int) coords[3], coords[4], coords[5]);
+				coords[1], coords[2], coords[3], coords[4], coords[5]);
 	  }
 	}
 	break;
@@ -1894,7 +1906,8 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
      */
   case ZN_MI_GET:
     {
-      int insert;
+      int   insert;
+
       if (argc != 5) {
 	Tcl_WrongNumArgs(interp, 1, args, "mapInfo get type index");
 	return TCL_ERROR;
@@ -1916,42 +1929,40 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
       switch ((enum e_types) index2) {
       case ZN_E_LINE:
 	{
-	  ZnMapInfoLineStyle	line_style;
-	  int			line_width;
-	  int			x_from, y_from, x_to, y_to;
+	  ZnMapInfoLineStyle line_style;
+	  ZnDim	line_width;
+	  ZnPos	x_to, y_to;
 	  ZnMapInfoGetLine(master->map_info, insert, NULL, &line_style,
-			   &line_width, &x_from, &y_from, &x_to, &y_to);
+			   &line_width, &x, &y, &x_to, &y_to);
 	  l = Tcl_GetObjResult(interp);
 	  Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(ZnMapInfoLineStyleToString(line_style), -1));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(line_width));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(x_from));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(y_from));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(x_to));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(y_to));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(line_width));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(x));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(y));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(x_to));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(y_to));
 	}
 	break;
       case ZN_E_SYMBOL:
 	{
-	  int	x, y;
 	  char	symbol;
 	  ZnMapInfoGetSymbol(master->map_info, insert, NULL, &x, &y, &symbol);
 	  l = Tcl_GetObjResult(interp);
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(x));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(y));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(x));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(y));
 	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(symbol));
 	}
 	break;
       case ZN_E_TEXT:
 	{
-	  int		x, y;
-	  char		*text;
-	  ZnMapInfoTextStyle	text_style;
-	  ZnMapInfoLineStyle	line_style;
+	  char *text;
+	  ZnMapInfoTextStyle text_style;
+	  ZnMapInfoLineStyle line_style;
 	  ZnMapInfoGetText(master->map_info, insert, NULL, &text_style, &line_style,
 			   &x, &y, &text);
 	  l = Tcl_GetObjResult(interp);
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(x));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(y));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(x));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(y));
 	  Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(ZnMapInfoTextStyleToString(text_style), -1));
 	  Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(ZnMapInfoLineStyleToString(line_style), -1));
 	  Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(text, -1));
@@ -1960,18 +1971,18 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
       case ZN_E_ARC:
 	{
 	  ZnMapInfoLineStyle	line_style;
-	  int	line_width, radius;
-	  int	center_x, center_y, start, extent;
+	  ZnDim	line_width, radius;
+	  ZnPos	start, extent;
 	  ZnMapInfoGetArc(master->map_info, insert, NULL, &line_style, &line_width,
-			  &center_x, &center_y, &radius, &start, &extent);
+			  &x, &y, &radius, &start, &extent);
 	  l = Tcl_GetObjResult(interp);
 	  Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(ZnMapInfoLineStyleToString(line_style), -1));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(line_width));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(center_x));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(center_y));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(radius));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(start));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(extent));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(line_width));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(x));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(y));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(radius));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(start));
+	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(extent));
 	}
 	break;
       }
@@ -2045,8 +2056,6 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
      */
   case ZN_MI_TRANSLATE:
     {
-      int x, y;
-      
       if (argc != 5) {
 	Tcl_WrongNumArgs(interp, 1, args, "mapInfo translate xAmount yAmount");
 	return TCL_ERROR;
@@ -2055,10 +2064,10 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
       if (master == NULL) {
 	return TCL_ERROR;
       }
-      if (Tcl_GetIntFromObj(interp, args[3], &x) == TCL_ERROR) {
+      if (Tcl_GetDoubleFromObj(interp, args[3], &x) == TCL_ERROR) {
 	return TCL_ERROR;
       }
-      if (Tcl_GetIntFromObj(interp, args[4], &y) == TCL_ERROR) {
+      if (Tcl_GetDoubleFromObj(interp, args[4], &y) == TCL_ERROR) {
 	return TCL_ERROR;
       }
       ZnMapInfoTranslate(master->map_info, x, y);
@@ -2090,10 +2099,11 @@ ZnVideomapObjCmd(ClientData	client_data __unused,
   int		*id_array, id_num, i;
   Tcl_Obj	*l;
 #ifdef PTK
-  static char *sub_cmd_strings[] = {
+  static char *sub_cmd_strings[] =
 #else
-  static CONST char *sub_cmd_strings[] = {
+  static CONST char *sub_cmd_strings[] =
 #endif
+  {
     "ids", "load", NULL
   };
   enum		sub_cmds {
@@ -2127,7 +2137,7 @@ ZnVideomapObjCmd(ClientData	client_data __unused,
 			 Tcl_GetString(args[2]), "\"", NULL);
 	return TCL_ERROR;
       }
-      id_array = (int *) ZnListArray(ids);
+      id_array = ZnListArray(ids);
       id_num = ZnListSize(ids);
       l = Tcl_GetObjResult(interp);
       for (i = 0; i < id_num; i++) {

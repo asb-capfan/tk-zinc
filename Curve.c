@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Fri Mar 25 15:32:17 1994
  *
- * $Id: Curve.c,v 1.43 2003/10/02 07:43:04 lecoanet Exp $
+ * $Id: Curve.c,v 1.45 2003/12/11 08:10:00 lecoanet Exp $
  */
 
 /*
@@ -39,7 +39,7 @@
 
 #include <ctype.h>
 
-static const char rcsid[] = "$Id: Curve.c,v 1.43 2003/10/02 07:43:04 lecoanet Exp $";
+static const char rcsid[] = "$Id: Curve.c,v 1.45 2003/12/11 08:10:00 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -1190,7 +1190,7 @@ Draw(ZnItem	item)
   ZnWInfo	*wi = item->wi;
   CurveItem	cv = (CurveItem) item;
   XGCValues 	values;
-  unsigned int	i, j, num_points=0, num2;
+  unsigned int	i, j, num_points=0;
   unsigned int	gc_mask;
   ZnPoint	*points=NULL;
   XPoint	*xpoints=NULL;
@@ -1304,17 +1304,14 @@ Draw(ZnItem	item)
 		  &values);
       }
       for (j = 0; j < cv->outlines.num_contours; j++) {
-	num2 = num_points = cv->outlines.contours[j].num_points;
+	num_points = cv->outlines.contours[j].num_points;
 	points = cv->outlines.contours[j].points;
 	ZnListAssertSize(wi->work_xpts, num_points);
 	xpoints = ZnListArray(wi->work_xpts);
-	for (i = 0; i < num2; i++) {
+	for (i = 0; i < num_points; i++) {
 	  xpoints[i].x = ZnNearestInt(points[i].x);
 	  xpoints[i].y = ZnNearestInt(points[i].y);
 	}
-	if (ISSET(cv->flags, CLOSED_BIT)) {
-	  xpoints[num2] = xpoints[0];
-	}	
 	XDrawLines(wi->dpy, wi->draw_buffer, wi->gc,
 		   xpoints, (int) num_points, CoordModeOrigin);
       }
@@ -1842,11 +1839,15 @@ Coords(ZnItem		item,
 	if (c->points) {
 	  ZnFree(c->points); 
 	}
-	c->points = (ZnPoint *) ZnMalloc(*num_pts*sizeof(ZnPoint));
+	c->points = ZnMalloc(*num_pts*sizeof(ZnPoint));
 	c->num_points = *num_pts;
 	memcpy(c->points, *pts, *num_pts*sizeof(ZnPoint));
+	if (c->controls) {
+	  ZnFree(c->controls);
+	  c->controls = NULL;
+	}
 	if (*controls) {
-	  c->controls = ZnRealloc(c->controls, *num_pts*sizeof(char));
+	  c->controls = ZnMalloc(*num_pts*sizeof(char));
 	  memcpy(c->controls, *controls, *num_pts*sizeof(char));
 	}
       }

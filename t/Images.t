@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Images.t,v 1.1 2003/10/07 11:25:48 mertz Exp $
+# $Id: Images.t,v 1.3 2003/11/28 09:21:10 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -14,7 +14,7 @@
 BEGIN {
     if (!eval q{
 #        use Test::More qw(no_plan);
-        use Test::More tests => 31;
+        use Test::More tests => 36;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";
@@ -43,7 +43,8 @@ BEGIN {
 }
 
 
-$zinc = $mw->Zinc(-width => 400, -height => 400)->pack;
+$zinc = $mw->Zinc(-render => 0,
+		  -width => 400, -height => 400)->pack;
 
 like  ($zinc, qr/^Tk::Zinc=HASH/ , "zinc has been created");
 
@@ -54,10 +55,17 @@ like ($photoMickey, qr/^Tk::Photo=HASH/ , "creating a Tk::Photo with a .gif");
 my $bitmap = $zinc->Bitmap('file.xbm', -file => Tk->findINC("file.xbm"));
 like ($bitmap, qr/^Tk::Bitmap=HASH/ , "creating a Tk::Bitmap with a .xbm");
 
+my $xpm = $zinc->Photo('QuitPB.xpm', -file => Tk->findINC("demos/images/QuitPB.xpm"));
+like ($xpm, qr/^Tk::Photo=HASH/ , "creating a Tk::Photo with a .xpm");
+
 #### tiling Tk::Zinc
+$zinc->configure(-tile => $xpm);
+is ($zinc->cget(-tile), "QuitPB.xpm", "verifying Tk::Zinc -tile option value");
+&wait ("-tile of Tk::Zinc with QuitPB.xpm");
+
 $zinc->configure(-tile => $photoMickey);
 is ($zinc->cget(-tile), "mickey.gif", "verifying Tk::Zinc -tile option value");
-&wait ("-tile of Tk::Zinc with mickey");
+&wait ("-tile of Tk::Zinc with mickey.gif");
 
 # modifying the Tk::Photo to see if the Tk::Zinc -tile changes
 $photoMickey->read( Tk->findINC("demos/images/earth.gif") );
@@ -75,6 +83,10 @@ is ($zinc->cget(-tile), "", "removing Tk::Zinc -tile");
 #### rectangle item
 my $rect1 = $zinc->add('rectangle', 1, [10,10,190,190], -filled => 1);
 
+
+$zinc->itemconfigure($rect1, -tile => $xpm);
+is ($zinc->itemcget($rect1, -tile), "QuitPB.xpm", "verifying rectangle -tile option value");
+&wait ("-tile of rectangle with QuitPB.xpm");
 
 $zinc->itemconfigure($rect1, -tile => $photoMickey);
 is ($zinc->itemcget($rect1, -tile), "mickey.gif", "verifying rectangle -tile option value");

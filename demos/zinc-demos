@@ -18,7 +18,7 @@ use vars qw/$COLOR $FONT_STYLE $POINT_SIZE $DEMO_FILE %DEMO_DESCRIPTION/;
 use strict;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.23 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.24 $ =~ /(\d+)\.(\d+)/);
 
 my $version = $Tk::Zinc::VERSION;
 print "Tkzinc version: $version\n";
@@ -38,7 +38,7 @@ $MW->configure(-menu => my $menubar = $MW->Menu);
 
     sub new {
 	my ($name) = $::DEMO_FILE =~ m#([^/]+).pl$#;
-	$::MW->WidgetDemo(-name => $name, -text => $::DEMO_DESCRIPTION{$name});
+	$::MW->WidgetDemo(-name => $name, -text => $::DEMO_DESCRIPTION{$name} || "" );
     }
 }
 
@@ -215,7 +215,7 @@ while ($_ = shift @dirent) {
 	next;
     }
     my($name) = /^(.*)\.pl$/;
-    $_ = <C>;
+    $_ = <C>; $_ = <C>; 
     my($title) = /^#\s*(.*)$/;
     $DEMO_DESCRIPTION{$name} = $title;
     close C;
