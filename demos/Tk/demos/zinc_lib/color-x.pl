@@ -1,9 +1,9 @@
 #!/usr/bin/perl
-# $Id: color-x.pl,v 1.6 2004/04/30 11:35:18 lecoanet Exp $
+# $Id: color-x.pl,v 1.7 2004/09/21 12:43:03 mertz Exp $
 # these simple samples have been developped by C. Mertz mertz@cena.fr
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -58,6 +58,9 @@ $zinc->add('text', 1,
 # we are using here the X explicit notation for rgb color
 # we could also have used CIE encoding. If interested,
 # please read the X man pages
+my $gradient = ($^O eq 'linux') ? "=axial 0 | rgb:ffff/0/0;40 | rgb:0/ffff/0;40 50 | rgb:0/0/ffff;40" 
+  : "=axial 0 | #ff0000;40 | #00ff00;40 50 | #0000ff;40";
+
 $zinc->add('rectangle', 1, [10, 210, 690, 300], -fillcolor => "=axial 0 | rgb:ffff/0/0;40 | rgb:0/ffff/0;40 50 | rgb:0/0/ffff;40", -filled => 1);
 
 $zinc->add('text', 1,

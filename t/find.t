@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: find.t,v 1.2 2004/04/02 12:01:49 mertz Exp $
+# $Id: find.t,v 1.4 2004/09/01 09:00:44 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -14,7 +14,7 @@
 BEGIN {
     if (!eval q{
 #        use Test::More qw(no_plan);
-        use Test::More tests => 16;
+        use Test::More tests => 22;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";
@@ -133,6 +133,47 @@ my @list;
 &is_deeply ( [ ($zinc->find('withtype', "rectangle", ".$g1*")) ],
 	     [ ($zinc->find('withtype', "rectangle")) ],
 	     "find with type 'rectangle' starting from .g1*");
+
+
+## testing overlapping find with atomic group (for testig the bug 
+##   reported by D. Etienne the 11th June 04
+$zinc->itemconfigure($g2, -atomic => 1);
+@list = $zinc->find('overlapping', 20,20,110,110);
+print "overlapping17 (",join (',', @list),")   \$g2=$g2\n";
+&ok (&eq_array (\@list ,
+		[ $g2 ]),
+     "find overlapping when group becomes atomic, without specifying starting group");
+
+@list = $zinc->find('overlapping', 20,20,110,110,1);
+print "overlapping18 (",join (',', @list),")   \$g2=$g2\n";
+&ok (&eq_array (\@list ,
+		[ $g2 ]),
+     "find overlapping when group becomes atomic, starting from group 1");
+
+@list = $zinc->find('overlapping', 20,20,110,110,1,1);
+&ok (&eq_array (\@list ,
+		[ $g2 ]),
+     "find overlapping when group becomes atomic, recursively, starting from group 1");
+
+
+## testing enclosing find with atomic group
+@list = $zinc->find('enclosed', 0,0,200,200);
+print "enclosing20 (",join (',', @list),")   \$g2=$g2\n";
+&ok (&eq_array (\@list ,
+		[ $g2 ]),
+     "find enclosed when group becomes atomic, without specifying starting group");
+
+@list = $zinc->find('enclosed', 0,0,200,200,  1);
+print "enclosing21 (",join (',', @list),")   \$g2=$g2\n";
+&ok (&eq_array (\@list ,
+		[ $g2 ]),
+     "find enclosed when group becomes atomic, starting from group 1");
+
+@list = $zinc->find('enclosed', 0,2,200,200,  1,1);
+print "enclosing22 (",join (',', @list),")   \$g2=$g2\n";
+&ok (&eq_array (\@list ,
+		[ $g2 ]),
+     "find enclosed when group becomes atomic, recursively, starting from group 1");
 
 # Tk::MainLoop;
 

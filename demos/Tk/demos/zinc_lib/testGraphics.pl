@@ -6,11 +6,11 @@
 #
 #      Authors: Jean-Luc Vinot <vinot@cena.fr>
 #
-# $Id: 
+# $Id: testGraphics.pl,v 1.13 2004/09/21 12:41:55 mertz Exp $
 #-----------------------------------------------------------------------------------
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -54,9 +54,9 @@ my %gradset = (# gradients zinc
 	       'conical_ext' => '=conical 0 0 135|#ffffff;100 0|#777788;100 30|#444455;100 50|#777788;100 70|#ffffff;100 100',
 	       'pushbtn_edge' => '=axial 140|#ffffff;100 0|#555566;100 100',
 	       'pushbtn_edge2' => '=axial 92|#ffffff;100 0|#555566;100 100',
-	       'logoshape' => '=axial 270|#ffffff|#7192aa',
-	       'logopoint' => '=radial -20 -20|#ffffff 0|#f70000 48|#900000 80|#ab0000 100',
-	       'logoptshad' => '=path 0 0|#770000;64 0|#770000;70 78|#770000;0 100',
+	       'logoshape2' => '=axial 270|#ffffff|#7192aa',
+	       'logopoint2' => '=radial -20 -20|#ffffff 0|#f70000 48|#900000 80|#ab0000 100',
+	       'logoptshad2' => '=path 0 0|#770000;64 0|#770000;70 78|#770000;0 100',
 	      );
 
 
@@ -917,7 +917,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 								    -params => {-closed => 1,
 										-filled => 1,
 										-visible => 1,
-										-fillcolor => 'logoshape',
+										-fillcolor => 'logoshape2',
 										-linewidth => 2.5,
 										-linecolor => '#000000',
 										-priority => 10,
@@ -933,7 +933,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 								   -params => {-priority => 20,
 									       -filled => 1,
 									       -linewidth => 0,
-									       -fillcolor => 'logoptshad',
+									       -fillcolor => 'logoptshad2',
 									       -closed => 1,
 									      },
 								  },
@@ -943,7 +943,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 									       -filled => 1,
 									       -linewidth => 1,
 									       -linecolor => '#a10000',
-									       -fillcolor => 'logopoint',
+									       -fillcolor => 'logopoint2',
 									       -closed => 1,
 									      },
 								  },
@@ -1551,7 +1551,7 @@ foreach my $shape (reverse @{$shapes}) {
 }
 
 # création du contenu des pages
-my $i = 0;
+$i = 0;
 foreach my $pagename (reverse @pagenames) {
   my $pagestyle = $pagesconf{$pagename};
   if ($pagestyle) {

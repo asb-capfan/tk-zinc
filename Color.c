@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Thu Dec 16 15:41:53 1999
  *
- * $Id: Color.c,v 1.28 2004/04/30 14:27:30 lecoanet Exp $
+ * $Id: Color.c,v 1.30 2004/09/09 07:55:31 lecoanet Exp $
  */
 
 /*
@@ -437,33 +437,36 @@ InterpolateGradientColor(Tk_Window	tkwin,
 			 int		 min_pos,
 			 int		 span)
 {
-  int	 pos1, pos2, interp_rel_pos, tmp;
+  ZnReal pos1, pos2, ipos, interp_rel_pos, tmp;
   XColor rgb;
 
-  pos1 = (gc1->position-min_pos)/span;
-  pos2 = (gc2->position-min_pos)/span;
-  interp_rel_pos = (interp_pos-pos1)*100/(pos2-pos1);
+  /*printf("interp_pos: %d, min_pos: %d, span: %d\n ", interp_pos, min_pos, span);*/
+  pos1 = ((ZnReal)gc1->position-(ZnReal)min_pos)/(ZnReal)span;
+  pos2 = ((ZnReal)gc2->position-(ZnReal)min_pos)/(ZnReal)span;
+  ipos = ((ZnReal)interp_pos-(ZnReal)min_pos)/(ZnReal)span;
+  interp_rel_pos = (ipos-pos1)*100/(pos2-pos1);
+
+  /*printf("pos1: %g, pos2: %g, interp_rel_pos: %g\n", pos1, pos2, interp_rel_pos);*/
   if (interp_rel_pos < gc1->control) {
-    tmp = interp_rel_pos*gc1->control;
-    rgb.red = gc1->rgb->red + (gc1->mid_rgb->red - gc1->rgb->red)*tmp/10000;
-    rgb.green = gc1->rgb->green + (gc1->mid_rgb->green - gc1->rgb->green)*tmp/10000;
-    rgb.blue = gc1->rgb->blue + (gc1->mid_rgb->blue - gc1->rgb->blue)*tmp/10000;
+    tmp = interp_rel_pos * 100 / gc1->control;
+    rgb.red = gc1->rgb->red + (gc1->mid_rgb->red - gc1->rgb->red) * tmp / 100;
+    rgb.green = gc1->rgb->green + (gc1->mid_rgb->green - gc1->rgb->green) * tmp / 100;
+    rgb.blue = gc1->rgb->blue + (gc1->mid_rgb->blue - gc1->rgb->blue) * tmp / 100;
+    gc_interp->alpha = gc1->alpha + (gc1->mid_alpha - gc1->alpha) * tmp / 100;
   }
   else if (interp_rel_pos > gc1->control) {
-    tmp = (interp_rel_pos-gc1->control)*gc1->control;
-    rgb.red = gc1->rgb->red + (gc1->mid_rgb->red - gc1->rgb->red)*tmp/10000;
-    rgb.green = gc1->rgb->green + (gc1->mid_rgb->green - gc1->rgb->green)*tmp/10000;
-    rgb.blue = gc1->rgb->blue + (gc1->mid_rgb->blue - gc1->rgb->blue)*tmp/10000;
+    tmp = (interp_rel_pos - gc1->control) * 100 / (100 - gc1->control);
+    rgb.red = gc1->mid_rgb->red + (gc2->rgb->red - gc1->mid_rgb->red)*tmp/100;
+    rgb.green = gc1->mid_rgb->green + (gc2->rgb->green - gc1->mid_rgb->green)*tmp/100;
+    rgb.blue = gc1->mid_rgb->blue + (gc2->rgb->blue - gc1->mid_rgb->blue)*tmp/100;
+    gc_interp->alpha = gc1->mid_alpha + (gc2->alpha - gc1->mid_alpha)*tmp/100;
   }
   else {
     rgb = *gc1->mid_rgb;
     gc_interp->alpha = gc1->mid_alpha;    
   }
-  rgb.red = gc1->rgb->red+(gc2->rgb->red-gc1->rgb->red)*interp_rel_pos/100;
-  rgb.green = gc1->rgb->green+(gc2->rgb->green-gc1->rgb->green)*interp_rel_pos/100;
-  rgb.blue = gc1->rgb->blue+(gc2->rgb->blue-gc1->rgb->blue)*interp_rel_pos/100;
   gc_interp->rgb = Tk_GetColorByValue(tkwin, &rgb);
-  gc_interp->alpha = gc1->alpha+(gc2->alpha-gc1->alpha)*interp_rel_pos/100;
+
   if (!gc_adjust) {
     /*
      * Interested in the segment from the interpolated color
@@ -480,29 +483,25 @@ InterpolateGradientColor(Tk_Window	tkwin,
       rgb.green = gc_interp->rgb->green+(gc2->rgb->green-gc_interp->rgb->green)/2;
       rgb.blue = gc_interp->rgb->blue+(gc2->rgb->blue-gc_interp->rgb->blue)/2;
       gc_interp->mid_rgb = Tk_GetColorByValue(tkwin, &rgb);
-      gc_interp->mid_alpha = gc_interp->mid_alpha +
-	(gc2->mid_alpha - gc_interp->mid_alpha)/2;
+      gc_interp->mid_alpha = gc_interp->alpha + (gc2->alpha - gc_interp->alpha)/2;
       gc_interp->control = 50;
     }
   }
   else {
     /*
-     * Interested in the segment form color 1 (color adjusted) to
-     * interpolated color.
+     * Interested in the segment from color 1 (color adjusted) to
+     * the interpolated color.
      */
     gc_interp->position = 100;
     gc_interp->mid_rgb = NULL;
-    if (interp_rel_pos > gc1->control) {
-      gc_adjust->control = gc1->control+interp_rel_pos;
-    }
-    else {
+    gc_interp->mid_alpha = 100;
+    if (interp_rel_pos <= gc1->control) {
       rgb.red = gc1->rgb->red+(gc_interp->rgb->red-gc1->rgb->red)/2;
       rgb.green = gc1->rgb->green+(gc_interp->rgb->green-gc1->rgb->green)/2;
       rgb.blue = gc1->rgb->blue+(gc_interp->rgb->blue-gc1->rgb->blue)/2;
       Tk_FreeColor(gc_adjust->mid_rgb);
       gc_adjust->mid_rgb = Tk_GetColorByValue(tkwin, &rgb);
-      gc_adjust->mid_alpha = gc1->mid_alpha +
-	(gc_interp->mid_alpha - gc1->mid_alpha)/2;
+      gc_adjust->mid_alpha = gc1->alpha + (gc_interp->alpha - gc1->alpha)/2;
       gc_adjust->control = 50;
     }
   }
@@ -600,8 +599,14 @@ ReduceGradient(Tk_Window	tkwin,
   minx100 = (int) (minx*100);
   maxx100 = (int) (maxx*100);
   span100 = (int) (span*100);
+
   if (start_in_new < 0.0) {
-    /* Find the closest color inside the active area */
+    /*
+     * The gradient starts outside the bbox,
+     * Find the color at the bbox edge. First
+     * find the correct gradient segment and then
+     * interpolate to get the color.
+     */
     first_color = 1;
     while ((first_color < (int) grad->num_colors_in) &&
 	   (grad->colors_in[first_color].position < minx100)) {
@@ -624,7 +629,12 @@ ReduceGradient(Tk_Window	tkwin,
   }
   interpolate_last = False;
   if (end_in_new > 100.0) {
-    /* Find the closest color inside the active area */
+    /*
+     * The gradient ends outside the bbox,
+     * Find the color at the bbox edge. First
+     * find the correct gradient segment and then
+     * interpolate to get the color.
+     */
     last_color = grad->num_colors_in-2;
     while ((last_color >= 0) &&
 	   (grad->colors_in[last_color].position > maxx100)) {
@@ -657,11 +667,9 @@ ReduceGradient(Tk_Window	tkwin,
   }
   else if ((first_color == 0) && (grad->type != ZN_RADIAL_GRADIENT)) {
     grad->actual_colors[j] = grad->colors_in[0];
-    grad->actual_colors[j].rgb =
-      Tk_GetColorByValue(tkwin, grad->colors_in[0].rgb);
+    grad->actual_colors[j].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[0].rgb);
     if (grad->colors_in[0].mid_rgb) {
-      grad->actual_colors[j].mid_rgb =
-	Tk_GetColorByValue(tkwin, grad->colors_in[0].mid_rgb);
+      grad->actual_colors[j].mid_rgb = Tk_GetColorByValue(tkwin, grad->colors_in[0].mid_rgb);
     }
     grad->actual_colors[0].position = 0;
     grad->actual_colors[0].control = 50;
@@ -670,17 +678,15 @@ ReduceGradient(Tk_Window	tkwin,
   }
 
   /*printf("first color: %d, last color: %d, num colors: %d\n",
-	 first_color, last_color, grad->num_actual_colors);*/
+    first_color, last_color, grad->num_actual_colors);*/
   for (i = first_color; i <= last_color; i++, j++) {
     grad->actual_colors[j] = grad->colors_in[i];
-    grad->actual_colors[j].rgb =
-      Tk_GetColorByValue(tkwin, grad->colors_in[i].rgb);
+    grad->actual_colors[j].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[i].rgb);
     if (grad->colors_in[i].mid_rgb) {
-      grad->actual_colors[j].mid_rgb =
-	Tk_GetColorByValue(tkwin, grad->colors_in[i].mid_rgb);
+      grad->actual_colors[j].mid_rgb = Tk_GetColorByValue(tkwin, grad->colors_in[i].mid_rgb);
     }
-    grad->actual_colors[j].position =
-      (grad->colors_in[i].position-minx100)*100/span100;
+    grad->actual_colors[j].position = (grad->colors_in[i].position-minx100)*100/span100;
+    grad->actual_colors[j].control = grad->colors_in[i].control;
     /*printf("i: %d, j: %d, minx: %d, span: %d, position av: %d position ap: %d\n",
       i, j, minx100, span100, grad->colors_in[i].position, grad->actual_colors[j].position);*/
   }
@@ -696,15 +702,14 @@ ReduceGradient(Tk_Window	tkwin,
   else if (last_color == ((int) grad->num_colors_in)-1) {
     i = grad->num_colors_in-1;
     grad->actual_colors[j] = grad->colors_in[i];
-    grad->actual_colors[j].rgb =
-      Tk_GetColorByValue(tkwin, grad->colors_in[i].rgb);
+    grad->actual_colors[j].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[i].rgb);
     if (grad->colors_in[i].mid_rgb) {
-      grad->actual_colors[j].mid_rgb =
-	Tk_GetColorByValue(tkwin, grad->colors_in[i].mid_rgb);    
+      grad->actual_colors[j].mid_rgb = Tk_GetColorByValue(tkwin, grad->colors_in[i].mid_rgb);    
     }
     /*printf("adding a color at end\n");*/
   }
   grad->actual_colors[j].position = 100;
+  /*  for (i=0; i<grad->num_actual_colors; i++) printf("control %d: %d\n", i, grad->actual_colors[i].control);*/
 }
 
 
@@ -1124,7 +1129,7 @@ ZnGetGradient(Tcl_Interp	*interp,
   }
 
   /*printf("num in: %d, num actual: %d\n", grad->num_colors_in,grad->num_actual_colors);*/
-  /* printf("ZnGetGradient end : %s\n", desc);*/
+  /*printf("ZnGetGradient end : %s\n", desc);*/
   return grad;
 }
 

@@ -1,5 +1,25 @@
 Tk::Zinc - another Canvas which proposes many new functions, some based on openGL
 
+Tk::Zinc for Perl/Tk is available for Linux, Windows and MacOSX. 
+the easiest way could be to use he CPAN. However new releases are usually 
+first available on www.tkzinc.org/
+
+
+* On a Linux system, you need Perl (>= 5.6) and perl-tk (800 or 804) packages.
+
+* On MacOSX you need:
+  - fink with tk-pm package and its dependencies (http://fink.sf.net)
+    tk-pm is available in unstable. You can add this binary unstable tree to you /sw/etc/apt/sources.list:
+    deb http://fink.opendarwin.org/bbraun 10.3/unstable main crypto
+    deb http://fink.opendarwin.org/bbraun 10.3/stable main crypto
+  - X11 et X11 sdk from Apple (http://www.apple.com/macosx/x11/)
+
+* On WinXP you need:
+  - perl and perl-tk 804, 
+  - Visual C++ or the Free Visual C++ Command Line Tools
+
+
+
 Install:
 
   perl Makefile.PL
@@ -10,6 +30,15 @@ Install:
   make install
 
 
+WATCH OUT! On Linux it is quite frequent to have both Mesa and proprietary
+           openGL libraries installed. This may lead to big problems at
+           runtime if the linker picks the wrong library. It is often the
+           the case between the static (libGL.a) Mesa library and the dynamic
+           (libGL.so) NVidia library. It is very important to assert that
+           the link is done with the library matching the openGL driver
+           loaded in the X server.
+
+
 up-to-date documentation is also available at http://www.tkzinc.org/index.php/Main/Documentation
 You will find there the reference manual, a FAQ, a mailing list, its archive
 etc...
@@ -17,13 +46,15 @@ The source of the reference manual is available in the full source package,
 which also includes TkZinc for Tcl/Tk, for Perl/Tk, and for Python (Python binding
 are now obsoletes).
 
+
 After installation, we recommend you to launch the zinc-demos script,
 a frontend to more than 30 small demos.
 
 For more information on building Tk::Zinc, a README is available in 
-the tkzinc-*tgz tar file (on Tkzinc web site) used for building 
-tcl flavor of Tk::Zinc
+the tkzinc-*tgz tar file (on Tkzinc web site) used for building all
+flavor of TkZinc (ie tcl, perl and python)
 
+This software is delivered under LGPL licence.
 For the copyright, please, read the COPYRIGHT file.
 
 For any question on Tk::Zinc usage, build or installation pb,
@@ -40,5 +71,5 @@ Tk::Zinc main author is Patrick Lecoanet
 Sub-Modules, demos and documentation have been developped by
 Daniel Etienne, Christophe Mertz, Jean-Luc Vinot, with contributions 
 from Stéphane Chatty, Céline Schlienger, Alexandre Lemort
-Stéphane Conversy contributed for the MacOSX port.
+Stéphane Conversy contributed to the MacOSX port.
 Many others contributed with their bug reports!

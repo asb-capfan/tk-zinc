@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.PL.in by configure.
 use 5.006;
 use Tk;
 use Config;
@@ -8,7 +9,7 @@ use strict;
 my $TkLibDir = $Tk::library;
 my $platform = $Tk::platform;
 
-my $VERSION = 3.298;
+my $VERSION = '3.30';
 
 
 if (!$TkLibDir)
@@ -50,16 +51,23 @@ if ($WIN) {
 }
 my $ZincObj = "Zinc" . $Config{"_o"};
 
+my $INC = "-I. -I$TkLibDir -I$TkLibDir/pTk -I$TkLibDir/X11";
+
+unless ($WIN) {
+  $INC .= " -I/usr/X11R6/include";
+}
+
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
+              'ABSTRACT'        => 'a canvas offering groups, tranformations, transparency, color gradient...',
 	      'AUTHOR'          => 'Patrick Lecoanet <lecoanet@cena.fr>',
 	      'NAME'		=> 'Tk::Zinc',
 	      'VERSION'	        => $VERSION,
-	      'PREREQ_PM'	=> {Tk => 8.0},
+	      'PREREQ_PM'	=> $WIN ? {Tk => 8.004} : {Tk => 8.0},
 	      'LIBS'		=> $NeededLibs, 
 	      'DEFINE'		=> &get_flags,
-	      'INC'             => "-I. -I$TkLibDir -I$TkLibDir/pTk -I$TkLibDir/X11",
+	      'INC'             => $INC,
 	      'C'               => [@C],
 	      'XS_VERSION'      => $Tk::Config::VERSION,
 	      'XS'              => {'Zinc.xs' => 'Zinc.c'},

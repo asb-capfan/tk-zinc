@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Mar 15 14:02:03 1999
  *
- * $Id: tkZinc.h,v 1.17 2004/05/10 15:55:40 lecoanet Exp $
+ * $Id: tkZinc.h,v 1.18 2004/05/19 19:35:05 lecoanet Exp $
  */
 
 /*
@@ -75,10 +75,10 @@ typedef struct _ZnTess {
   int		type;
 } ZnTess;
 
-ZnList	   ZnWorkPoints;
-ZnList	   ZnWorkXPoints;
-ZnList	   ZnWorkStrings;
-ZnTess	   ZnTesselator;
+extern ZnList	   ZnWorkPoints;
+extern ZnList	   ZnWorkXPoints;
+extern ZnList	   ZnWorkStrings;
+extern ZnTess	   ZnTesselator;
 
 #ifdef GL
 typedef struct _ZnGLContextEntry {

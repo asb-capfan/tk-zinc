@@ -1,8 +1,6 @@
 Arc.c
 Attrs.c
 Attrs.h
-COPYRIGHT
-Changes
 CharsetISO8859-15.h
 CharsetUTF8.h
 Color.c
@@ -131,6 +129,8 @@ render.c
 render.h
 sweep.c
 sweep.h
+t/AnimatedGradient.t
+t/Bbox.t
 t/Coords.t
 t/Images.t
 t/Import.t

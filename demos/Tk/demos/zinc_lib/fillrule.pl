@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: curve_bezier.pl,v 1.1 2002/12/20 12:28:38
+# $Id: fillrule.pl,v 1.4 2004/09/21 12:47:28 mertz Exp $
 # This simple demo has been developped by C. Mertz <mertz@cena.fr>
 
 ####### This file has been largely inspired from figure 11-3
@@ -11,7 +11,7 @@
 #######   contour, coords and clone method
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 use Tk::Zinc;
 

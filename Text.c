@@ -665,7 +665,7 @@ ComputeCoordinates(ZnItem	item,
   } /* ISSET(item->inv_flags, INV_TEXT_LAYOUT) */
     
   text->height = font_height;
-  if (text->text_info) {
+  if (text->text_info && text->max_width) {
     unsigned int h, cursor_offset;
     int		 cursor_line;
     ZnPoint	 origin, box[4];
@@ -698,9 +698,15 @@ ComputeCoordinates(ZnItem	item,
     cursor_line = -1;
     ComputeCursor(item, &cursor_line, &cursor_offset);
     if (cursor_line >= 0) {
-      box[0].x = origin.x + infos[cursor_line].origin_x + cursor_offset -
-	wi->text_info.insert_width/2;
-      box[0].y = origin.y + infos[cursor_line].origin_y - fm.ascent + 1;
+      if (num_lines) {
+	box[0].x = origin.x + infos[cursor_line].origin_x + cursor_offset -
+	  wi->text_info.insert_width/2;
+	box[0].y = origin.y + infos[cursor_line].origin_y - fm.ascent + 1;
+      }
+      else {
+	box[0].x = origin.x;
+	box[0].y = origin.y;
+      }
       box[2].x = box[0].x + wi->text_info.insert_width;
       box[2].y = box[0].y + font_height - 1;
       box[1].x = box[2].x;
@@ -1112,12 +1118,6 @@ Render(ZnItem	item)
   if (!text->text_info) {
     return;
   }
-  /*
-  if (!text->tfi) {
-    if (! (text->tfi = ZnGetTexFont(wi, text->font))) {
-      return;
-    }
-  }*/
   
 #ifdef GL_LIST
   if (!item->gl_list) {

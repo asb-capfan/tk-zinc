@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Wed Jun 23 10:09:20 1999
  *
- * $Id: Group.c,v 1.46 2004/04/30 14:19:20 lecoanet Exp $
+ * $Id: Group.c,v 1.49 2004/09/09 07:58:08 lecoanet Exp $
  */
 
 /*
@@ -39,7 +39,7 @@
 #endif
 
 
-static const char rcsid[] = "$Id: Group.c,v 1.46 2004/04/30 14:19:20 lecoanet Exp $";
+static const char rcsid[] = "$Id: Group.c,v 1.49 2004/09/09 07:58:08 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -911,7 +911,7 @@ ToArea(ZnItem	item,
       continue;
     }
     /*printf("bbox test passed %d\n", current_item?current_item->id:0);*/
-    if ((current_item->class != ZnGroup) || atomic || ta->recursive) {
+    if ((current_item->class != ZnGroup) || atomic || ta->recursive || ISSET(current_item->flags, ATOMIC_BIT)) {
       if (current_item->class != ZnGroup) {
 	/*printf("testing %d\n", current_item?current_item->id:0);*/
 	PushTransform(current_item);
@@ -1185,6 +1185,7 @@ Pick(ZnItem	item,
   ZnBBox	bbox, inter, *clip_box;
   ZnPoint	*p = ps->point;
   ZnBool	atomic;
+  TkRegion	reg;
 
   ps->a_item= ZN_NO_ITEM;
   ps->a_part = ZN_NO_PART;
@@ -1232,13 +1233,16 @@ Pick(ZnItem	item,
   bbox.corner.x = p->x + (aperture?aperture:1);
   bbox.corner.y = p->y + (aperture?aperture:1);
 
-  if (ZnCurrentClip(wi, NULL, &clip_box, NULL)) {
+  if (ZnCurrentClip(wi, &reg, &clip_box, NULL)) {
     ZnIntersectBBox(&bbox, clip_box, &inter);
     if (ZnIsEmptyBBox(&inter)) {
       goto out;
     }
+    if (reg && !ZnPointInRegion(reg, p->x, p->y)) {
+      goto out;
+    }
   }
-  
+
   current_item = (ps->start_item == ZN_NO_ITEM) ? group->head : ps->start_item;
   atomic = ISSET(item->flags, ATOMIC_BIT) && !ps->override_atomic;
 

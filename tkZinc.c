@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: tkZinc.c,v 1.99 2004/05/14 09:14:31 lecoanet Exp $
+ * $Id: tkZinc.c,v 1.105 2004/09/21 08:40:25 lecoanet Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
  *
  */
 
-static const char rcs_id[]="$Id: tkZinc.c,v 1.99 2004/05/14 09:14:31 lecoanet Exp $";
+static const char rcs_id[]="$Id: tkZinc.c,v 1.105 2004/09/21 08:40:25 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 static const char * const zinc_version = "zinc-version-" VERSION;
 
@@ -139,10 +139,12 @@ static  int		ZnMajorGlx, ZnMinorGlx;
 static  int		ZnGLAttribs[] = {
   GLX_RGBA,
   GLX_DOUBLEBUFFER,
-  GLX_BUFFER_SIZE, 24,
-  /*GLX_BUFFER_SIZE, 32,*/
+  GLX_RED_SIZE, 8,
+  GLX_GREEN_SIZE, 8,
+  GLX_BLUE_SIZE, 8,
   GLX_STENCIL_SIZE, 8,
   /*GLX_ALPHA_SIZE, 8,*/
+  GLX_DEPTH_SIZE, 0,
   None
 };
 #endif
@@ -916,19 +918,31 @@ ZnGLMakeCurrent(Display	*dpy,
   ZnGLContextEntry *ce;
 
   ce = ZnGetGLContext(dpy);
-#ifdef _WIN32
+
   if (!wi) {
     /* Get a zinc widget from the context struct
      * for this display. If no more are left,
      * returns, nothing can be done. This can
-     * happend only when freeing images or fonts
+     * happen only when freeing images or fonts
      * after the last zinc on a given display has
-     * been deleted. In this case the context has
-     * been already deleted, freeing all resources
-     * including textures.
+     * been deleted. In this case the context should
+     * be deleted, freeing all resources including
+     * textures.
      */
-    return NULL;
+    ZnWInfo **wip = ZnListArray(ce->widgets);
+    int	    i, num = ZnListSize(ce->widgets);
+
+    for (i = 0; i <num; i++, wip++) {
+      if ((*wip)->win != NULL) {
+	wi = *wip;
+	break;
+      }
+    }
+    if (!wi) {
+      return NULL;
+    }
   }
+#ifdef _WIN32
   ce->hwnd = Tk_GetHWND(Tk_WindowId(wi->win));
   ce->hdc = GetDC(ce->hwnd);
   SetPixelFormat(ce->hdc, ce->ipixel, &ce->pfd);
@@ -937,8 +951,7 @@ ZnGLMakeCurrent(Display	*dpy,
     fprintf(stderr, "Can't make the GL context current: %d\n", GetLastError());
   }
 #else
-  glXMakeCurrent(dpy, wi?Tk_WindowId(wi->win):DefaultRootWindow(dpy),
-		 ce->context);
+  glXMakeCurrent(dpy, Tk_WindowId(wi->win), ce->context);
 #endif
   return ce;
 }
@@ -971,81 +984,15 @@ ZnGLSwapBuffers(ZnGLContextEntry *ce,
 #endif
 
 
+#ifdef GL
 static void
-InitRendering(ZnWInfo	*wi)
+InitRendering1(ZnWInfo	*wi)
 {
   ZnGLContextEntry	*ce;
   ZnGLContext		gl_context;
-  GLfloat		r[2]; /* Min, Max */
-  GLint			i[1];
 
-#ifdef GL
   if (wi->render) {
-#  ifdef _WIN32
-    /*
-     * Look for a matching context already available.
-     */
-    ce = ZnGetGLContext(wi->dpy);
-    if (ce) {
-      gl_context = ce->context;
-      ce->hwnd = Tk_GetHWND(Tk_WindowId(wi->win));
-      ce->hdc = GetDC(ce->hwnd);
-      ZnListAdd(ce->widgets, &wi, ZnListTail);
-      SetPixelFormat(ce->hdc, ce->ipixel, &ce->pfd);
-    }
-    else {
-      ce = ZnMalloc(sizeof(ZnGLContextEntry));
-      ce->hwnd = Tk_GetHWND(Tk_WindowId(wi->win));
-      ce->hdc = GetDC(ce->hwnd);
-      ce->widgets = ZnListNew(1, sizeof(ZnWInfo *));
-      ZnListAdd(ce->widgets, &wi, ZnListTail);
-
-      memset(&ce->pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
-      ce->pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
-      ce->pfd.nVersion = 1;
-      ce->pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-      ce->pfd.iPixelType = PFD_TYPE_RGBA;
-      ce->pfd.cRedBits = 8;
-      ce->pfd.cGreenBits = 8;
-      ce->pfd.cBlueBits = 8;
-      ce->pfd.cAlphaBits = 8;
-      ce->pfd.cStencilBits = 8;
-      ce->pfd.iLayerType = PFD_MAIN_PLANE;
-      ce->ipixel = ChoosePixelFormat(ce->hdc, &ce->pfd);
-      /*printf("ipixel=%d dwFlags=0x%x req=0x%x iPixelType=%d hdc=%d\n",
-	ce->ipixel,
-	ce->pfd.dwFlags,
-	PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER,	      
-	ce->pfd.iPixelType==PFD_TYPE_RGBA,
-	ce->hdc);*/
-      if (!ce->ipixel) {
-	fprintf(stderr, "ChoosePixelFormat failed\n");
-      }
-      
-      if (SetPixelFormat(ce->hdc, ce->ipixel, &ce->pfd) == TRUE) {
-	gl_context = wglCreateContext(ce->hdc);
-	if (gl_context) {
-	  ce->context = gl_context;
-	  ce->dpy = wi->dpy;
-	  ce->max_tex_size = 64; /* Minimum value is always valid */
-	  ce->max_line_width = 1;
-	  ce->max_point_width = 1;
-	  ce->next = gl_contexts;
-	  gl_contexts = ce;
-	}
-	else {
-	  fprintf(stderr, "wglCreateContext failed\n");
-	  ZnFree(ce);
-	}
-      }
-      else {
-	ZnFree(ce);
-      }
-    }
-    ReleaseDC(ce->hwnd, ce->hdc);
-
-#  else /* _WIN32 */
-
+#  ifndef _WIN32
     XVisualInfo *gl_visual = NULL;
     Colormap	colormap = 0;
 
@@ -1125,6 +1072,82 @@ InitRendering(ZnWInfo	*wi)
       Tk_SetWindowVisual(wi->win, gl_visual->visual, 24, colormap);
     }
 #  endif /* _WIN32 */
+  }
+}
+
+static void
+InitRendering2(ZnWInfo	*wi)
+{
+  ZnGLContextEntry	*ce;
+  ZnGLContext		gl_context;
+  GLfloat		r[2]; /* Min, Max */
+  GLint			i[1];
+
+  if (wi->render) {
+#  ifdef _WIN32
+    /*
+     * Look for a matching context already available.
+     */
+    ce = ZnGetGLContext(wi->dpy);
+    if (ce) {
+      gl_context = ce->context;
+      ce->hwnd = Tk_GetHWND(Tk_WindowId(wi->win));
+      ce->hdc = GetDC(ce->hwnd);
+      ZnListAdd(ce->widgets, &wi, ZnListTail);
+      SetPixelFormat(ce->hdc, ce->ipixel, &ce->pfd);
+    }
+    else {
+      ce = ZnMalloc(sizeof(ZnGLContextEntry));
+      ce->hwnd = Tk_GetHWND(Tk_WindowId(wi->win));
+      ce->hdc = GetDC(ce->hwnd);
+      ce->widgets = ZnListNew(1, sizeof(ZnWInfo *));
+      ZnListAdd(ce->widgets, &wi, ZnListTail);
+
+      memset(&ce->pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
+      ce->pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+      ce->pfd.nVersion = 1;
+      ce->pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+      ce->pfd.iPixelType = PFD_TYPE_RGBA;
+      ce->pfd.cRedBits = 8;
+      ce->pfd.cGreenBits = 8;
+      ce->pfd.cBlueBits = 8;
+      ce->pfd.cAlphaBits = 8;
+      ce->pfd.cStencilBits = 8;
+      ce->pfd.iLayerType = PFD_MAIN_PLANE;
+      ce->ipixel = ChoosePixelFormat(ce->hdc, &ce->pfd);
+      /*printf("ipixel=%d dwFlags=0x%x req=0x%x iPixelType=%d hdc=%d\n",
+	ce->ipixel,	ce->pfd.dwFlags,
+	PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER,	      
+	ce->pfd.iPixelType==PFD_TYPE_RGBA,
+	ce->hdc);*/
+      if (!ce->ipixel ||
+	  (ce->pfd.cRedBits != 8) || (ce->pfd.cGreenBits != 8) || (ce->pfd.cBlueBits != 8) ||
+	  (ce->pfd.cStencilBits != 8)) {
+	fprintf(stderr, "ChoosePixelFormat failed\n");
+      }
+      
+      if (SetPixelFormat(ce->hdc, ce->ipixel, &ce->pfd) == TRUE) {
+	gl_context = wglCreateContext(ce->hdc);
+	if (gl_context) {
+	  ce->context = gl_context;
+	  ce->dpy = wi->dpy;
+	  ce->max_tex_size = 64; /* Minimum value is always valid */
+	  ce->max_line_width = 1;
+	  ce->max_point_width = 1;
+	  ce->next = gl_contexts;
+	  gl_contexts = ce;
+	}
+	else {
+	  fprintf(stderr, "wglCreateContext failed\n");
+	  ZnFree(ce);
+	}
+      }
+      else {
+	ZnFree(ce);
+      }
+    }
+    ReleaseDC(ce->hwnd, ce->hdc);
+#endif
 
     ce = ZnGLMakeCurrent(wi->dpy, wi);
     glGetFloatv(ZN_GL_LINE_WIDTH_RANGE, r);
@@ -1153,8 +1176,8 @@ InitRendering(ZnWInfo	*wi)
     
     ZnGLReleaseContext(ce);
   }
-#endif /* GL */
 }
+#endif /* GL */
 
 
 /*
@@ -1207,6 +1230,17 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
       }
     }
   }
+  if (has_gl) {
+    XVisualInfo *visual = glXChooseVisual(dpy,
+					  XScreenNumberOfScreen(screen),
+					  ZnGLAttribs);
+    if (visual) {
+      XFree(visual);
+    }
+    else {
+      has_gl = False;
+    }
+  }
 #  endif
 #endif
 
@@ -1218,16 +1252,7 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
     Tcl_AppendResult(interp, " GL", NULL);
 #  else
     if (has_gl) {
-      XVisualInfo *visual = glXChooseVisual(dpy,
-					    XScreenNumberOfScreen(screen),
-					    ZnGLAttribs);
-      if (visual) {
-	Tcl_AppendResult(interp, " GL", NULL);
-	XFree(visual);
-      }
-      else {
-	has_gl = False;
-      }
+      Tcl_AppendResult(interp, " GL", NULL);
     }
 #  endif
 #endif
@@ -1258,7 +1283,6 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
   wi->real_top = None;
 
   ASSIGN(wi->flags, ZN_HAS_GL, has_gl);
-
 #if defined(SHAPE) && !defined(_WIN32)
   ASSIGN(wi->flags, ZN_HAS_X_SHAPE,
 	 XQueryExtension(wi->dpy, "SHAPE", &major_op, &first_evt, &first_err));
@@ -1419,20 +1443,15 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
   wi->damaged_area.corner.x = wi->width = wi->opt_width;
   wi->damaged_area.corner.y = wi->height = wi->opt_height;
 
-  if (!has_gl) {
-    /* Do not allow GL rendering if not available. This should
-     * _not_ be changed later as images may have been created
-     * in the belief that GL will be available.
-     */
-    wi->render = 0;
-  }
-
   if (!wi->render) {
   /*
    * Allocate double buffer pixmap/image.
    */
     wi->draw_buffer = Tk_GetPixmap(wi->dpy, RootWindowOfScreen(wi->screen),
 				   wi->width, wi->height, Tk_Depth(wi->win));
+  }
+  else {
+    InitRendering1(wi);
   }
 
 #ifdef PTK
@@ -3233,7 +3252,7 @@ FindItems(ZnWInfo	*wi,
       }
       ps.recursive = True;
       ps.override_atomic = False;
-      if (argc > first+5) {
+      if (argc > first+6) {
 	result = Tcl_GetBooleanFromObj(wi->interp, args[first+6], &ps.recursive);
 	if (result != TCL_OK) {
 	  str = Tcl_GetString(args[first+6]);
@@ -3270,7 +3289,7 @@ FindItems(ZnWInfo	*wi,
       }
       ps.recursive = True;
       ps.override_atomic = False;
-      if (argc > first+5) {
+      if (argc > first+6) {
 	result = Tcl_GetBooleanFromObj(wi->interp, args[first+6], &ps.recursive);
 	if (result != TCL_OK) {
 	  str = Tcl_GetString(args[first+6]);
@@ -4252,26 +4271,40 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
 	result = ZnItemWithTagOrId(wi, args[0], &item, &search_var);
 	if ((result == TCL_ERROR) || (item == ZN_NO_ITEM) ||
 	    ! item->class->GetFieldSet) {
-	  Tcl_AppendResult(interp, ", unknown item or doesn't support fields\" ",
+	  Tcl_AppendResult(interp, "unknown item or doesn't support fields \"",
 			   Tcl_GetString(args[0]), "\"", NULL);
 	  goto error;
 	}
 	fs = item->class->GetFieldSet(item);
 	if (field >= 0) {
+	  if ((unsigned int) field >= fs->num_fields) {
+	    Tcl_AppendResult(interp, "field index is out of bounds", NULL);
+	    goto error;	  
+	  }
 	  ZnFIELD.GetFieldBBox(fs, field, &bbox);
 	}
 	else {
 	  ZnFIELD.GetLabelBBox(fs, &width, &height);
-	  p.x = ZnNearestInt(fs->label_pos.x);
-	  p.y = ZnNearestInt(fs->label_pos.y);
-	  ZnAddPointToBBox(&bbox, p.x, p.y);
-	  p.x += width;
-	  p.y += height;
-	  ZnAddPointToBBox(&bbox, p.x, p.y);
+	  if (width && height) {
+	    p.x = ZnNearestInt(fs->label_pos.x);
+	    p.y = ZnNearestInt(fs->label_pos.y);
+	    ZnAddPointToBBox(&bbox, p.x, p.y);
+	    p.x += width;
+	    p.y += height;
+	    ZnAddPointToBBox(&bbox, p.x, p.y);
+	  }
 	}	
       }
       else {
 	for (i = 0; i < (unsigned int) argc; i++) {
+	  /*
+	   * Check for options in wrong place amidst tags.
+	   */
+	  str = Tcl_GetString(args[i]);
+	  if (*str == '-') {
+	    Tcl_AppendResult(interp, "bbox options should be specified before any tag", NULL);
+	    goto error;
+	  }
 	  if (ZnTagSearchScan(wi, args[i], &search_var) == TCL_ERROR) {
 	    goto error;
 	  }	
@@ -6477,6 +6510,14 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     }
     wi->render = render;
   }
+  /*
+   * Reset the render mode if GL is not available. It'll be too late
+   * to do this after images or fonts have been allocated.
+   */
+  if ((wi->render != 0) && ISCLEAR(wi->flags, ZN_HAS_GL)) {
+    fprintf(stderr, "GLX not available (need at least a 24 bits buffer with stencil)\n");
+    wi->render = 0;
+  }
 
 #ifdef GL
   if (CONFIG_PROBE(FONT_SPEC) || !wi->font_tfi) {
@@ -6717,6 +6758,14 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
       }
     }
     else if (wi->render < 0) {
+      wi->render = 0;
+    }
+    /*
+     * Reset the render mode if GL is not available. It'll be too late
+     * to do this after images or fonts have been allocated.
+     */
+    else if ((wi->render != 0) && ISCLEAR(wi->flags, ZN_HAS_GL)) {
+      fprintf(stderr, "GLX not available (need at least a 24 bits buffer with stencil)\n");
       wi->render = 0;
     }
 
@@ -7054,7 +7103,9 @@ Event(ClientData client_data,	/* Information about widget. */
     SET(wi->flags, ZN_CONFIGURE_EVENT);
     if (!wi->gc) {
       SET(wi->flags, ZN_REALIZED);
-      InitRendering(wi);
+#ifdef GL
+      InitRendering2(wi);
+#endif
 
       /*
        * Get the work GC and suppress GraphicExpose
@@ -7928,10 +7979,11 @@ static void
 Destroy(char *mem_ptr)		/* Info about the widget. */
 {
   ZnWInfo	*wi = (ZnWInfo *) mem_ptr;
-  unsigned int	num, i;
+  unsigned int	num;
   Tcl_HashSearch search;
   Tcl_HashEntry	*entry;
 #ifdef GL
+  unsigned int	i;
   ZnGLContextEntry *ce;
   ZnWInfo	**wip;
 #endif
@@ -8075,7 +8127,7 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
      * though). Thus it has been limited to WIN for
      * the time being.
      */
-#ifdef _WIN32
+#if 1 /*def _WIN32*/
     if (ZnListSize(ce->widgets) == 0) {
       ZnGLContextEntry *prev, *next;
       /*printf("Freeing a GL context\n");*/
@@ -8096,7 +8148,10 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
       wglDeleteContext(ce->context);
 #else
       glXDestroyContext(ce->dpy, ce->context);
-      XFreeColormap(ce->dpy, ce->colormap);
+      /*
+       * This call seems to be a problem for X11/Mesa
+       */
+      /*XFreeColormap(ce->dpy, ce->colormap);*/
       XFree(ce->visual);
 #endif
       ZnListFree(ce->widgets);
@@ -8256,10 +8311,10 @@ Repair(ZnWInfo	*wi)
   ZnTriStrip	tristrip;
 #ifdef GL
   XColor	*color;
+  ZnGLContextEntry *ce;
 #endif
   int		int_width = Tk_Width(wi->win);
   int		int_height = Tk_Height(wi->win);
-  ZnGLContextEntry *ce;
 
   /*SET(wi->flags, ZN_CONFIGURE_EVENT);*/
   if (wi->render) {

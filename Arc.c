@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Wed Mar 30 16:24:09 1994
  *
- * $Id: Arc.c,v 1.54 2004/04/30 12:02:49 lecoanet Exp $
+ * $Id: Arc.c,v 1.56 2004/09/17 08:46:48 lecoanet Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Arc.c,v 1.54 2004/04/30 12:02:49 lecoanet Exp $";
+static const char rcsid[] = "$Id: Arc.c,v 1.56 2004/09/17 08:46:48 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -82,8 +82,6 @@ typedef struct _ArcItemStruct {
   /* Private data */
   ZnPoint	orig;
   ZnPoint	corner;
-  ZnPoint	center1;
-  ZnPoint	center2;
   ZnList	render_shape;
   ZnPoint	*grad_geo;
 } ArcItemStruct, *ArcItem;
@@ -348,66 +346,6 @@ Query(ZnItem		item,
 
 
 /*
- * Tangent --
- *	Compute a point describing the arc tangent at the first/last
- *	end of the arc. The point is on the tangent segment next to
- *	the arc (ie: it is suitable for drawing arrows).
- */
-static void
-Tangent(ArcItem	arc,
-	ZnBool	first,
-	ZnPoint	*p)
-{
-  double	a2, b2, w_2, h_2;
-  double	angle;
-  ZnPoint	p1, center;
-
-  if (first) {
-    angle = ZnDegRad(arc->start_angle);
-  }
-  else {
-    angle = ZnDegRad(arc->start_angle + arc->angle_extent);
-  }
-  p1.x = cos(angle);
-  p1.y = sin(angle);
-  w_2 = (arc->corner.x - arc->orig.x) / 2.0;
-  h_2 = (arc->corner.y - arc->orig.y) / 2.0;
-  center.x = (arc->orig.x + arc->corner.x) / 2.0;
-  center.y = (arc->orig.y + arc->corner.y) / 2.0;
-
-  /*
-   * Slope of the initial segment.
-   *
-   * a1 = (center->y - p1.y) / (center->x - p1.x);
-   * a2 = -1/a1;
-   */
-  a2 = - p1.x / p1.y;
-  b2 = p1.y - a2*p1.x;
-
-  if (p1.y == 0.0) {
-    p->x = p1.x;
-    if (!first) {
-      p->y = p1.y - 10.0;
-    }
-    else {
-      p->y = p1.y + 10.0;
-    }
-  }
-  else {
-    if ((!first && (p1.y < 0.0)) || (first && (p1.y > 0.0))) {
-      p->x = p1.x - 10.0;
-    }
-    else {
-      p->x = p1.x + 10.0;
-    }
-    p->y = a2*p->x + b2;
-  }
-  p->x = center.x + ZnNearestInt(p->x*w_2);
-  p->y = center.y + ZnNearestInt(p->y*h_2);
-}
-
-
-/*
  **********************************************************************************
  *
  * ComputeCoordinates --
@@ -439,7 +377,7 @@ UpdateRenderShape(ArcItem	arc)
 			     arc->render_shape);
 
   /*
-   * Adapt the number of arc circles to the radius of the arc.
+   * Adapt the number of arc points to the radius of the arc.
    */
   p.x = o.x + p_list->x*d;
   p.y = o.y + p_list->y*d;
@@ -455,6 +393,7 @@ UpdateRenderShape(ArcItem	arc)
   else if (d > 9.0) {
     quality = ZN_CIRCLE_MEDIUM;
   }
+
   if (quality != ZN_CIRCLE_COARSE) {
     p_list = ZnGetCirclePoints(ISCLEAR(arc->flags, PIE_SLICE_BIT) ? 1 : 2,
 			       quality,
@@ -477,10 +416,9 @@ ComputeCoordinates(ZnItem	item,
 {
   ZnWInfo	*wi = item->wi;
   ArcItem	arc = (ArcItem) item;
-  ZnReal	angle, sin1, cos1, sin2, cos2;
-  ZnReal	tmp, w_2, h_2, center_x, center_y;
+  ZnReal	angle, tmp;
   unsigned int	num_p;
-  ZnPoint	*p_list, p;
+  ZnPoint	*p_list;
   ZnPoint	end_points[ZN_LINE_END_POINTS];
   
   ZnResetBBox(&item->item_bounding_box);
@@ -497,9 +435,9 @@ ComputeCoordinates(ZnItem	item,
   if (!wi->render) {
     ZnTransfoDecompose(wi->current_transfo, NULL, NULL, &angle, NULL);
   }
-  if (wi->render || (angle >= PRECISION_LIMIT)) {
+  if (wi->render || (angle >= PRECISION_LIMIT) || (ABS(arc->angle_extent) != 360) ||
+      ISSET(arc->flags, FIRST_END_OK) || ISSET(arc->flags, LAST_END_OK)) {
     SET(arc->flags, USING_POLY_BIT);
-
     UpdateRenderShape(arc);
     p_list = ZnListArray(arc->render_shape);
     num_p = ZnListSize(arc->render_shape);
@@ -559,122 +497,21 @@ ComputeCoordinates(ZnItem	item,
 
   /*
    *******		********			**********
-   * This part is for X drawn arcs: not rotated.
+   * This part is for X drawn arcs: full extent, not rotated.
    *******		********			**********
    */
   CLEAR(arc->flags, USING_POLY_BIT);
   ZnTransformPoint(wi->current_transfo, &arc->coords[0], &arc->orig);
   ZnTransformPoint(wi->current_transfo, &arc->coords[1], &arc->corner);
 
-  if (arc->orig.x > arc->corner.x) {
-    tmp = arc->orig.x;
-    arc->orig.x = arc->corner.x;
-    arc->corner.x = tmp;
-  }
-  if (arc->orig.y > arc->corner.y) {
-    tmp = arc->orig.y;
-    arc->orig.y = arc->corner.y;
-    arc->corner.y = tmp;
-  }
+  ZnAddPointToBBox(&item->item_bounding_box, arc->orig.x, arc->orig.y);
+  ZnAddPointToBBox(&item->item_bounding_box, arc->corner.x, arc->corner.y);
 
-  /*
-   * now compute the two points at the centers of the ends of the arc.
-   * We first compute the position for a unit circle and then scale
-   * to fit the shape.
-   * Angles are running clockwise and y coordinates are inverted.
-   */
-  angle = ZnDegRad(arc->start_angle);
-  sin1 = sin(angle);
-  cos1 = cos(angle);
-  angle += ZnDegRad(arc->angle_extent);
-  sin2 = sin(angle);
-  cos2 = cos(angle);
-  
-  w_2 = (arc->corner.x - arc->orig.x) / 2;
-  h_2 = (arc->corner.y - arc->orig.y) / 2;
-  center_x = (arc->corner.x + arc->orig.x) / 2;
-  center_y = (arc->corner.y + arc->orig.y) / 2;
-
-  arc->center1.x = center_x + ZnNearestInt(cos1*w_2);
-  arc->center1.y = center_y + ZnNearestInt(sin1*h_2);
-  arc->center2.x = center_x + ZnNearestInt(cos2*w_2);
-  arc->center2.y = center_y + ZnNearestInt(sin2*h_2);
-  
-  /*
-   * Add the ends centers to the bbox.
-   */
-  ZnAddPointToBBox(&item->item_bounding_box, arc->center1.x, arc->center1.y);
-  ZnAddPointToBBox(&item->item_bounding_box, arc->center2.x, arc->center2.y);
-  
-  /*
-   * If the arc is filled or if the outline is closed in pie slice,
-   * add the center of the arc.
-   */
-  if ((ISSET(arc->flags, FILLED_BIT) || ISSET(arc->flags, CLOSED_BIT)) &&
-      ISSET(arc->flags, PIE_SLICE_BIT)) {
-    ZnAddPointToBBox(&item->item_bounding_box, center_x, center_y);
-  }
-  
-  /*
-   * Then add the 3-o'clock, 6-o'clock, 9-o'clock, 12-o'clock position
-   * as required.
-   */
-  tmp = -arc->start_angle;
-  if (tmp < 0) {
-    tmp += 360;
-  }
-  if ((tmp < arc->angle_extent) || ((tmp - 360) > arc->angle_extent)) {
-    ZnAddPointToBBox(&item->item_bounding_box, arc->corner.x, center_y);
-  }
-
-  tmp = 180 - arc->start_angle;
-  if (tmp < 0) {
-    tmp += 360;
-  }
-  if ((tmp < arc->angle_extent) || ((tmp - 360) > arc->angle_extent)) {
-    ZnAddPointToBBox(&item->item_bounding_box, arc->orig.x, center_y);
-  }
-  
-  tmp = 90 - arc->start_angle;
-  if (tmp < 0) {
-    tmp += 360;
-  }
-  if ((tmp < arc->angle_extent) || ((tmp - 360) > arc->angle_extent)) {
-    ZnAddPointToBBox(&item->item_bounding_box, center_x, arc->corner.y);
-  }
-
-  tmp = 270 - arc->start_angle;
-  if (tmp < 0) {
-    tmp += 360;
-  }
-  if ((tmp < arc->angle_extent) || ((tmp - 360) > arc->angle_extent)) {
-    ZnAddPointToBBox(&item->item_bounding_box, center_x, arc->orig.y);
-  }
-  
-  /*
-   * Now take care of the arc outline width plus one pixel of margin.
-   */
   tmp = (arc->line_width + 1.0) / 2.0 + 1.0;
   item->item_bounding_box.orig.x -= tmp;
   item->item_bounding_box.orig.y -= tmp;
   item->item_bounding_box.corner.x += tmp;
   item->item_bounding_box.corner.y += tmp;
-
-  /*
-   * Then add the arrows if any.
-   */
-  if (ISSET(arc->flags, FIRST_END_OK)) {
-    Tangent(arc, True, &p);
-    ZnGetLineEnd(&arc->center1, &p, arc->line_width, CapRound,
-		 arc->first_end, end_points);
-    ZnAddPointsToBBox(&item->item_bounding_box, end_points, ZN_LINE_END_POINTS);
-  }
-  if (ISSET(arc->flags, LAST_END_OK)) {
-    Tangent(arc, False, &p);
-    ZnGetLineEnd(&arc->center2, &p, arc->line_width, CapRound,
-		 arc->last_end, end_points);
-    ZnAddPointsToBBox(&item->item_bounding_box, end_points, ZN_LINE_END_POINTS);
-  }
 }
 
 
@@ -694,71 +531,73 @@ ToArea(ZnItem	item,
   ArcItem	arc = (ArcItem) item;
   ZnPoint	*points;
   ZnPoint	pts[20]; /* Should be at least ZN_LINE_END_POINTS large */
-  ZnPoint	center, tang;
-  ZnBBox	t_area, *area = ta->area;
+  ZnPoint	center;
+  ZnBBox	*area = ta->area;
   unsigned int	num_points;
   int		result=-1, result2;
   ZnReal	lw = arc->line_width;
-  ZnReal	rx, ry, angle, tmp;
-  ZnBool	inside, new_inside;
-  ZnPickStruct	ps;
+  ZnReal	width, height;
 
-  if (ISSET(arc->flags, USING_POLY_BIT) &&
-      (ISSET(arc->flags, FILLED_BIT) || (arc->line_width))) {
-    points = ZnListArray(arc->render_shape);
-    num_points = ZnListSize(arc->render_shape);
-
-    if (ISSET(arc->flags, FILLED_BIT)) {
-      result = ZnPolygonInBBox(points, num_points, area, NULL);
-      if (result == 0) {
-	return 0;
+  if (ISSET(arc->flags, USING_POLY_BIT)) {
+    if (ISSET(arc->flags, FILLED_BIT) || (arc->line_width)) {
+      points = ZnListArray(arc->render_shape);
+      num_points = ZnListSize(arc->render_shape);
+      
+      if (ISSET(arc->flags, FILLED_BIT)) {
+	result = ZnPolygonInBBox(points, num_points, area, NULL);
+	if (result == 0) {
+	  return 0;
+	}
       }
+      if (arc->line_width > 0) {
+	result2 = ZnPolylineInBBox(points, num_points, arc->line_width,
+				   CapRound, JoinRound, area);
+	if (ISCLEAR(arc->flags, FILLED_BIT)) {
+	  if (result2 == 0) {
+	    return 0;
+	  }
+	  result = result2;
+	}
+	else if (result2 != result) {
+	  return 0;
+	}
+	if (ISSET(arc->flags, CLOSED_BIT) && ISSET(arc->flags, PIE_SLICE_BIT)) {
+	  pts[0] = points[num_points-1];
+	  pts[1] = points[0];
+	  if (ZnPolylineInBBox(pts, 2, arc->line_width,
+			       CapRound, JoinRound, area) != result) {
+	    return 0;
+	  }
+	}
+	/*
+	 * Check line ends.
+	 */
+	if (ISSET(arc->flags, FIRST_END_OK)) {
+	  ZnGetLineEnd(&points[0], &points[1], arc->line_width, CapRound,
+		       arc->first_end, pts);
+	  if (ZnPolygonInBBox(pts, ZN_LINE_END_POINTS, area, NULL) != result) {
+	    return 0;
+	  }
+	}
+	if (ISSET(arc->flags, LAST_END_OK)) {
+	  ZnGetLineEnd(&points[num_points-1], &points[num_points-2], arc->line_width,
+		       CapRound, arc->last_end, pts);
+	  if (ZnPolygonInBBox(pts, ZN_LINE_END_POINTS, area, NULL) != result) {
+	    return 0;
+	  }
+	}
+      }
+      return result;
     }
-    if (arc->line_width > 0) {
-      result2 = ZnPolylineInBBox(points, num_points, arc->line_width,
-				 CapRound, JoinRound, area);
-      if (ISCLEAR(arc->flags, FILLED_BIT)) {
-	if (result2 == 0) {
-	  return 0;
-	}
-	result = result2;
-      }
-      else if (result2 != result) {
-	return 0;
-      }
-      if (ISSET(arc->flags, CLOSED_BIT) && ISSET(arc->flags, PIE_SLICE_BIT)) {
-	pts[0] = points[num_points-1];
-	pts[1] = points[0];
-	if (ZnPolylineInBBox(pts, 2, arc->line_width,
-			     CapRound, JoinRound, area) != result) {
-	  return 0;
-	}
-      }
-      /*
-       * Check line ends.
-       */
-      if (ISSET(arc->flags, FIRST_END_OK)) {
-	ZnGetLineEnd(&points[0], &points[1], arc->line_width, CapRound,
-		     arc->first_end, pts);
-	if (ZnPolygonInBBox(pts, ZN_LINE_END_POINTS, area, NULL) != result) {
-	  return 0;
-	}
-      }
-      if (ISSET(arc->flags, LAST_END_OK)) {
-	ZnGetLineEnd(&points[num_points-1], &points[num_points-2], arc->line_width,
-		     CapRound, arc->last_end, pts);
-	if (ZnPolygonInBBox(pts, ZN_LINE_END_POINTS, area, NULL) != result) {
-	  return 0;
-	}
-      }
+    else {
+      return -1;
     }
-    return result;
   }
 
   /*
    *******		********			**********
-   * The rest of this code deal with non rotated arcs.           *
-   * It has been stolen from tkCanvArc.c			 *
+   * The rest of this code deal with non rotated, full extent    *
+   * arcs. It has been stolen from tkRectOval.c			 *
    *******		********			**********
    */
   /*
@@ -767,199 +606,37 @@ ToArea(ZnItem	item,
    */
   center.x = (arc->orig.x + arc->corner.x)/2.0;
   center.y = (arc->orig.y + arc->corner.y)/2.0;
-  t_area.orig.x = area->orig.x - center.x;
-  t_area.orig.y = area->orig.y - center.y;
-  t_area.corner.x = area->corner.x - center.x;
-  t_area.corner.y = area->corner.y - center.y;
-  rx = arc->corner.x - center.x + lw/2.0;
-  ry = arc->corner.y - center.y + lw/2.0;
+  width = (arc->corner.x - arc->orig.x) +  lw;
+  height = (arc->corner.y - arc->orig.y) + lw;
 
-  /*
-   * Find the extreme points of the arc and see whether these are all
-   * inside the rectangle (in which case we're done), partly in and
-   * partly out (in which case we're done), or all outside (in which
-   * case we have more work to do).  The extreme points include the
-   * following, which are checked in order:
-   *
-   * 1. The outside points of the arc, corresponding to start and
-   *	  extent.
-   * 2. The center of the arc (but only in pie-slice mode).
-   * 3. The 12, 3, 6, and 9-o'clock positions (but only if the arc
-   *    includes those angles).
-   */
-  points = pts;
-  angle = ZnDegRad(arc->start_angle);
-  points->x = rx*cos(angle);
-  points->y = ry*sin(angle);
-  angle += ZnDegRad(arc->angle_extent);
-  points[1].x = rx*cos(angle);
-  points[1].y = ry*sin(angle);
-  num_points = 2;
-  points += 2;
+  result = ZnOvalInBBox(&center, width, height, area);
+ 
+   /*
+    * If the area appears to overlap the oval and the oval
+    * isn't filled, do one more check to see if perhaps all four
+    * of the area's corners are totally inside the oval's
+    * unfilled center, in which case we should return "outside".
+    */
+  if ((result == 0) && lw && ISCLEAR(arc->flags, FILLED_BIT)) {
+    ZnReal x_delta1, x_delta2, y_delta1, y_delta2;
 
-  if (ISSET(arc->flags, PIE_SLICE_BIT) && (arc->angle_extent < 180.0)) {
-    points->x = 0.0;
-    points->y = 0.0;
-    num_points++;
-    points++;
-  }
-
-  tmp = -arc->start_angle;
-  if (tmp < 0) {
-    tmp += 360.0;
-  }
-  if ((tmp < arc->angle_extent) || ((tmp-360) > arc->angle_extent)) {
-    points->x = rx;
-    points->y = 0.0;
-    num_points++;
-    points++;
-  }
-  tmp = 180.0 - arc->start_angle;
-  if (tmp < 0) {
-    tmp += 360.0;
-  }
-  if ((tmp < arc->angle_extent) || ((tmp-360) > arc->angle_extent)) {
-    points->x = 0.0;
-    points->y = ry;
-    num_points++;
-    points++;
-  }
-  tmp = 90.0 - arc->start_angle;
-  if (tmp < 0) {
-    tmp += 360.0;
-  }
-  if ((tmp < arc->angle_extent) || ((tmp-360) > arc->angle_extent)) {
-    points->x = -rx;
-    points->y = 0.0;
-    num_points++;
-    points++;
-  }
-  tmp = 270.0 - arc->start_angle;
-  if (tmp < 0) {
-    tmp += 360.0;
-  }
-  if ((tmp < arc->angle_extent) || ((tmp-360) > arc->angle_extent)) {
-    points->x = 0.0;
-    points->y = -ry;
-    num_points++;
-  }
-
-  /*
-   * Now that we've located the extreme points, loop through them all
-   * to see which are inside the rectangle.
-   */
-  inside = ZnPointInBBox(&t_area, pts->x, pts->y);
-  for (points = pts+1; num_points > 1; points++, num_points--) {
-    new_inside = ZnPointInBBox(&t_area, points->x, points->y);
-    if (new_inside != inside) {
-      return 0;
-    }
-  }
-  result = inside ? 1 : -1;
-  
-  /*
-   * So far, oval appears to be outside rectangle, but can't yet tell
-   * for sure.  Next, test each of the four sides of the rectangle
-   * against the bounding region for the arc.  If any intersections
-   * are found, then return "overlapping".  First, test against the
-   * polygon(s) forming the sides of a chord or pie-slice.
-   */
-  if ((lw >= 1.0) && (ISSET(arc->flags, CLOSED_BIT))) {
-    if (ISSET(arc->flags, PIE_SLICE_BIT)) {
-      pts[0] = arc->center1;
-      pts[1] = center;
-      pts[2] = arc->center2;
-      num_points = 3;
-    }
-    else {
-      pts[0] = arc->center1;
-      pts[1] = arc->center2;
-      num_points = 2;
-    }
-    if (ZnPolylineInBBox(pts, num_points, lw, CapRound, JoinRound, area) != result) {
-      return 0;
-    }
-  }
-  else if (ISSET(arc->flags, FILLED_BIT)) {
-    if (ISSET(arc->flags, PIE_SLICE_BIT)) {
-      if ((ZnLineInBBox(&center, &arc->center1, area) != result) ||
-	  (ZnLineInBBox(&center, &arc->center2, area) != result)) {
-	return 0;
-      }
-    }
-    else {
-      if (ZnLineInBBox(&arc->center1, &arc->center2, area) != result) {
-	return 0;
-      }
+    width /= 2.0;
+    height /= 2.0;
+    x_delta1 = (area->orig.x - center.x) / width;
+    x_delta1 *= x_delta1;
+    y_delta1 = (area->orig.y - center.y) / height;
+    y_delta1 *= y_delta1;
+    x_delta2 = (area->corner.x - center.x) / width;
+    x_delta2 *= x_delta2;
+    y_delta2 = (area->corner.y - center.y) / height;
+    y_delta2 *= y_delta2;
+    if (((x_delta1 + y_delta1) < 1.0) && ((x_delta1 + y_delta2) < 1.0) &&
+	((x_delta2 + y_delta1) < 1.0) && ((x_delta2 + y_delta2) < 1.0)) {
+      return -1;
     }
   }
 
-  /*
-   * Check line ends.
-   */
-  if (ISSET(arc->flags, FIRST_END_OK)) {
-    Tangent(arc, True, &tang);
-    ZnGetLineEnd(&arc->center1, &tang, arc->line_width, CapRound,
-		 arc->first_end, pts);
-    if (ZnPolygonInBBox(pts, ZN_LINE_END_POINTS, area, NULL) != result) {
-      return 0;
-    }
-  }
-  if (ISSET(arc->flags, LAST_END_OK)) {
-    Tangent(arc, False, &tang);
-    ZnGetLineEnd(&arc->center2, &tang, arc->line_width, CapRound,
-		 arc->last_end, pts);
-    if (ZnPolygonInBBox(pts, ZN_LINE_END_POINTS, area, NULL) != result) {
-      return 0;
-    }
-  }
-  if (result == 1) {
-    return result;
-  }
-  
-  /*
-   * Next check for overlap between each of the four sides and the
-   * outer perimiter of the arc.  If the arc isn't filled, then also
-   * check the inner perimeter of the arc.
-   */
-  if (ZnHorizLineToArc(t_area.orig.x, t_area.corner.x, t_area.orig.y,
-		       rx, ry, arc->start_angle, arc->angle_extent) ||
-      ZnHorizLineToArc(t_area.orig.x, t_area.corner.x, t_area.corner.y,
-		       rx, ry, arc->start_angle, arc->angle_extent) ||
-      ZnVertLineToArc(t_area.orig.x, t_area.orig.y, t_area.corner.y,
-		      rx, ry, arc->start_angle, arc->angle_extent) ||
-      ZnVertLineToArc(t_area.corner.x, t_area.orig.y, t_area.corner.y,
-		      rx, ry, arc->start_angle, arc->angle_extent)) {
-    return 0;
-  }
-  if ((lw > 1.0) && ISCLEAR(arc->flags, FILLED_BIT)) {
-    rx -= lw;
-    ry -= lw;
-    if (ZnHorizLineToArc(t_area.orig.x, t_area.corner.x, t_area.orig.y,
-			 rx, ry, arc->start_angle, arc->angle_extent) ||
-	ZnHorizLineToArc(t_area.orig.x, t_area.corner.x, t_area.corner.y,
-			 rx, ry, arc->start_angle, arc->angle_extent) ||
-	ZnVertLineToArc(t_area.orig.x, t_area.orig.y, t_area.corner.y,
-			rx, ry, arc->start_angle, arc->angle_extent) ||
-	ZnVertLineToArc(t_area.corner.x, t_area.orig.y, t_area.corner.y,
-			rx, ry, arc->start_angle, arc->angle_extent)) {
-      return 0;
-    }
-  }
-  
-  /*
-   * The arc still appears to be totally disjoint from the rectangle,
-   * but it's also possible that the rectangle is totally inside the arc.
-   * Do one last check, which is to check one point of the rectangle
-   * to see if it's inside the arc.  If it is, we've got overlap.  If
-   * it isn't, the arc's really outside the rectangle.
-   */
-  ps.point = &area->orig;
-  if (Pick(item, &ps) == 0.0) {
-    return 0;
-  }
-
-  return -1;
+  return result;
 }
 
 
@@ -980,9 +657,11 @@ Draw(ZnItem	item)
   ZnPoint	*p=NULL;
   XPoint	*xp=NULL;
   unsigned int	num_points=0, i;
-  
-  if (ISSET(arc->flags, USING_POLY_BIT) &&
-      (ISSET(arc->flags, FILLED_BIT) || (arc->line_width))) {
+
+  if (ISCLEAR(arc->flags, FILLED_BIT) && !arc->line_width) {
+    return;
+  }
+  if (ISSET(arc->flags, USING_POLY_BIT)) {
     p = ZnListArray(arc->render_shape);
     num_points = ZnListSize(arc->render_shape);
     ZnListAssertSize(ZnWorkXPoints, num_points);
@@ -1026,6 +705,7 @@ Draw(ZnItem	item)
       values.fill_style = FillSolid;
       XChangeGC(wi->dpy, wi->gc, GCForeground|GCFillStyle|GCArcMode, &values);
     }
+
     if (ISSET(arc->flags, USING_POLY_BIT)) {
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc,
 		   xp, (int) num_points, Nonconvex, CoordModeOrigin);
@@ -1046,7 +726,6 @@ Draw(ZnItem	item)
   if (arc->line_width) {
     ZnPoint  end_points[ZN_LINE_END_POINTS];
     XPoint      xap[ZN_LINE_END_POINTS];
-    ZnPoint	tang;
       
     ZnSetLineStyle(wi, arc->line_style);
     values.foreground = ZnGetGradientPixel(arc->line_color, 0.0);
@@ -1105,52 +784,6 @@ Draw(ZnItem	item)
 	       (unsigned int) width,
 	       (unsigned int) height,
 	       -arc->start_angle*64, -arc->angle_extent*64);
-      /*
-       * If the outline is closed, draw the closure.
-       */
-      if (ISSET(arc->flags, CLOSED_BIT)) {
-	if (ISSET(arc->flags, PIE_SLICE_BIT)) {
-	  XPoint	points[3];
-	  
-	  points[0].x = (short) arc->center1.x;
-	  points[0].y = (short) arc->center1.y;
-	  points[1].x = (short) ((arc->corner.x + arc->orig.x) / 2);
-	  points[1].y = (short) ((arc->corner.y + arc->orig.y) / 2);
-	  points[2].x = (short) arc->center2.x;
-	  points[2].y = (short) arc->center2.y;
-	  XDrawLines(wi->dpy, wi->draw_buffer, wi->gc, points, 3,
-		     CoordModeOrigin);
-	}
-	else {
-	  XDrawLine(wi->dpy, wi->draw_buffer, wi->gc,
-		    (int) arc->center1.x,
-		    (int) arc->center1.y,
-		    (int) arc->center2.x,
-		    (int) arc->center2.y);
-	}
-      }
-      if (ISSET(arc->flags, FIRST_END_OK)) {
-	Tangent(arc, True, &tang);
-	ZnGetLineEnd(&arc->center1, &tang, arc->line_width, CapRound,
-		     arc->first_end, end_points);
-	for (i = 0; i < ZN_LINE_END_POINTS; i++) {
-	  xap[i].x = (short) end_points[i].x;
-	  xap[i].y = (short) end_points[i].y;
-	}
-	XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xap, ZN_LINE_END_POINTS,
-		     Nonconvex, CoordModeOrigin);
-      }
-      if (ISSET(arc->flags, LAST_END_OK)) {
-	Tangent(arc, False, &tang);
-	ZnGetLineEnd(&arc->center2, &tang, arc->line_width, CapRound,
-		     arc->last_end, end_points);
-	for (i = 0; i < ZN_LINE_END_POINTS; i++) {
-	  xap[i].x = (short) end_points[i].x;
-	  xap[i].y = (short) end_points[i].y;
-	}
-	XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xap, ZN_LINE_END_POINTS,
-		     Nonconvex, CoordModeOrigin);
-      }
     }
   }
 }
@@ -1295,17 +928,16 @@ Pick(ZnItem	item,
 {
   ArcItem	arc = (ArcItem) item;
   double	dist = 1e40, new_dist;
-  ZnBool	point_in_angle, filled, closed;
-  ZnBool	in_triangle, acute_angle;
-  ZnPoint	p1, center, tang;
+  ZnPoint	center;
   ZnPoint	*points, *p = ps->point;
   ZnPoint	end_points[ZN_LINE_END_POINTS];
   unsigned int	num_points;
-  ZnDim		width, height;
   ZnDim		lw = arc->line_width;
   
-  if (ISSET(arc->flags, USING_POLY_BIT) &&
-      (ISSET(arc->flags, FILLED_BIT) || (arc->line_width))) {
+  if (ISCLEAR(arc->flags, FILLED_BIT) && ! arc->line_width) {
+    return dist;
+  }
+  if (ISSET(arc->flags, USING_POLY_BIT)) {
     points = ZnListArray(arc->render_shape);
     num_points = ZnListSize(arc->render_shape);
 
@@ -1361,204 +993,24 @@ Pick(ZnItem	item,
   }
 
   /*
-   *******		********			**********
-   * The rest of this code deal with non rotated or relief arcs. *
-   *******		********			**********
+   *******		********			  **********
+   * The rest of this code deal with non rotated full extent arcs. *
+   *******		********			  **********
    */
-  center.x = (arc->corner.x + arc->orig.x) / 2;
-  center.y = (arc->corner.y + arc->orig.y) / 2;
-  width = arc->corner.x - arc->orig.x;
-  height = arc->corner.y - arc->orig.y;
-  
-  /*
-   * Let see if the point is in the angular range. First
-   * transform the coordinates so that the oval is circular.
-   */
-  p1.y = (p->y - center.y) / height;
-  p1.x = (p->x - center.x) / width;
-  point_in_angle = ZnPointInAngle(arc->start_angle, arc->angle_extent, &p1);
-
-  /*
-   * Now try to compute the distance dealing with the
-   * many possible configurations.
-   */
-  filled = !ISCLEAR(arc->flags, FILLED_BIT);
-  closed = !ISCLEAR(arc->flags, CLOSED_BIT);
-
-  /*
-   * First the case of an arc not filled, not closed. We suppose
-   * here that the outline is drawn since we cannot get here without
-   * filling or outlining.
-   */
-  if (!filled && !closed) {
-    if (point_in_angle) {
-      dist = ZnOvalToPointDist(&center, width, height, lw, p);
-      if (dist < 0.0) {
-	dist = -dist;
-      }
+  center.x = (arc->orig.x + arc->corner.x) / 2.0;
+  center.y = (arc->orig.y + arc->corner.y) / 2.0;
+  dist = ZnOvalToPointDist(&center, arc->corner.x - arc->orig.x,
+			   arc->corner.y - arc->orig.y, lw, p);
+  if (dist < 0.0) {
+    if (ISSET(arc->flags, FILLED_BIT)) {
+      dist = 0.0;
     }
     else {
-      dist = hypot((p->x - arc->center1.x), (p->y - arc->center1.y));
-    }
-    new_dist = hypot((p->x - arc->center2.x), (p->y - arc->center2.y));
-    if (new_dist < dist) {
-      dist = new_dist;
-    }
-    /* Take into account CapRounded path. */
-    if (lw > 1) {
-      dist -= lw/2;
-      if (dist < 0.0) {
-	dist = 0.0;
-      }
-    }
-    if (dist == 0.0) {
-      return 0.0;
-    }
-
-    /*
-     * Check line ends.
-     */
-    if (ISSET(arc->flags, FIRST_END_OK)) {
-      Tangent(arc, True, &tang);
-      ZnGetLineEnd(&arc->center1, &tang, arc->line_width, CapRound,
-		   arc->first_end, end_points);
-      new_dist = ZnPolygonToPointDist(end_points, ZN_LINE_END_POINTS, p);
-      if (new_dist < dist) {
-	dist = new_dist;
-      }
-      if (dist <= 0.0) {
-	return 0.0;
-      }
-    }
-    if (ISSET(arc->flags, LAST_END_OK)) {
-      Tangent(arc, False, &tang);
-      ZnGetLineEnd(&arc->center2, &tang, arc->line_width,
-		   CapRound, arc->last_end, end_points);
-      new_dist = ZnPolygonToPointDist(end_points, ZN_LINE_END_POINTS, p);
-      if (new_dist < dist) {
-	dist = new_dist;
-      }
-      if (dist <= 0.0) {
-	return 0.0;
-      }
-    }
-    return dist;
-  }
-  
-  /*
-   * Try to deal with filled and/or outline-closed arcs (not having full
-   * angular extent).
-   */
-  if (ISSET(arc->flags, PIE_SLICE_BIT)) {
-    dist = ZnLineToPointDist(&center, &arc->center1, p, NULL);
-    new_dist = ZnLineToPointDist(&center, &arc->center2, p, NULL);
-    if (new_dist < dist) {
-      dist = new_dist;
-    }
-    if (arc->line_width > 1) {
-      if (closed) {
-	dist -= arc->line_width/2;
-      }
-      /*
-       * The arc outline is CapRounded so if it is not
-       * full extent, includes the caps.
-       */
-      else {
-	new_dist = hypot(p->x - arc->center1.x, p->y - arc->center1.y) - lw/2;
-	if (new_dist < dist) {
-	  dist = new_dist;
-	}
-	new_dist = hypot(p->x - arc->center2.x, p->y - arc->center2.y) - lw/2;
-	if (new_dist < dist) {
-	  dist = new_dist;
-	}
-      }
-    }
-    if (dist <= 0.0) {
-      return 0.0;
-    }
-    if (point_in_angle) {
-      new_dist = ZnOvalToPointDist(&center, width, height, lw, p);
-      if (new_dist < dist) {
-	dist = new_dist;
-      }
-      if (dist < 0.0) {
-	dist = filled ? 0.0 : -dist;
-      }
-    }
-    return dist;
-  }
-
-  /*
-   * This is a chord closed oval.
-   */    
-  dist = ZnLineToPointDist(&arc->center1, &arc->center2, p, NULL);
-  if (arc->line_width > 1) {
-    if (closed) {
-      dist -= arc->line_width/2;
-    }
-    /*
-     * The arc outline is CapRounded so if it is not
-     * full extent, includes the caps.
-     */
-    else {
-      new_dist = hypot(p->x - arc->center1.x, p->y - arc->center1.y) - lw/2;
-      if (new_dist < dist) {
-	dist = new_dist;
-      }
-      new_dist = hypot(p->x - arc->center2.x, p->y - arc->center2.y) - lw/2;
-      if (new_dist < dist) {
-	dist = new_dist;
-      }
+      dist = -dist;
     }
   }
-  if (dist <= 0.0) {
-    return 0.0;
-  }
-  
-  /*
-   * Need to check the point against the triangle formed
-   * by the difference between Chord mode and PieSlice mode.
-   * This triangle needs to be included if extend is more than
-   * 180 degrees and excluded otherwise. We try to see if
-   * the center of the arc and the point are both on the same
-   * side of the chord. If they are, the point is in the triangle
-   */
-  if (arc->center1.x == arc->center2.x) {
-    in_triangle = ((center.x <= arc->center1.x) && (p->x <= arc->center1.x)) ||
-      ((center.x > arc->center1.x) && (p->x > arc->center1.x));
-  }
-  else {
-    double	a, b;
-    
-    a = ((double) (arc->center2.y - arc->center1.y)) /
-      ((double) (arc->center2.x - arc->center1.x));
-    b = arc->center1.y - a*arc->center1.x;
-    in_triangle = (((a*center.x + b - center.y) >= 0.0) ==
-		   ((a*p->x + b - p->y) >= 0.0));
-  }
-  
-  acute_angle = ((arc->angle_extent > -180) && (arc->angle_extent < 180));
-  if (!point_in_angle && !acute_angle && filled && in_triangle) {
-    return 0.0;
-  }
-  
-  if (point_in_angle && (!acute_angle || !in_triangle)) {
-    new_dist = ZnOvalToPointDist(&center, width, height, lw, p);
-    if (new_dist < dist) {
-      dist = new_dist;
-    }
-    if (dist < 0.0) {
-      dist = filled ? 0.0 : -dist;
-    }
-    if (dist == 0.0) {
-      return 0.0;
-    }
-  }
-
   return dist;
 }
-
 
 /*
  **********************************************************************************

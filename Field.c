@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: Field.c,v 1.22 2004/05/07 09:37:07 lecoanet Exp $
+ * $Id: Field.c,v 1.23 2004/05/19 13:04:54 lecoanet Exp $
  */
 
 /*
@@ -38,7 +38,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Field.c,v 1.22 2004/05/07 09:37:07 lecoanet Exp $";
+static const char rcsid[] = "$Id: Field.c,v 1.23 2004/05/19 13:04:54 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -839,7 +839,7 @@ InitFields(ZnFieldSet	field_set)
     field->tile = ZnUnspecifiedImage;
     field->font = Tk_GetFont(wi->interp, wi->win, Tk_NameOfFont(wi->font));
 #ifdef GL
-    field->tfi = NULL;
+    field->tfi = ZnGetTexFont(wi, field->font);
 #endif
     field->border_edges = ZN_NO_BORDER;
     field->alignment = TK_JUSTIFY_LEFT;
@@ -901,7 +901,7 @@ CloneFields(ZnFieldSet	field_set)
     }
     field->font = Tk_GetFont(wi->interp, wi->win, Tk_NameOfFont(field->font));
 #ifdef GL
-    field->tfi = NULL;
+    field->tfi = ZnGetTexFont(wi, field->font);
 #endif
     field->color = ZnGetGradientByValue(field->color);
     field->fill_color = ZnGetGradientByValue(field->fill_color);
@@ -992,7 +992,7 @@ ConfigureField(ZnFieldSet	fs,
   if (old_font != fptr->font) {
     if (fptr->tfi) {
       ZnFreeTexFont(fptr->tfi);
-      fptr->tfi = NULL;
+      fptr->tfi = ZnGetTexFont(wi, fptr->font);
     }
   }
 #endif
@@ -2049,11 +2049,6 @@ RenderField(ZnWInfo	*wi,
        */
       num_bytes = strlen(fptr->text);
       if (num_bytes) {
-	if (!fptr->tfi) {
-	  if (! (fptr->tfi = ZnGetTexFont(wi, fptr->font))) {
-	    continue;
-	  }
-	}
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	if (sel_start >= 0) {
 	  color = ZnGetGradientColor(ti->sel_color, 0.0, &alpha);

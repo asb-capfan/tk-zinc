@@ -40,7 +40,7 @@
 #endif
 
 
-static const char rcsid[] = "$Id: Image.c,v 1.43 2004/05/14 09:08:36 lecoanet Exp $";
+static const char rcsid[] = "$Id: Image.c,v 1.44 2004/07/28 14:40:08 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -1146,7 +1146,7 @@ SuckGlyphsFromServer(ZnWInfo	*wi,
   unsigned int	numToGrab, glyph;
   ZnTexGVI	*tgvip;
   Tk_FontMetrics fm;
-  CONST char	*cur, *next;
+  CONST unsigned char	*cur, *next;
 #ifndef PTK_800
   Tcl_UniChar	uni_ch;
 #endif

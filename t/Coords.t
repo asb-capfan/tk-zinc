@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Coords.t,v 1.5 2004/05/12 08:57:33 mertz Exp $
+# $Id: Coords.t,v 1.6 2004/05/24 19:56:23 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -10,7 +10,7 @@
 BEGIN {
     if (!eval q{
 #        use Test::More qw(no_plan);
-        use Test::More tests => 20;
+        use Test::More tests => 21;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";
