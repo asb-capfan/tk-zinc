@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Sat Dec 10 12:51:30 1994
  *
- * $Id: Draw.c,v 1.53 2003/06/16 15:03:58 lecoanet Exp $
+ * $Id: Draw.c,v 1.56 2004/03/24 15:06:44 lecoanet Exp $
  */
 
 /*
@@ -42,6 +42,7 @@
 #include "List.h"
 #include "WidgetInfo.h"
 #include "Image.h"
+#include "tkZinc.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -749,7 +750,7 @@ DoPolygon(ZnPoint	*p,
       odx = p11->x - p1->x;
       ody = p11->y - p1->y;
       dotp = odx*dx + ody*dy;
-      dist = ZnLineToPointDist(p11, p2, p1);
+      dist = ZnLineToPointDist(p11, p2, p1, NULL);
       if ((dist < 4.0) && (dotp <= 0)) {
 	perp.x = p1->x + (p2->y - p1->y);
 	perp.y = p1->y - (p2->x - p1->x);
@@ -1157,6 +1158,7 @@ ZnRenderPolyline(ZnWInfo	*wi,
   ZnPoint	c1, c2;    
   XColor	*color;
   unsigned short alpha;
+  ZnGLContextEntry *ce = ZnGetGLContext(wi->dpy);
 
   /*
    * The code below draws curves thiner than the min
@@ -1166,8 +1168,8 @@ ZnRenderPolyline(ZnWInfo	*wi,
    * BUG: The joints are drawn only rounded.
    * The caps can be either round or butt (but not projecting).
    */
-  thin = ((line_width <= wi->max_line_width) &&
-	  (line_width <= wi->max_point_width));
+  thin = ((line_width <= ce->max_line_width) &&
+	  (line_width <= ce->max_point_width));
   closed = (points->x == points[num_points-1].x) && (points->y == points[num_points-1].y);
   color = ZnGetGradientColor(gradient, 0.0, &alpha);
   alpha = ZnComposeAlpha(alpha, wi->alpha);
@@ -1599,7 +1601,7 @@ ComputeCircularGradient(ZnWInfo		*wi,
   /*
    * Then, center the oval on the focal point.
    */
-  ZnTranslate(&t1, focal_point.x, focal_point.y);
+  ZnTranslate(&t1, focal_point.x, focal_point.y, False);
   /*
    * Last, compose with the current transform.
    */
@@ -2103,3 +2105,236 @@ ZnRenderFancyString(ZnTexFontInfo	*tfi,
 }
 
 #endif
+
+/*
+ **********************************************************************************
+ *
+ * RenderTriangle --
+ *	This routine maps an image onto a triangle.
+ *	Image coordinates are chosen for  each vertex of the triangle.
+ *	A simple affine tex mapping is used as in Zinc there is no way
+ *	to specify perspective deformation. No filtering is attempted
+ *	on the output pixels. 
+ *
+ *	In the comments below u and v are image coordinates and x and
+ *	y are triangle coordinates.
+ *	RenderAffineScanline is an helper function that draws a whole
+ *	scan line to the image with linear interpolation.
+ *
+ **********************************************************************************
+ */
+static void
+RenderAffineScanline(XImage	*image,
+		     XImage	*mapped_image,
+		     ZnReal	x1,
+		     ZnReal	x2,
+		     ZnReal	u1,
+		     ZnReal	u2,
+		     ZnReal	v1,
+		     ZnReal	v2,
+		     int	y)
+{
+  ZnReal	du, dv, width;
+  int		intx1, intx2, intu, intv;
+  int		i;
+  
+  /* Revert span ends if needed */
+  if (x2 < x1) {
+    ZnReal	tmp;
+    tmp = x1; x1 = x2; x2 = tmp;
+    tmp = u1; u1 = u2; u2 = tmp;
+    tmp = v1; v1 = v2; v2 = tmp;
+  }
+  
+  /* Compute the interpolation factors */
+  width = x2 - x1;
+  if (width) {
+    du = (u2 - u1) / width;
+    dv = (v2 - v1) / width;
+  }
+  else {
+    du = dv = 0;
+  }
+  intx1 = (int) floor(x1);
+  intx2 = (int) floor(x2);
+  
+  /* Draw the line */
+  for (i = intx1; i < intx2; i++) {
+    intu = (int) floor(u1);
+    intv = (int) floor(v1);
+    XPutPixel(mapped_image, i, y, XGetPixel(image, intu, intv));
+    u1 += du;
+    v1 += dv;
+  }
+}
+
+static void
+RenderTriangle(XImage	*image,
+	       XImage	*mapped_image,
+	       ZnPoint	*tri,
+	       ZnPoint	*im_coords)
+{
+  ZnReal	dx_A, dx_B;	/* Interpolation factor in x / y */
+  ZnReal	du_A, du_B;	/* in u / y */
+  ZnReal	dv_A, dv_B;	/* in v / y */
+  ZnReal	x1, x2;		/* Span in x */
+  ZnReal	u1, u2;		/* Span in u */
+  ZnReal	v1, v2;		/* Span in v */
+  int		height_A;	/* Scan line # from top top vertex A */
+  int		height_B;	/* Scan line # from top top vertex B */
+  int		y;		/* Current scan line */
+  int		top, a, b;	/* Top triangle vertex and other two */
+  int		i;
+
+  /* Find top vertex and deduce the others. */
+  top = 0;
+  for (i = 1; i < 3; i++) {
+    if (tri[i].y <= tri[top].y)
+      top = i;
+  }
+  a = (top+1)%3;
+  b = top-1;
+  if (b < 0)
+    b = 2;
+  
+  /* Initialize conversion parameters. */
+  y = ZnNearestInt(tri[top].y);
+  height_A = ZnNearestInt(tri[a].y - tri[top].y);
+  height_B = ZnNearestInt(tri[b].y - tri[top].y);
+  x1 = x2 = tri[top].x;
+  u1 = u2 = im_coords[top].x;
+  v1 = v2 = im_coords[top].y;
+  if (height_A) {
+    dx_A = (tri[a].x - tri[top].x) / height_A;
+    du_A = (im_coords[a].x - im_coords[top].x) / height_A;
+    dv_A = (im_coords[a].y - im_coords[top].y) / height_A;
+  }
+  else {
+    dx_A = du_A = dv_A = 0;
+  }
+  if (height_B) {
+    dx_B = (tri[b].x - tri[top].x) / height_B;
+    du_B = (im_coords[b].x - im_coords[top].x) / height_B;
+    dv_B = (im_coords[b].y - im_coords[top].y) / height_B;
+  }
+  else {
+    dx_B = du_B = dv_B = 0;
+  }
+  
+  /* Convert from top to bottom */
+  for (i = 2; i > 0; ) {
+    while (height_A && height_B) {
+
+      /* Draw a scanline */
+      RenderAffineScanline(image, mapped_image, x1, x2, u1, u2, v1, v2, y);
+
+      /* Step the parameters*/
+      y++;
+      height_A--;
+      height_B--;
+      x1 += dx_A;
+      x2 += dx_B;
+      u1 += du_A;
+      u2 += du_B;
+      v1 += dv_A;
+      v2 += dv_B;
+    }
+    
+    /* If either height_A or height_B steps to zero, we have
+     * encountered a vertex (A or B) and we are starting conversion
+     * along a new edge. Update the parameters before proceeding. */
+    if (!height_A) {
+      int	na = (a+1)%3;
+      
+      height_A = ZnNearestInt(tri[na].y - tri[a].y);
+      if (height_A) {
+	dx_A = (tri[na].x - tri[a].x) / height_A;
+	du_A = (im_coords[na].x - im_coords[a].x) / height_A;
+	dv_A = (im_coords[na].y - im_coords[a].y) / height_A;
+      }
+      else {
+	dx_A = du_A = dv_A = 0;
+      }
+      x1 = tri[a].x;
+      u1 = im_coords[a].x;
+      v1 = im_coords[a].y;
+      a = na;
+      /* One less vertex to do */
+      i--;
+    }
+    
+    if (!height_B) {
+      int	nb = b - 1;
+      
+      if (nb < 0)
+	nb = 2;
+      height_B = ZnNearestInt(tri[nb].y - tri[b].y);
+      if (height_B) {
+	dx_B = (tri[nb].x - tri[b].x) / height_B;
+	du_B = (im_coords[nb].x - im_coords[b].x) / height_B;
+	dv_B = (im_coords[nb].y - im_coords[b].y) / height_B;
+      }
+      else {
+	dx_B = du_B = dv_B = 0;
+      }
+      x2 = tri[b].x;
+      u2 = im_coords[b].x;
+      v2 = im_coords[b].y;
+      b = nb;
+      /* One less vertex to do */
+      i--;
+    }
+  }
+}
+
+
+/*
+ **********************************************************************************
+ *
+ * MapImage --
+ *	This procedure maps an image on a parallelogram given in poly.
+ *	The given parallelogram should fit in the destination image.
+ *	The parallelogram vertices must be ordered as for a triangle
+ *	 strip: 
+ *
+ *    v0 ------------ v2
+ *       |          |
+ *       |          |
+ *    v1 ------------ v3
+ *
+ *	The mapping is done by a simple affine mapping of the image on the
+ *	two triangles obtained by cutting the parallelogram along the diogonal
+ *	from the second vertex to the third vertex.
+ *
+ **********************************************************************************
+ */
+void
+ZnMapImage(XImage	*image,
+	   XImage	*mapped_image,
+	   ZnPoint	*poly)
+{
+  ZnPoint	triangle[3];
+  ZnPoint	im_coords[3];
+  
+  triangle[0] = poly[0];
+  triangle[1] = poly[1];
+  triangle[2] = poly[2];
+  im_coords[0].x = 0.0;
+  im_coords[0].y = 0.0;
+  im_coords[1].x = 0.0;
+  im_coords[1].y = image->height-1;
+  im_coords[2].x = image->width-1;
+  im_coords[2].y = 0.0;
+  RenderTriangle(image, mapped_image, triangle, im_coords);
+
+  triangle[0] = poly[1];
+  triangle[1] = poly[2];
+  triangle[2] = poly[3];
+  im_coords[0].x = 0.0;
+  im_coords[0].y = image->height-1;
+  im_coords[1].x = image->width-1;
+  im_coords[1].y = 0.0;
+  im_coords[2].x = image->width-1;
+  im_coords[2].y = image->height-1;
+  RenderTriangle(image, mapped_image, triangle, im_coords);
+}

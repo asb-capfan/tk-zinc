@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Thu Dec 16 15:41:53 1999
  *
- * $Id: Color.c,v 1.25 2003/10/02 12:29:44 lecoanet Exp $
+ * $Id: Color.c,v 1.27 2004/03/24 15:06:44 lecoanet Exp $
  */
 
 /*
@@ -538,7 +538,7 @@ ReduceGradient(Tk_Window	tkwin,
   }
 
   ZnTransfoSetIdentity(&t);
-  ZnTranslate(&t, -grad->p.x, -grad->p.y);
+  ZnTranslate(&t, -grad->p.x, -grad->p.y, False);
   ZnRotateRad(&t, -angle);
   ZnScale(&t, 1/len, 1/len);
   pbbox[0].x = -50;
@@ -942,6 +942,7 @@ ZnGetGradient(Tcl_Interp	*interp,
   grad->num_colors_in = num_colors;
   grad->type = type;
   grad->p.x = grad->p.y = grad->e.x = grad->e.y = 0.0;
+  grad->angle = 0;
 
   switch (type) {
   case ZN_AXIAL_GRADIENT:
@@ -969,7 +970,6 @@ ZnGetGradient(Tcl_Interp	*interp,
     else if (num_coords == 2) {
       grad->p.x = coords[0];
       grad->p.y = coords[1];
-      grad->angle = 0;
     }
     else if (num_coords == 3) {
       grad->p.x = coords[0];

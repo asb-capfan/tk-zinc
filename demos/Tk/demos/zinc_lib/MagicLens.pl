@@ -15,7 +15,7 @@
 #-----------------------------------------------------------------------------------
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -55,32 +55,33 @@ my %lensitems = ('back' => {-itemtype => 'arc',
 					-tags => ['lensback'],
 				       },
 			   },
-		 'light' => {-itemtype => 'pathline',
-			     -metacoords => {-type => 'polygone',
-					     -coords => [0, 0],
-					     -numsides => 36,
-					     -radius => 100,
-					     -startangle => 240,
-					    },
-			     -linewidth => 10,
-			     -shifting => 'right',
-			     -closed => 1,
-			     -graduate => {-type => 'double',
-					   -colors => [['#ffffff;0', '#6666cc;0', '#ffffff;0'],
-						       ['#ffffff;100', '#333399;50', '#ffffff;100']],
-					  },
-			     -params => {-priority => 50,
-					},
-			    },
-		 'bord' => {-itemtype => 'hippodrome',
-			    -coords => [[-100, -100],[100, 100]],
-			    -params => {-priority => 100,
-					-closed => 1,
-					-filled => 0,
-					-linewidth => 2,
-					-linecolor => '#222266;80'
-				       },
-			   },
+ 		 'light' => {-itemtype => 'pathline',
+ 			     -metacoords => {-type => 'polygone',
+ 					     -coords => [0, 0],
+ 					     -numsides => 36,
+ 					     -radius => 100,
+ 					     -startangle => 240,
+ 					    },
+ 			     -linewidth => 10,
+ 			     -shifting => 'in',
+ 			     -closed => 1,
+ 			     -graduate => {-type => 'double',
+ 					   -colors => [['#ffffff;0', '#6666cc;0', '#ffffff;0'],
+ 						       ['#ffffff;100', '#333399;50', '#ffffff;100']],
+ 					  },
+ 			     -params => {-priority => 50,
+ 					},
+ 			    },
+ 		 'bord' => {-itemtype => 'hippodrome',
+ 			    -coords => [[-100, -100],[100, 100]],
+ 			    -params => {-priority => 100,
+ 					-closed => 1,
+ 					-filled => 0,
+ 					-linewidth => 2,
+ 					-linecolor => '#222266;80'
+ 				       },
+
+ 			   },
 		);
 				
 
@@ -223,7 +224,7 @@ $zinc->coords($lensgroup, [300, 110]);
 
 # items graphiques
 while (my ($name, $style) = each(%lensitems)) {
-  &buildZincItem($zinc, $lensgroup, $style, undef, $name);
+  &buildZincItem($zinc, $lensgroup, %{$style});
 }
 
 # clipping lensview

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Fri Dec  2 14:47:42 1994
  *
- * $Id: Rectangle.c,v 1.61 2003/12/11 08:14:20 lecoanet Exp $
+ * $Id: Rectangle.c,v 1.65 2004/03/23 14:53:45 lecoanet Exp $
  */
 
 /*
@@ -37,7 +37,7 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Rectangle.c,v 1.61 2003/12/11 08:14:20 lecoanet Exp $";
+static const char rcsid[] = "$Id: Rectangle.c,v 1.65 2004/03/23 14:53:45 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -417,15 +417,18 @@ ToArea(ZnItem	item,
        ZnToArea	ta)
 {
   RectangleItem	rect = (RectangleItem) item;
-  int		result;
+  int		result, result2;
   ZnBBox	*area = ta->area;
 
   result = -1;
-  
+
   if (ISSET(rect->flags, FILLED_BIT)) {
     result = ZnPolygonInBBox(rect->dev, 4, area, NULL);
+    if (result == 0) {
+      return 0;
+    }
   }
-  else if (rect->line_width > 0) {
+  if (rect->line_width > 0) {
     int		i;
     ZnPoint	pts[5];
 
@@ -433,8 +436,17 @@ ToArea(ZnItem	item,
       pts[i] = rect->dev[i];
     }
     pts[4] = pts[0];
-    result = ZnPolylineInBBox(pts, 5, rect->line_width,
-			      CapProjecting, JoinMiter, area);
+    result2 = ZnPolylineInBBox(pts, 5, rect->line_width,
+			       CapProjecting, JoinMiter, area);
+    if (ISCLEAR(rect->flags, FILLED_BIT)) {
+      if (result2 == 0) {
+	return 0;
+      }
+      result = result2;
+    }
+    else if (result2 != result) {
+      return 0;
+    }
   }
 
   return result;
@@ -492,7 +504,7 @@ Draw(ZnItem	item)
     if (rect->tile != ZnUnspecifiedImage) {
       if (!ZnImageIsBitmap(rect->tile)) { /* Fill tiled */
 	values.fill_style = FillTiled;
-	values.tile = ZnImagePixmap(rect->tile);
+	values.tile = ZnImagePixmap(rect->tile, wi->win);
 	if (ISSET(rect->flags, ALIGNED_BIT)) {
 	  values.ts_x_origin = (int) r.x;
 	  values.ts_y_origin = (int) r.y;
@@ -506,7 +518,7 @@ Draw(ZnItem	item)
       }
       else {
 	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(rect->tile);
+	values.stipple = ZnImagePixmap(rect->tile, wi->win);
 	if (ISSET(rect->flags, ALIGNED_BIT)) {
 	  values.ts_x_origin = (int) r.x;
 	  values.ts_y_origin = (int) r.y;
@@ -567,7 +579,7 @@ Draw(ZnItem	item)
       }
       else {
 	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(rect->line_pattern);
+	values.stipple = ZnImagePixmap(rect->line_pattern, wi->win);
 	gc_mask |= GCStipple;
 	XChangeGC(wi->dpy, wi->gc, gc_mask, &values);
       }
@@ -753,8 +765,8 @@ Pick(ZnItem	item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -917,6 +929,7 @@ static ZnItemClassStruct RECTANGLE_ITEM_CLASS = {
   False,		/* has_anchors */
   "rectangle",
   rect_attrs,
+  -1,
   Init,
   Clone,
   Destroy,

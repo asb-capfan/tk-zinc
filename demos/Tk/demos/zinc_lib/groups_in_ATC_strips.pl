@@ -41,16 +41,11 @@
 package groups_in_ATC_strips; # for avoiding symbol collision between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
 use strict;
-
-# to find some images (used as textures) needed by this demo
-# we avoids empty 'demos/zinc_data' directory!
-my $image_path = Tk->findINC('demos/zinc_data/background_texture.gif');
-$image_path =~ s:/background_texture.gif$:: ;
 
 $| = 1;
 
@@ -469,7 +464,8 @@ sub createStrip {
 
     if ($sstyle->{'-texture'}) {
 	if (!exists($textures{'-strip'})) {
-	    my $texture = $zinc->Photo($sstyle->{'-texture'}, -file => "$image_path/$sstyle->{'-texture'}");
+	    my $texture = $zinc->Photo($sstyle->{'-texture'}, 
+                                       -file => Tk->findINC("demos/zinc_data/".$sstyle->{-texture}));
 	    $textures{'-strip'} = $texture;
 	}
 	    
@@ -613,7 +609,8 @@ sub buildContent {
 
 	if ($zonestyle->{'-texture'}) {
 	    if (!exists($textures{$name})) {
-		my $texture = $zinc->Photo($zonestyle->{'-texture'}, -file => "$image_path/$zonestyle->{'-texture'}");
+		my $texture = $zinc->Photo($zonestyle->{'-texture'}, 
+                                           -file => Tk->findINC("demos/zinc_data/".$zonestyle->{-texture}));
 		$textures{$name} = $texture;
 	    }
 
@@ -694,7 +691,8 @@ sub buildExtent {
 
     if ($infostyle->{'-texture'}) {
   	if (!exists($textures{'-zinfo'})) {
-  	    my $texture = $zinc->Photo($infostyle->{'-texture'}, -file => "$image_path/$infostyle->{'-texture'}");
+  	    my $texture = $zinc->Photo($infostyle->{'-texture'}, 
+                                       -file => Tk->findINC("demos/zinc_data/".$infostyle->{-texture}));
   	    $textures{'-zinfo'} = $texture;
   	}
   	$zinc->itemconfigure($rectzone, -tile => $textures{'-zinfo'});

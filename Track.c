@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Track.c,v 1.71 2003/11/28 13:40:54 lecoanet Exp $
+ * $Id: Track.c,v 1.76 2004/03/23 14:53:46 lecoanet Exp $
  */
 
 /*
@@ -41,7 +41,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Track.c,v 1.71 2003/11/28 13:40:54 lecoanet Exp $";
+static const char rcsid[] = "$Id: Track.c,v 1.76 2004/03/23 14:53:46 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -59,7 +59,6 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
 #define DEFAULT_LINE_WIDTH		1
 #define DEFAULT_LABEL_PREFERRED_ANGLE	0
 #define DEFAULT_CONVERGENCE_STYLE	0
-#define DEFAULT_VISIBLE_HISTORY_SIZE	6
 
 #define SPEED_VECTOR_PICKING_THRESHOLD	5	/* In pixels	*/
 
@@ -79,6 +78,7 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
 #define POLAR_BIT			1 << 6
 #define FROZEN_LABEL_BIT		1 << 7
 #define LAST_AS_FIRST_BIT		1 << 8
+#define HISTORY_VISIBLE_BIT		1 << 9
 
 #define CURRENT_POSITION	-2
 #define LEADER			-3
@@ -128,7 +128,6 @@ typedef struct _TrackItemStruct {
   ZnLineStyle	connection_style;
   ZnDim		connection_width;
   ZnGradient	*speed_vector_color;	/* s. v. color			*/
-  unsigned int	visible_history_size;	/* Number of visible positions	*/
   ZnPoint	pos;			/* item world coordinates	*/
   ZnPoint	speed_vector;		/* s. v. slope in world coord	*/
   ZnDim		speed_vector_width;
@@ -260,8 +259,8 @@ static ZnAttrConfig	track_attrs[] = {
   { ZN_CONFIG_BOOL, "-visible", NULL,
     Tk_Offset(TrackItemStruct, header.flags), ZN_VISIBLE_BIT,
     ZN_DRAW_FLAG|ZN_REPICK_FLAG|ZN_VIS_FLAG, False },
-  { ZN_CONFIG_UINT, "-visiblehistorysize", NULL,
-    Tk_Offset(TrackItemStruct, visible_history_size), 0, ZN_DRAW_FLAG, False },
+  { ZN_CONFIG_BOOL, "-historyvisible", NULL,
+    Tk_Offset(TrackItemStruct, flags), HISTORY_VISIBLE_BIT, ZN_COORDS_FLAG, False },
   
   { ZN_CONFIG_END, NULL, NULL, 0, 0, 0, False }
 };
@@ -421,7 +420,7 @@ Init(ZnItem		item,
   
   if (item->class == ZnTrack) {
     item->priority = 1;
-    track->visible_history_size = DEFAULT_VISIBLE_HISTORY_SIZE;
+    SET(track->flags, HISTORY_VISIBLE_BIT);
     track->marker_size = DEFAULT_MARKER_SIZE;
     track->speed_vector.x = 0;
     track->speed_vector.y = 0;
@@ -429,7 +428,7 @@ Init(ZnItem		item,
   }
   else {
     item->priority = 1;
-    track->visible_history_size = 0;
+    CLEAR(track->flags, HISTORY_VISIBLE_BIT);
     track->marker_size = 0;
     track->speed_vector.x = 0.0;
     track->speed_vector.y = 10.0;
@@ -582,17 +581,14 @@ AddToHistory(TrackItem	track,
 {
   ZnWInfo	*wi = ((ZnItem) track)->wi;
   
-  /*printf("Track moved, manage history: %d\n", wi->track_manage_history);*/
   if (track->history) {
-    if (wi->track_manage_history) {
-      HistoryStruct	hist;
-      
-      hist.world = old_pos;
-      hist.dev = track->dev;
-      hist.visible = True;
-      ZnListAdd(track->history, &hist, ZnListHead);
-      ZnListTruncate(track->history, wi->track_managed_history_size);
-    }
+    HistoryStruct	hist;
+    
+    hist.world = old_pos;
+    hist.dev = track->dev;
+    hist.visible = True;
+    ZnListAdd(track->history, &hist, ZnListHead);
+    ZnListTruncate(track->history, wi->track_managed_history_size);
   }
   else {
     /* We do not shift the first time we move as the preceding position
@@ -625,11 +621,6 @@ Configure(ZnItem	item,
     track->label_angle = 360 + track->label_angle;
   }
 
-  /*
-   * Trunc the visible history to the managed size.
-   */
-  track->visible_history_size = MIN(track->visible_history_size,
-				    wi->track_managed_history_size);
   /*
    * Adapt to the new label locating system.
    */
@@ -727,13 +718,6 @@ ComputeCoordinates(ZnItem	item,
   old_label_width = field_set->label_width;
   old_label_height = field_set->label_height;
 
-  /*
-   * Suppress history if history management was turned off.
-   */
-  if ((item->class == ZnTrack) && !wi->track_manage_history) {
-    ZnListEmpty(track->history);
-  }
-
   old_pos = track->dev;
 
   ZnTransformPoint(wi->current_transfo, &track->pos, &track->dev);
@@ -759,12 +743,20 @@ ComputeCoordinates(ZnItem	item,
      information from the symbol font.
   */
   if ((item->class == ZnTrack) && track->history) {
+    unsigned int visible_history_size;
+    /*
+     * Trunc the visible history to the managed size.
+     */
+    ZnListTruncate(track->history, wi->track_managed_history_size);
+    visible_history_size = (ISSET(track->flags, HISTORY_VISIBLE_BIT) ?
+			    wi->track_visible_history_size : 0);
+
     ZnResetBBox(&bbox);
     num_acc_pos = ZnListSize(track->history);
     hist = ZnListArray(track->history);
     for (i = 0; i < num_acc_pos; i++) {
       ZnTransformPoint(wi->current_transfo, &hist[i].world, &hist[i].dev);
-      if ((i < track->visible_history_size) && (hist[i].visible)) {
+      if ((i < visible_history_size) && (hist[i].visible)) {
 	bbox.orig.x = hist[i].dev.x - w2;
 	bbox.orig.y = hist[i].dev.y - h2;
 	bbox.corner.x = bbox.orig.x + w;
@@ -1114,7 +1106,7 @@ Draw(ZnItem	item)
       else {
 	/* Fill stippled */
 	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(track->marker_fill_pattern);
+	values.stipple = ZnImagePixmap(track->marker_fill_pattern, wi->win);
 	XChangeGC(wi->dpy, wi->gc,
 		  GCFillStyle | GCStipple | GCLineWidth | GCForeground, &values);
       }
@@ -1212,6 +1204,11 @@ Draw(ZnItem	item)
    * Draw the history, current pos excepted.
    */
   if ((item->class == ZnTrack) && track->history) {
+    unsigned int visible_history_size;
+
+    visible_history_size = (ISSET(track->flags, HISTORY_VISIBLE_BIT) ?
+			    wi->track_visible_history_size : 0);
+
     values.foreground = ZnGetGradientPixel(track->history_color, 0.0);
     values.fill_style = FillSolid;
     XChangeGC(wi->dpy, wi->gc, GCForeground|GCFillStyle, &values);  
@@ -1220,13 +1217,13 @@ Draw(ZnItem	item)
       values.line_style = LineSolid;
       XChangeGC(wi->dpy, wi->gc, GCLineWidth | GCLineStyle, &values);
     }
-    num_acc_pos = MIN(track->visible_history_size, ZnListSize(track->history));
+    num_acc_pos = MIN(visible_history_size, ZnListSize(track->history));
     hist = ZnListArray(track->history);
     side_size = MAX(width, height);
 
     for (i = 0, nb_hist = 0; i < num_acc_pos; i++) {
       if (ISSET(track->flags, LAST_AS_FIRST_BIT) &&
-	  (i == track->visible_history_size-1)) {
+	  (i == visible_history_size-1)) {
 	values.foreground = ZnGetGradientPixel(track->symbol_color, 0.0);
 	XChangeGC(wi->dpy, wi->gc, GCForeground, &values);
       }
@@ -1276,7 +1273,7 @@ Draw(ZnItem	item)
     y = ((int) track->dev.y) - (height+1)/2;
     values.foreground = ZnGetGradientPixel(track->symbol_color, 0.0);
     values.fill_style = FillStippled;
-    values.stipple = ZnImagePixmap(track->symbol);
+    values.stipple = ZnImagePixmap(track->symbol, wi->win);
     values.ts_x_origin = x;
     values.ts_y_origin = y;
     XChangeGC(wi->dpy, wi->gc,
@@ -1480,13 +1477,18 @@ Render(ZnItem	item)
    * Draw the history, current pos excepted.
    */
   if ((item->class == ZnTrack) && track->history) {
+    unsigned int visible_history_size;
+
+    visible_history_size = (ISSET(track->flags, HISTORY_VISIBLE_BIT) ?
+			    wi->track_visible_history_size : 0);
+
     points = ZnGetCirclePoints(3, ZN_CIRCLE_COARSE, 0.0, 2*M_PI, &num_points, NULL);
     color = ZnGetGradientColor(track->history_color, 0.0, &alpha);
     alpha = ZnComposeAlpha(alpha, wi->alpha);
     glColor4us(color->red, color->green, color->blue, alpha);
     glLineWidth(1.0);    
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    num_acc_pos = MIN(track->visible_history_size, ZnListSize(track->history));
+    num_acc_pos = MIN(visible_history_size, ZnListSize(track->history));
     hist = ZnListArray(track->history);
     side_size = MAX(width, height);
     /*
@@ -1497,7 +1499,7 @@ Render(ZnItem	item)
     glDisable(GL_POINT_SMOOTH);
     for (i = 0, nb_hist = 0; i < num_acc_pos; i++) {
       if (ISSET(track->flags, LAST_AS_FIRST_BIT) &&
-	  (i == track->visible_history_size-1)) {
+	  (i == visible_history_size-1)) {
 	color = ZnGetGradientColor(track->symbol_color, 0.0, &alpha);
 	alpha = ZnComposeAlpha(alpha, wi->alpha);
 	glColor4us(color->red, color->green, color->blue, alpha);
@@ -1676,7 +1678,7 @@ Pick(ZnItem	item,
     points = (ZnPoint *) ZnListArray(track->leader_points);
     num_points = ZnListSize(track->leader_points)-1;
     for (i = 0; i < num_points; i++) {
-      new_dist = ZnLineToPointDist(&points[i], &points[i+1], p);
+      new_dist = ZnLineToPointDist(&points[i], &points[i+1], p, NULL);
       new_dist -= width_2;
       if (new_dist < dist) {
 	best_part = LEADER;
@@ -1763,8 +1765,8 @@ Pick(ZnItem	item,
 **********************************************************************************
 */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -2286,12 +2288,20 @@ Selection(ZnItem	item,
 *
 **********************************************************************************
 */
+/*
+ * Track and WP -position attribute is not handled the same way as other
+ * interface items like texts, icons and such, as it make little sense
+ * to change the local transform of a track. It is always processed as
+ * a point in the coordinate system of the track's parent. It is the same
+ * for the points in the history and the speed vector end.
+ */
 static ZnItemClassStruct TRACK_ITEM_CLASS = {
   sizeof(TrackItemStruct),
   4,			/* num_parts */
   True,			/* has_anchors */
   "track",
   track_attrs,
+  -1,
   Init,
   Clone,
   Destroy,
@@ -2325,6 +2335,7 @@ static ZnItemClassStruct WAY_POINT_ITEM_CLASS = {
   True,			/* has_anchors */
   "waypoint",
   wp_attrs,
+  -1,
   Init,
   Clone,
   Destroy,

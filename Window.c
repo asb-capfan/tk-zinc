@@ -31,7 +31,7 @@
 #include "WidgetInfo.h"
 
 
-static const char rcsid[] = "$Id: Window.c,v 1.11 2003/10/02 09:09:11 lecoanet Exp $";
+static const char rcsid[] = "$Id: Window.c,v 1.13 2004/03/03 10:16:24 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -377,7 +377,9 @@ ComputeCoordinates(ZnItem	item,
 					   &wind->pos_dev);
   }
   else {
-    ZnTransformPoint(wi->current_transfo, &wind->pos, &wind->pos_dev);
+    ZnPoint pos;
+    pos.x = pos.y = 0.0;
+    ZnTransformPoint(wi->current_transfo, &pos, &wind->pos_dev);
   }
   
   ZnAnchor2Origin(&wind->pos_dev, (ZnReal) wind->real_width, (ZnReal) wind->real_height,
@@ -542,8 +544,8 @@ Pick(ZnItem	item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -659,6 +661,7 @@ static ZnItemClassStruct WINDOW_ITEM_CLASS = {
   True,			/* has_anchors */
   "window",
   wind_attrs,
+  Tk_Offset(WindowItemStruct, pos),
   Init,
   Clone,
   Destroy,

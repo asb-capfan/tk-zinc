@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Item.h,v 1.41 2003/12/11 08:18:12 lecoanet Exp $
+ * $Id: Item.h,v 1.47 2004/03/24 15:06:44 lecoanet Exp $
  */
 
 /*
@@ -92,6 +92,10 @@ typedef struct _ZnAttrConfig {
 #define	ZN_CONFIG_WINDOW	30
 #define	ZN_CONFIG_ALPHA		31
 #define	ZN_CONFIG_FILL_RULE	32
+#define	ZN_CONFIG_SHORT		33
+#define	ZN_CONFIG_USHORT	34
+#define ZN_CONFIG_CHAR		35
+#define ZN_CONFIG_UCHAR		36
 
 #define ZN_DRAW_FLAG	1 << 0
 #define	ZN_COORDS_FLAG	1 << 1
@@ -103,12 +107,12 @@ typedef struct _ZnAttrConfig {
 #define ZN_VIS_FLAG	1 << 7	/* Visibility has changed. */
 #define ZN_MOVED_FLAG	1 << 8	/* Item has moved. */
 #define ZN_ITEM_FLAG	1 << 9	/* Signal a change in an item type attribute. */
-#define ZN_MAP_INFO_FLAG 1 << 10	/* Update mapinfo pointer. */
-#define ZN_LAYOUT_FLAG	1 << 10	/* A layout need update. */
-#define ZN_POLAR_FLAG	1 << 11	/* Signal a cartesian to polar change. */
-#define ZN_CARTESIAN_FLAG 1 << 12	/* Signal a polar to cartesian change. */
-#define ZN_TILE_FLAG	1 << 13	/* Update tile pointer. */
-#define ZN_WINDOW_FLAG	1 << 14	/* Signal a change in a window type attribute. */
+#define ZN_MAP_INFO_FLAG 1 << 10/* Update mapinfo pointer. */
+#define ZN_LAYOUT_FLAG	1 << 11	/* A layout need update. */
+#define ZN_POLAR_FLAG	1 << 12	/* Signal a cartesian to polar change. */
+#define ZN_CARTESIAN_FLAG 1 << 13	/* Signal a polar to cartesian change. */
+#define ZN_TILE_FLAG	1 << 14	/* Update tile pointer. */
+#define ZN_WINDOW_FLAG	1 << 15	/* Signal a change in a window type attribute. */
 
 
 /*
@@ -169,20 +173,20 @@ struct _ZnTransfo;
  */
 typedef struct _ZnItemStruct {
   /* Private data */
-  long			id;
+  unsigned int		id;
   ZnList		tags;
   struct _ZnWInfo	*wi;			/* The widget this item is on	*/
   struct _ZnItemClassStruct *class;		/* item class			*/
   struct _ZnItemStruct	*previous;		/* previous item in group list	*/
   struct _ZnItemStruct	*next;			/* next item in group list	*/
+  struct _ZnItemStruct	*parent;
   ZnBBox		item_bounding_box;	/* device item bounding box	*/
 
   /* Common attributes */
   unsigned short	flags;			
   unsigned short	part_sensitive;		/* Currently limited to 16 parts per item */
-  short			inv_flags;
-  struct _ZnItemStruct	*parent;
-  int			priority;
+  unsigned short	inv_flags;
+  unsigned short	priority;
   struct _ZnTransfo	*transfo;
   struct _ZnItemStruct	*connected_item;	/* Item this item is connected to 	*/
 #ifdef GL
@@ -198,6 +202,7 @@ typedef struct _ZnToAreaStruct {
   ZnItem	in_group;
   ZnBool	report;
   ZnBool	recursive;
+  ZnBool	override_atomic;
   ZnBBox	*area;
 } ZnToAreaStruct, *ZnToArea;
 
@@ -206,6 +211,7 @@ typedef struct _ZnPickStruct {
   ZnItem	in_group;
   ZnItem	start_item;
   ZnBool	recursive;
+  ZnBool	override_atomic;
   ZnPoint	*point;
   ZnItem 	a_item;
   int		a_part;
@@ -246,7 +252,7 @@ typedef int (*ZnItemIndexMethod)(ZnItem item, int field, Tcl_Obj *index_spec,
 typedef int (*ZnItemPartMethod)(ZnItem item, Tcl_Obj **part_spec, int *part);
 typedef int (*ZnItemSelectionMethod)(ZnItem item, int field, int offset,
 				     char *chars, int max_chars);
-typedef void (*ZnItemPostScriptMethod)(ZnItem item, ZnPostScriptInfo ps_info);
+typedef void (*ZnItemPostScriptMethod)(ZnItem item, ZnBool prepass);
 
 
 typedef void	*ZnItemClassId;
@@ -258,6 +264,8 @@ typedef struct _ZnItemClassStruct {
   ZnBool			has_anchors;	/* 1 if anchors are supported */
   char				*name;
   ZnAttrConfig			*attr_desc;
+  int				pos_offset;	/* Offset of -position attrib, */
+						/* if any, -1 otherwise. */
   ZnItemInitMethod		Init;
   ZnItemCloneMethod		Clone;
   ZnItemDestroyMethod		Destroy;
@@ -311,10 +319,10 @@ extern struct _ZnITEM {
   ZnBool (*HasTag)(ZnItem item, Tk_Uid tag);
   void (*ResetTransfo)(ZnItem item);
   void (*SetTransfo)(ZnItem item, struct _ZnTransfo *t);
-  void (*TranslateItem)(ZnItem item, ZnReal tx, ZnReal ty);
-  void (*ScaleItem)(ZnItem item, ZnReal sx, ZnReal sy);
+  void (*TranslateItem)(ZnItem item, ZnReal tx, ZnReal ty, ZnBool abs);
+  void (*ScaleItem)(ZnItem item, ZnReal sx, ZnReal sy, ZnPoint *p);
   void (*SkewItem)(ZnItem item, ZnReal x_skew, ZnReal y_skew);
-  void (*RotateItem)(ZnItem item, ZnReal angle, ZnPoint *p);
+  void (*RotateItem)(ZnItem item, ZnReal angle, ZnBool deg, ZnPoint *p);
   void (*Invalidate)(ZnItem item, int reason);
   void (*InvalidateItems)(ZnItem group, ZnItemClass item_class);
   void (*GetItemTransform)(ZnItem item, struct _ZnTransfo *t);
@@ -345,7 +353,7 @@ void ZnInitTransformStack(struct _ZnWInfo *wi);
 void ZnFreeTransformStack(struct _ZnWInfo *wi);
 void ZnResetTransformStack(struct _ZnWInfo *wi);
 void ZnPushTransform(struct _ZnWInfo *wi, struct _ZnTransfo *transfo,
-		     ZnBool compose_scale, ZnBool compose_rot);
+		     ZnPoint *pos, ZnBool compose_scale, ZnBool compose_rot);
 void ZnPopTransform(struct _ZnWInfo *wi);
 void ZnInitClipStack(struct _ZnWInfo *wi);
 void ZnFreeClipStack(struct _ZnWInfo *wi);

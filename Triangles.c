@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Tue Dec 11 10:52:01 2001
  *
- * $Id: Triangles.c,v 1.13 2003/10/02 09:09:27 lecoanet Exp $
+ * $Id: Triangles.c,v 1.16 2004/03/03 10:16:24 lecoanet Exp $
  */
 
 /*
@@ -585,8 +585,8 @@ Pick(ZnItem	item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -822,9 +822,9 @@ PickVertex(ZnItem	item,
    * Update the opposite vertex.
    */
   i = (*vertex+1) % num_points;
-  new_dist = ZnLineToPointDist(&points[*vertex], &points[i], p);
+  new_dist = ZnLineToPointDist(&points[*vertex], &points[i], p, NULL);
   k = ((unsigned)(*vertex-1)) % num_points;
-  dist2 = ZnLineToPointDist(&points[*vertex], &points[k], p);
+  dist2 = ZnLineToPointDist(&points[*vertex], &points[k], p, NULL);
   if (dist2 < new_dist) {
     *o_vertex = k;
   }
@@ -847,6 +847,7 @@ static ZnItemClassStruct TRIANGLES_ITEM_CLASS = {
   False,		/* has_anchors */
   "triangles",
   tr_attrs,
+  -1,
   Init,
   Clone,
   Destroy,

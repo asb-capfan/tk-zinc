@@ -5,7 +5,7 @@
 ### done by Daniel Etienne! Thx!
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 use Tk::Zinc;
 use Tk::Zinc::Debug;
@@ -22,8 +22,7 @@ my $zinc = $mw->Zinc(-width => $WIDTH, -height => $HEIGHT,
 		     -reshape => 1,
 		     -fullreshape => 1,
 		      )->pack;
-&Tk::Zinc::Debug::finditems($zinc);
-&Tk::Zinc::Debug::tree($zinc, -optionsToDisplay => '-tags', -optionsFormat => 'row');
+&Tk::Zinc::Debug::init($zinc, -optionsToDisplay => '-tags', -optionsFormat => 'row');
 my $top_group = $zinc->add('group', 1);
 
 $text = "

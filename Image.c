@@ -26,6 +26,7 @@
 
 
 #include "Types.h"
+#include "tkZinc.h"
 #include "Image.h"
 #include "WidgetInfo.h"
 #include "Geo.h"
@@ -38,8 +39,9 @@
 #include <stdlib.h>
 #endif
 
+#include <tkFont.h>
 
-static const char rcsid[] = "$Id: Image.c,v 1.33 2003/11/28 13:27:34 lecoanet Exp $";
+static const char rcsid[] = "$Id: Image.c,v 1.39 2004/03/23 14:53:45 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -52,6 +54,7 @@ static Tcl_HashTable	font_textures;
 typedef struct _ClientStruct {
   void	(*inv_proc)(void *cd);
   void	*client_data;
+  int   refcount;
 } ClientStruct;
 
 typedef struct _ImageStruct {
@@ -61,7 +64,8 @@ typedef struct _ImageStruct {
     GLuint	texobj;
 #endif
   } i;
-  struct _ZnWInfo   *wi;
+  Display	*dpy;
+  Screen	*screen;
   struct _ImageBits *bits;
 
   /* Bookkeeping */
@@ -87,13 +91,14 @@ typedef struct _ImageBits {
 #endif
 
   /* Bookeeping */
-  struct _ZnWInfo *wi;	  /* The widget that created the tkimage below (the first
-			   * to use this image). */
+  Display	*dpy;	  /* The tkimage below comes from this display. */
+  Tcl_Interp	*interp;  /* The interp that created the tkimage below. */
   Tk_Image	tkimage;  /* Keep this handle to be informed of changes */ 
   Tk_PhotoHandle tkphoto;
   TkRegion	valid_region;
   int		width;
   int		height;
+  int		depth;
   Tcl_HashEntry	*hash;	  /* From this it is easy to get the image/bitmap
 			   * name. */
   Image		images;   /* Linked list of widget/display dependant
@@ -132,14 +137,17 @@ InvalidateImage(ClientData	client_data,
 		int		y __unused,
 		int		width __unused,
 		int		height __unused,
-		int		image_width __unused,
-		int		image_height __unused)
+		int		image_width,
+		int		image_height)
 {
   ImageBits    *bits = (ImageBits *) client_data;
   Image	       this;
   int	       num_cs, count, i;
   ClientStruct *cs;
+  char		*image_name;
 
+  /*  printf("Invalidation, bits: %d, %d %d %d %d %d %d\n",
+      client_data, x, y, width, height, image_width, image_height);*/
   if (ZnImageIsBitmap(bits->images)) {
     /* This is a bitmap nothing to update
      * (This should not happen) */
@@ -157,28 +165,33 @@ InvalidateImage(ClientData	client_data,
     bits->valid_region = NULL;
   }
 
+  bits->width = image_width;
+  bits->height = image_height;
+  image_name = ZnNameOfImage(bits->images);
+
+  /*
+   * The photo pointer must be updated. It changes when creating an new image with
+   * the same name as an old. The image is first deleted then re-instantiated.
+   * As a side effect we also rely on it for telling if an image is a photo.
+   */
+  bits->tkphoto = Tk_FindPhoto(bits->interp, image_name);
+
   count = 0;
   this = bits->images;
   while (this) {
-    if (bits->tkphoto) {
-      Tk_PhotoGetSize(bits->tkphoto, &bits->width, &bits->height);
-    }
-    else {
-      Tk_SizeOfImage(bits->tkimage, &bits->width, &bits->height);
-    }
 #ifdef GL
     if (this->for_gl) {
       if (this->i.texobj) {
-	ZnGLMakeCurrent(this->wi);
+	ZnGLMakeCurrent(this->dpy, 0);
 	glDeleteTextures(1, &this->i.texobj);
-	ZnGLRelease(this->wi);
+	/*ZnGLRelease(this->wi);*/
 	this->i.texobj = 0;
       }
     }
     else {
 #endif
       if (this->i.pixmap != None) {
-	Tk_FreePixmap(this->wi->dpy, this->i.pixmap);
+	Tk_FreePixmap(this->dpy, this->i.pixmap);
 	this->i.pixmap = None;    
       }
 #ifdef GL
@@ -197,7 +210,6 @@ InvalidateImage(ClientData	client_data,
   }
   /*printf("Invalidate on image %s with %d clients\n",
     Tcl_GetHashKey(&images, bits->hash), count);*/
-
 }
 
 ZnImage
@@ -222,17 +234,16 @@ ZnGetImage(ZnWInfo	*wi,
   image_name = Tk_GetUid(image_name);
   entry = Tcl_FindHashEntry(&images, image_name);
   if (entry != NULL) {
-    /*printf("Image %s déjà connue\n", image_name);*/
+    /*printf("Image \"%s\" is in cache\n", image_name);*/
     bits = (ImageBits *) Tcl_GetHashValue(entry);
   }
   else {
-    /*printf("Nouvelle Image %s\n", image_name);*/
+    /*printf("New image \"%s\"\n", image_name);*/
     if (strcmp(image_name, "") == 0) {
       return ZnUnspecifiedImage;
     }
 
     bits = ZnMalloc(sizeof(ImageBits));
-    bits->wi = wi;
 #ifdef GL
     bits->t_bits = NULL;
 #endif
@@ -241,6 +252,8 @@ ZnGetImage(ZnWInfo	*wi,
     bits->valid_region = NULL;
     bits->tkimage = NULL;
     bits->tkphoto = NULL;
+    bits->interp = wi->interp;
+    bits->dpy = wi->dpy;
 
     if (!Tk_GetImageMasterData(wi->interp, image_name, &type)) {
       /*
@@ -261,6 +274,7 @@ ZnGetImage(ZnWInfo	*wi,
       Tk_SizeOfBitmap(wi->dpy, pmap, &bits->width, &bits->height);    
       mask = XGetImage(wi->dpy, pmap, 0, 0, (unsigned int) bits->width,
 		       (unsigned int) bits->height, 1L, XYPixmap);
+      bits->depth = 1;
       bits->rowstride = mask->bytes_per_line;
       bits->bpixels = ZnMalloc((unsigned int) (bits->height * bits->rowstride));
       memset(bits->bpixels, 0, (unsigned int) (bits->height * bits->rowstride));
@@ -285,10 +299,12 @@ ZnGetImage(ZnWInfo	*wi,
 	ZnWarning("bogus photo image \"");
 	goto im_error;
       }
+      bits->depth = Tk_Depth(wi->win);
       bits->tkimage = Tk_GetImage(wi->interp, wi->win, image_name,
 				  InvalidateImage, (ClientData) bits);
     }
     else { /* Other image types */
+      bits->depth = Tk_Depth(wi->win);
       bits->tkimage = Tk_GetImage(wi->interp, wi->win, image_name,
 				  InvalidateImage, (ClientData) bits);
       Tk_SizeOfImage(bits->tkimage, &bits->width, &bits->height);
@@ -314,14 +330,15 @@ ZnGetImage(ZnWInfo	*wi,
    */
   for (image = bits->images; image != NULL; image = image->next) {
     if (image->for_gl == for_gl) {
-      if ((for_gl && (image->wi == wi)) ||
-	  (!for_gl && (image->wi->screen == wi->screen))) {
+      if ((for_gl && (image->dpy == wi->dpy)) ||
+	  (!for_gl && (image->screen == wi->screen))) {
 	if (!ZnImageIsBitmap(image)) {
 	  cs_ptr = ZnListArray(image->clients);
 	  num_cs = ZnListSize(image->clients);
 	  for (i = 0; i < num_cs; i++, cs_ptr++) {
 	    if ((cs_ptr->inv_proc == inv_proc) &&
 		(cs_ptr->client_data == client_data)) {
+	      cs_ptr->refcount++;
 	      return image;
 	    }
 	  }
@@ -329,7 +346,9 @@ ZnGetImage(ZnWInfo	*wi,
 	   */
 	  cs.inv_proc = inv_proc;
 	  cs.client_data = client_data;
+	  cs.refcount = 1;
 	  ZnListAdd(image->clients, &cs, ZnListTail);
+	  return image;
 	}
 	image->refcount++;
 	return image;
@@ -340,17 +359,23 @@ ZnGetImage(ZnWInfo	*wi,
   /*
    * Create a new instance for this case.
    */
+  /*printf("new instance for \"%s\"\n", image_name);*/
   image = ZnMalloc(sizeof(ImageStruct));
   image->bits = bits;
-  image->refcount = 1;
+  image->refcount = 0;
   image->for_gl = for_gl;
-  image->wi = wi;
+  image->dpy = wi->dpy;
+  image->screen = wi->screen;
 
   if (!ZnImageIsBitmap(image)) {
     image->clients = ZnListNew(1, sizeof(ClientStruct));
     cs.inv_proc = inv_proc;
     cs.client_data = client_data;
+    cs.refcount = 1;
     ZnListAdd(image->clients, &cs, ZnListTail);
+  }
+  else {
+    image->refcount++;
   }
 
   /* Init the real resource and let the client load it
@@ -395,15 +420,19 @@ ZnGetImageByValue(ZnImage	image,
     for (i = 0; i < num_cs; i++, cs_ptr++) {
       if ((cs_ptr->inv_proc == inv_proc) &&
 	  (cs_ptr->client_data == client_data)) {
+	cs_ptr->refcount++;
 	return image;
       }
     }
     cs.inv_proc = inv_proc;
     cs.client_data = client_data;
+    cs.refcount = 1;
     ZnListAdd(this->clients, &cs, ZnListTail);
   }
+  else {
+    this->refcount++;
+  }
 
-  this->refcount++;
   return image;
 }
 
@@ -435,7 +464,7 @@ ZnFreeImage(ZnImage	image,
   Image		prev, scan, this = ((Image) image);
   ImageBits	*bits = this->bits;
   ClientStruct	*cs_ptr;
-  int		i, num_cs;
+  int		i, num_cs, rm_image;
 
   /*printf("ZnFreeImage: %s\n", ZnNameOfImage(image));*/
   /*
@@ -453,16 +482,21 @@ ZnFreeImage(ZnImage	image,
     for (i = 0; i < num_cs; i++, cs_ptr++) {
       if ((cs_ptr->inv_proc == inv_proc) &&
 	  (cs_ptr->client_data == client_data)) {
-	ZnListDelete(this->clients, i);
-	this->refcount--;
+	cs_ptr->refcount--;
+	if (cs_ptr->refcount == 0) {
+	  ZnListDelete(this->clients, i);
+	}
 	break;
       }
     }
+    rm_image = ZnListSize(this->clients)==0;
   }
   else {
     this->refcount--;
+    rm_image = this->refcount==0;
   }
-  if (this->refcount != 0) {
+
+  if (!rm_image) {
     return;
   }
 
@@ -477,11 +511,13 @@ ZnFreeImage(ZnImage	image,
   }
   if (this->for_gl) {
 #ifdef GL
-    ZnWInfo *wi = this->wi;
-    if (this->i.texobj && wi->win) {
-      ZnGLMakeCurrent(wi);
+    if (this->i.texobj) {
+      ZnGLMakeCurrent(this->dpy, 0);
+      /*      printf("%d Libération de la texture %d pour l'image %s\n",
+	      wi, this->i.texobj, ZnNameOfImage(image));*/
       glDeleteTextures(1, &this->i.texobj);
-      ZnGLRelease(wi);
+      this->i.texobj = 0;
+      /*ZnGLRelease(wi);*/
     }
 #endif
   }
@@ -490,7 +526,7 @@ ZnFreeImage(ZnImage	image,
      * This is an image, we need to free the instances.
      */
     if (this->i.pixmap != None) {
-      Tk_FreePixmap(this->wi->dpy, this->i.pixmap);
+      Tk_FreePixmap(this->dpy, this->i.pixmap);
     }
   }
   else {
@@ -498,7 +534,7 @@ ZnFreeImage(ZnImage	image,
      * This is a bitmap ask Tk to free the resource.
      */
     if (this->i.pixmap != None) {
-      Tk_FreeBitmap(this->wi->dpy, this->i.pixmap);
+      Tk_FreeBitmap(this->dpy, this->i.pixmap);
     }
   }
   ZnFree(this);
@@ -569,11 +605,11 @@ ZnSizeOfImage(ZnImage	image,
  **********************************************************************************
  */
 Pixmap
-ZnImagePixmap(ZnImage	image)
+ZnImagePixmap(ZnImage	image,
+	      Tk_Window	win)
 {
   Image		this = (Image) image;
   ImageBits	*bits = this->bits;
-  ZnWInfo	*wi = bits->wi;
 
   /*printf("ZnImagePixmap: %s\n", ZnNameOfImage(image));*/
   if (this->for_gl) {
@@ -584,21 +620,27 @@ ZnImagePixmap(ZnImage	image)
   
   if (this->i.pixmap == None) {
     if (ZnImageIsBitmap(image)) {
-      this->i.pixmap = Tk_GetBitmap(wi->interp, wi->win, Tk_GetUid(ZnNameOfImage(image)));
+      this->i.pixmap = Tk_GetBitmap(bits->interp, win, Tk_GetUid(ZnNameOfImage(image)));
     }
     else {
       Tk_Image tkimage;
       
-      if (bits->wi == wi) {
+      /*
+       * If the original image was created on the same display
+       * as the required display, we can get the pixmap from it.
+       * On the other hand we need first to obtain an image
+       * instance on the right display.
+       */
+      if (bits->dpy == this->dpy) {
 	tkimage = bits->tkimage;
       }
       else {
 	/* Create a temporary tkimage to draw the pixmap. */
-	tkimage = Tk_GetImage(wi->interp, wi->win, ZnNameOfImage(image), NULL, NULL);
+	tkimage = Tk_GetImage(bits->interp, win, ZnNameOfImage(image), NULL, NULL);
       }
       
-      this->i.pixmap = Tk_GetPixmap(wi->dpy, Tk_WindowId(wi->win),
-				    bits->width, bits->height, Tk_Depth(wi->win));
+      this->i.pixmap = Tk_GetPixmap(this->dpy, Tk_WindowId(win),
+				    bits->width, bits->height, bits->depth);
       Tk_RedrawImage(tkimage, 0, 0, bits->width, bits->height, this->i.pixmap, 0, 0);
       
       if (tkimage != bits->tkimage) {
@@ -649,9 +691,9 @@ ZnPointInImage(ZnImage	image,
  **********************************************************************************
  */
 static void
-BuildImageRegion(ImageBits *bits)
+BuildImageRegion(Display	*dpy,
+		 ImageBits	*bits)
 {
-  ZnWInfo	*wi = bits->wi;
   Pixmap	pmap;
   int		x, y, end;
   GC		gc;
@@ -659,20 +701,19 @@ BuildImageRegion(ImageBits *bits)
   XRectangle	rect;
 
   /*printf("BuildImageRegion: %s\n", ZnNameOfImage(bits->images));*/
-  pmap = Tk_GetPixmap(wi->dpy, Tk_WindowId(wi->win),
-		      bits->width, bits->height, Tk_Depth(wi->win));
-  gc = XCreateGC(wi->dpy, pmap, 0, NULL);
-  XSetForeground(wi->dpy, gc, 0);
-  XFillRectangle(wi->dpy, pmap, gc, 0, 0, bits->width, bits->height);
+  pmap = Tk_GetPixmap(dpy, DefaultRootWindow(dpy), bits->width, bits->height, bits->depth);
+  gc = XCreateGC(dpy, pmap, 0, NULL);
+  XSetForeground(dpy, gc, 0);
+  XFillRectangle(dpy, pmap, gc, 0, 0, bits->width, bits->height);
   Tk_RedrawImage(bits->tkimage, 0, 0, bits->width, bits->height, pmap, 0, 0);
-  im1 = XGetImage(wi->dpy, pmap, 0, 0, bits->width, bits->height, ~0L, ZPixmap);
+  im1 = XGetImage(dpy, pmap, 0, 0, bits->width, bits->height, ~0L, ZPixmap);
   
-  XSetForeground(wi->dpy, gc, 1);
-  XFillRectangle(wi->dpy, pmap, gc, 0, 0, bits->width, bits->height);
+  XSetForeground(dpy, gc, 1);
+  XFillRectangle(dpy, pmap, gc, 0, 0, bits->width, bits->height);
   Tk_RedrawImage(bits->tkimage, 0, 0, bits->width, bits->height, pmap, 0, 0);
-  im2 = XGetImage(wi->dpy, pmap, 0, 0, bits->width, bits->height, ~0L, ZPixmap);
-  Tk_FreePixmap(wi->dpy, pmap);
-  XFreeGC(wi->dpy, gc);
+  im2 = XGetImage(dpy, pmap, 0, 0, bits->width, bits->height, ~0L, ZPixmap);
+  Tk_FreePixmap(dpy, pmap);
+  XFreeGC(dpy, gc);
 
   bits->valid_region = TkCreateRegion();
 
@@ -712,10 +753,11 @@ ZnImageRegion(ZnImage	image)
     return NULL;
   }
   else {
-    ImageBits	*bits = ((Image) image)->bits;
+    Image	this = (Image) image;
+    ImageBits	*bits = this->bits;
 #ifdef PTK
     if (!bits->valid_region) {
-      BuildImageRegion(bits);
+      BuildImageRegion(this->dpy, bits);
     }
     return bits->valid_region;
 #else
@@ -724,7 +766,7 @@ ZnImageRegion(ZnImage	image)
     }
     else {
       if (!bits->valid_region) {
-	BuildImageRegion(bits);
+	BuildImageRegion(this->dpy, bits);
       }
       return bits->valid_region;
     }
@@ -865,32 +907,31 @@ From8r8g8b(unsigned char *data,
 }
 
 static void
-GatherImageTexels(ImageBits	*bits)
+GatherImageTexels(Display	*dpy,
+		  ImageBits	*bits)
 {
   Pixmap	pmap;
   XImage	*im;
   TkRegion	valid_region;
-  int		t_size, depth;
-  ZnWInfo	*wi = bits->wi;
+  int		t_size;
 
   /*printf("GatherImageTexels: %s\n", ZnNameOfImage(bits->images));*/
   valid_region = ZnImageRegion(bits->images);
 
   t_size = bits->t_width * 4 * bits->t_height;
   bits->t_bits = ZnMalloc(t_size);  
-  depth = Tk_Depth(wi->win);
 
-  pmap = Tk_GetPixmap(wi->dpy, Tk_WindowId(wi->win),
-		      bits->width, bits->height, depth);
+  pmap = Tk_GetPixmap(dpy, DefaultRootWindow(dpy),
+		      bits->width, bits->height, bits->depth);
   Tk_RedrawImage(bits->tkimage, 0, 0, bits->width, bits->height, pmap, 0, 0);
-  im = XGetImage(wi->dpy, pmap, 0, 0, bits->width, bits->height, ~0L, ZPixmap);
-  Tk_FreePixmap(wi->dpy, pmap);
+  im = XGetImage(dpy, pmap, 0, 0, bits->width, bits->height, ~0L, ZPixmap);
+  Tk_FreePixmap(dpy, pmap);
 
-  if (depth == 16) {
+  if (bits->depth == 16) {
     From5r6g5b(im->data, bits->width, bits->height, im->bytes_per_line,
 	       bits->t_bits, bits->t_width, bits->t_height, valid_region);
   }
-  else if ((depth == 24) || (depth == 32)) {
+  else if ((bits->depth == 24) || (bits->depth == 32)) {
     From8r8g8b(im->data, bits->width, bits->height, im->bytes_per_line,
 	       bits->t_bits, bits->t_width, bits->t_height, valid_region);
   }
@@ -954,6 +995,7 @@ ZnImageTex(ZnImage	image,
 
       t_stride = bits->t_width * 4;
       t_size = t_stride * bits->t_height;
+      /*printf("t_width: %d(%d), t_height: %d(%d)\n", bits->t_width, width, bits->t_height, height);*/
       bits->t_bits = ZnMalloc(t_size);
       Tk_PhotoGetImage(bits->tkphoto, &block);
       green_off = block.offset[1] - block.offset[0];
@@ -1000,14 +1042,14 @@ ZnImageTex(ZnImage	image,
      * from a locally drawn pixmap.
      */
     else {
-      GatherImageTexels(bits);
+      GatherImageTexels(bits->dpy, bits);
     }
   }
 
   if (!this->i.texobj) {
     glGenTextures(1, &this->i.texobj);
-    /*printf("creation texture %d pour image %s\n",
-      this->i.texobj, ZnNameOfImage(this));*/
+    /*printf("%d creation texture %d pour image %s\n",
+      bits, this->i.texobj, ZnNameOfImage(this));*/
     glBindTexture(GL_TEXTURE_2D, this->i.texobj);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -1027,7 +1069,7 @@ ZnImageTex(ZnImage	image,
     if (glGetError() != GL_NO_ERROR) {
       ZnWarning("Can't allocate the texture for image ");
       ZnWarning(ZnNameOfImage(image));
-      ZnWarning("\n");
+     ZnWarning("\n");
     }
     glBindTexture(GL_TEXTURE_2D, 0);
   }
@@ -1063,8 +1105,8 @@ typedef struct {
 } TexGlyphInfo;
 
 typedef struct _TexFontInfo {
-  GLuint	texobj;
   struct _TexFont *txf;
+  GLuint	texobj;
   ZnWInfo	*wi;
   unsigned int	refcount;
   struct _TexFontInfo *next;
@@ -1084,6 +1126,9 @@ typedef struct _TexFont {
   TexGlyphInfo	*tgi;
   ZnTexGVI	*tgvi;
   ZnTexGVI	**lut;
+#ifndef PTK_800
+  Tcl_Encoding	enc;
+#endif
   Tcl_HashEntry	*hash;
 } TexFont;
 
@@ -1190,9 +1235,16 @@ placeGlyph(FontInfoPtr	font,
   }
 }
 
+#ifdef PTK_800
 FontInfoPtr
 SuckGlyphsFromServer(ZnWInfo	*wi,
 		     Tk_Font	font)
+#else
+FontInfoPtr
+SuckGlyphsFromServer(ZnWInfo	*wi,
+		     Tk_Font	font,
+		     Tcl_Encoding enc)
+#endif
 {
   Pixmap	offscreen = 0;
   XImage	*image = NULL;
@@ -1200,10 +1252,13 @@ SuckGlyphsFromServer(ZnWInfo	*wi,
   XGCValues	values;
   unsigned int	width, height, length, pixwidth;
   unsigned int	i, j;
-  char		str[] = " ";
+  char		str_from[] = " ";
+#ifndef PTK_800
+  char		str_utf[8];
+#endif
   unsigned char	*bitmapData = NULL;
   unsigned int	x, y;
-  int		num_chars, spanLength=0;
+  int		num_chars, written, spanLength=0;
   unsigned int	charWidth=0, maxSpanLength;
   int		grabList[MAX_GLYPHS_PER_GRAB];
   unsigned int	glyphsPerGrab = MAX_GLYPHS_PER_GRAB;
@@ -1232,8 +1287,15 @@ SuckGlyphsFromServer(ZnWInfo	*wi,
    */
   width = 0;
   for (i = 0; i < myfontinfo->num_glyphs; i++) {
-    *str = i + myfontinfo->min_char;
-    Tk_MeasureChars(font, str, 1, 0, TK_AT_LEAST_ONE, &length);
+    *str_from = i + myfontinfo->min_char;
+#ifdef PTK_800
+    Tk_MeasureChars(font, str_from, 1, 0, TK_AT_LEAST_ONE, &length);
+#else
+    Tcl_ExternalToUtf(wi->interp, enc, str_from, 1,
+		      TCL_ENCODING_START|TCL_ENCODING_END,
+		      NULL, str_utf, 8, NULL, &written, NULL);
+    Tk_MeasureChars(font, str_utf, written, 0, TK_AT_LEAST_ONE, &length);
+#endif
     width = MAX(width, length);
   }
 
@@ -1268,8 +1330,15 @@ SuckGlyphsFromServer(ZnWInfo	*wi,
 
   numToGrab = 0;
   for (i = 0; i < myfontinfo->num_glyphs; i++) {
-    *str = i + myfontinfo->min_char;
-    Tk_MeasureChars(font, str, 1, 0, TK_AT_LEAST_ONE, &charWidth);
+    *str_from = i + myfontinfo->min_char;
+#ifdef PTK_800
+    Tk_MeasureChars(font, str_from, 1, 0, TK_AT_LEAST_ONE, &charWidth);
+#else
+    Tcl_ExternalToUtf(wi->interp, enc, str_from, 1,
+		      TCL_ENCODING_START|TCL_ENCODING_END,
+		      NULL, str_utf, 8, NULL, &written, NULL);
+    Tk_MeasureChars(font, str_utf, written, 0, TK_AT_LEAST_ONE, &charWidth);
+#endif
 
     myfontinfo->glyph[i].width = charWidth;
     myfontinfo->glyph[i].height = height;
@@ -1278,8 +1347,13 @@ SuckGlyphsFromServer(ZnWInfo	*wi,
     myfontinfo->glyph[i].advance = charWidth;
     myfontinfo->glyph[i].bitmap = NULL;
     if (charWidth != 0) {
-      Tk_DrawChars(wi->dpy, offscreen, xgc, font, str, 1, 
+#ifdef PTK_800
+      Tk_DrawChars(wi->dpy, offscreen, xgc, font, str_from, 1, 
 		   (int) (8*maxSpanLength*numToGrab), myfontinfo->ascent);
+#else
+      Tk_DrawChars(wi->dpy, offscreen, xgc, font, str_utf, written, 
+		   (int) (8*maxSpanLength*numToGrab), myfontinfo->ascent);
+#endif
       grabList[numToGrab] = i;    
       numToGrab++;
     }
@@ -1344,6 +1418,62 @@ SuckGlyphsFromServer(ZnWInfo	*wi,
   return NULL;
 }
 
+#ifndef PTK_800
+Tcl_Encoding
+ZnGetFontEncoding(ZnWInfo	*wi,
+		  Tk_Font	tkfont)
+{
+#ifdef WIN
+  return Tcl_GetEncoding(wi->interp, "unicode");
+#else
+  Tcl_Encoding	enc;
+  XFontStruct	*fs;
+  int		count;
+  unsigned long	prop;
+  char	CONST	*xlfd;
+  char		*charset_lc=NULL;
+  char		*charset, *charset_def = "iso8859-1";
+
+  fs = XQueryFont(wi->dpy, Tk_FontId(tkfont));
+  
+  charset = charset_def;
+  xlfd = Tk_NameOfFont(tkfont);
+  if (XGetFontProperty(fs, XInternAtom(wi->dpy, "FONT", 0), &prop) != False) {
+    xlfd = charset = XGetAtomName(wi->dpy, prop);
+    for (count = 0; count < 13; count++) {
+      charset = strchr(charset, '-');
+      if (!charset) {
+	charset = charset_def;
+	goto getenc;
+      }
+      charset++;
+    }
+    /* Get a lower case string */
+    count = strlen(charset);
+    charset_lc = ZnMalloc(count+1);
+    charset_lc[count] = '\000';
+    for (count--; count >= 0; count--) {
+      charset_lc[count] = tolower(charset[count]);
+    }
+    charset = charset_lc;
+  }
+
+ getenc:
+  enc = Tcl_GetEncoding(wi->interp, charset);
+  if (charset_lc) {
+    ZnFree(charset_lc);
+  }
+  if (!enc) {
+    ZnWarning("Unable to find encoding for font ");
+    ZnWarning(xlfd);
+    ZnWarning("\n");
+  }
+
+  return enc;
+#endif
+}
+#endif
+
 /*
  **********************************************************************************
  *
@@ -1369,12 +1499,17 @@ ZnGetTexFont(ZnWInfo	*wi,
   int		width, height;
   unsigned int	texw, texh;
   GLfloat	xstep, ystep;
+  ZnGLContextEntry *ce = ZnGetGLContext(wi->dpy);
 
   if (!inited) {
     Tcl_InitHashTable(&font_textures, TCL_ONE_WORD_KEYS);
     inited = 1;
   }
 
+  /*  printf("family: %s, size: %d, weight: %d, slant: %d, underline: %d, overstrike: %d\n",
+	 tft->fa.family, tft->fa.size, tft->fa.weight, tft->fa.slant, tft->fa.underline,
+	 tft->fa.overstrike);
+  */
   entry = Tcl_FindHashEntry(&font_textures, (char *) font);
   if (entry != NULL) {
     txf = (TexFont *) Tcl_GetHashValue(entry);
@@ -1392,10 +1527,17 @@ ZnGetTexFont(ZnWInfo	*wi,
     /* Get a local reference to the font, it will be deallocated
      * when no further references on this TexFont exist. */
     txf->tkfont = Tk_GetFont(wi->interp, wi->win, Tk_NameOfFont(font));
+#ifndef PTK_800
+    txf->enc = ZnGetFontEncoding(wi, txf->tkfont);
+#endif
 
     /*printf("Chargement de la texture pour la fonte %s\n",
       ZnNameOfTexFont(tfi));*/
+#ifdef PTK_800
     fontinfo = SuckGlyphsFromServer(wi, txf->tkfont);
+#else
+    fontinfo = SuckGlyphsFromServer(wi, txf->tkfont, txf->enc);
+#endif
     if (fontinfo == NULL) {
       goto error;
     }
@@ -1410,18 +1552,18 @@ ZnGetTexFont(ZnWInfo	*wi,
     /*
      * Initial size of texture.
      */
-    texw = wi->max_tex_size;
+    texw = ce->max_tex_size;
     texh = 64;
     while (texh < (unsigned int) (txf->ascent+txf->descent)) {
       texh *= 2;
     }
-    /*printf("Taille réelle de texture utilisée: %d\n", wi->max_tex_size);*/
+    /*printf("Taille réelle de texture utilisée: %d\n", ce->max_tex_size);*/
     /*
      * This is temporarily disabled until we find out
      * how to reliably get max_tex_size up front without
      * waiting for the window mapping.
      */
-    if (texh > wi->max_tex_size) {
+    if (texh > ce->max_tex_size) {
       goto error;
     }
     xstep = 0/*0.5 / texw*/;
@@ -1510,14 +1652,14 @@ ZnGetTexFont(ZnWInfo	*wi,
 	    px = gap;
 	    maxheight = height;
 	    if ((unsigned int) (py + height + gap) >= texh) {
-	      if (texh*2 < wi->max_tex_size) {
+	      if (texh*2 < ce->max_tex_size) {
 		texh *= 2;
 		ZnFree(txf->teximage);
 		txf->teximage = ZnMalloc(texw * texh * sizeof(unsigned char));
 		strcpy(glist, glist2);
 		goto restart;
 	      }
-	      else if (texw*2 < wi->max_tex_size) {
+	      else if (texw*2 < ce->max_tex_size) {
 		texw *= 2;
 		ZnFree(txf->teximage);
 		txf->teximage = ZnMalloc(texw * texh * sizeof(unsigned char));
@@ -1619,18 +1761,22 @@ ZnGetTexFont(ZnWInfo	*wi,
 	ZnFree(txf->teximage);
 	txf->teximage = NULL;
       }
+#ifndef PTK_800
+      Tcl_FreeEncoding(txf->enc);
+#endif
+      Tk_FreeFont(txf->tkfont);
       ZnFree(txf);
       ZnWarning("Cannot load font texture for font ");
       ZnWarning(Tk_NameOfFont(font));
       ZnWarning("\n");
       return 0;
     }
-
+    
     memset(txf->lut, 0, txf->range * sizeof(ZnTexGVI *));
     for (i = 0; i < txf->num_glyphs; i++) {
       txf->lut[txf->tgi[i].c - txf->min_glyph] = &txf->tgvi[i];
     }
-
+    
     for (i = 0; i < fontinfo->num_glyphs; i++) {
       if (fontinfo->glyph[i].bitmap)
 	ZnFree(fontinfo->glyph[i].bitmap);
@@ -1638,17 +1784,17 @@ ZnGetTexFont(ZnWInfo	*wi,
     ZnFree(fontinfo);
     ZnFree(glist);
     ZnFree(glist2);
-
+    
     entry = Tcl_CreateHashEntry(&font_textures, (char *) font, &new);
     Tcl_SetHashValue(entry, (ClientData) txf);
     txf->hash = entry;
   }
-      
+ 
   /*
    * Now locate the texture obj in the texture list for this widget.
    */
   for (tfi = txf->tfi; tfi != NULL; tfi = tfi->next) {
-    if (tfi->wi == wi) {
+    if (tfi->wi->dpy == wi->dpy) {
       tfi->refcount++;
       return tfi;
     }
@@ -1658,13 +1804,12 @@ ZnGetTexFont(ZnWInfo	*wi,
    */
   tfi = ZnMalloc(sizeof(TexFontInfo));
   if (tfi == NULL) {
-    ZnFree(txf);
     return NULL;
   }
   tfi->refcount = 1;
-  tfi->texobj = 0;
   tfi->wi = wi;
   tfi->txf = txf;
+  tfi->texobj = 0;
   tfi->next = txf->tfi;
   txf->tfi = tfi;
 
@@ -1763,12 +1908,12 @@ ZnFreeTexFont(ZnTexFontInfo	tfi)
   else {
     prev->next = this->next;
   }
-  if (this->texobj && wi->win) {
+  if (this->texobj) {
     /*printf("%d Libération de la texture %d pour la fonte %s\n",
       wi, this->texobj, ZnNameOfTexFont(tfi));*/
-    ZnGLMakeCurrent(wi);
+    ZnGLMakeCurrent(wi->dpy, 0);
     glDeleteTextures(1, &this->texobj);
-    ZnGLRelease(wi);
+    /*ZnGLRelease(wi);*/
   }
 
   /*
@@ -1782,6 +1927,9 @@ ZnFreeTexFont(ZnTexFontInfo	tfi)
     ZnFree(txf->tgvi);
     ZnFree(txf->lut);
     ZnFree(txf->teximage);
+#ifndef PTK_800
+    Tcl_FreeEncoding(txf->enc);
+#endif
     Tcl_DeleteHashEntry(txf->hash);
     ZnFree(txf);
   }
@@ -1809,6 +1957,21 @@ ZnCharInTexFont(ZnTexFontInfo	tfi,
   }
   return False;
 }
+
+/*
+ **********************************************************************************
+ *
+ * ZnTexFontEncoding --
+ *
+ **********************************************************************************
+ */
+#ifndef PTK_800
+Tcl_Encoding
+ZnTexFontEncoding(ZnTexFontInfo tfi)
+{
+  return ((TexFontInfo *) tfi)->txf->enc;
+}
+#endif
 
 /*
  **********************************************************************************

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: WidgetInfo.h,v 1.30 2003/11/28 13:35:29 lecoanet Exp $
+ * $Id: WidgetInfo.h,v 1.33 2004/03/23 14:53:46 lecoanet Exp $
  */
 
 /*
@@ -151,8 +151,7 @@ typedef struct _ZnWInfo {
   
   /* Tracks global resources	*/
   unsigned int		track_managed_history_size;	/* Size of history for tracks	*/
-  ZnBool		track_manage_history;	/* Tell if the tracks manage their	*/
-						/* histories.				*/
+  unsigned int		track_visible_history_size;	/* Size of displayed history	*/
   ZnReal		speed_vector_length; /* How long (in time) are speedvectors*/
   int			om_group_id;	/* Tell which group contains tracks to be	*/
 #ifdef OM
@@ -202,18 +201,7 @@ typedef struct _ZnWInfo {
   Display		*dpy;			/* The display of the widget window.	*/
   Screen		*screen;
   Tk_Window		win;			/* The window of the widget. */
-#ifdef GL
-  ZnGLContext		gl_context;
-#  ifdef _WIN32
-  HDC			hdc;
-  HWND			hwnd;
-#  else
-  XVisualInfo		*gl_visual;
-#  endif
-  ZnReal		max_line_width;
-  ZnReal		max_point_width;
-  unsigned int		max_tex_size;
-#endif /* GL */
+
   GLUtesselator		*tess;
   ZnCombineData		*tess_combine_list;
   int			tess_type;
@@ -277,6 +265,7 @@ int			scroll_yc;		/* scrollbars). */
 #ifndef _WIN32
   ZnChrono		this_draw_chrono;
   ZnChrono		total_draw_chrono;
+  void			*ps_info;
 #endif
   int			num_items;
   int			damaged_area_w;

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Import.t,v 1.1 2003/09/23 12:15:15 mertz Exp $
+# $Id: Import.t,v 1.2 2004/04/02 12:01:49 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -9,7 +9,8 @@
 
 BEGIN {
     if (!eval q{
-        use Test::More qw(no_plan);
+#        use Test::More qw(no_plan);
+        use Test::More tests => 6;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";

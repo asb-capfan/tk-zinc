@@ -10,16 +10,17 @@
 #-----------------------------------------------------------------------------------
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
-
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
 use Tk::Zinc::Graphics;
-use Getopt::Long;
 use Math::Trig;
+use Getopt::Long;
 use strict 'vars';
 
+
+my $currenttransfo;
 my $previousangle = 0;
 my $rotate_angle = .1;
 my $zoomfactor = .1;
@@ -236,11 +237,11 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 							     -text => "Click hippo Buttons with mouse button 1.\n",
 							     -color => '#2222cc',
 							    },
-					      },
+						},
 				  'hp1' => {-itemtype => 'group',
-					     -coords => [-163, -40],
-					     -params => {-priority => 40,
-							},
+					    -coords => [-163, -40],
+					    -params => {-priority => 40,
+						       },
 					    -items => {'edge' => {-itemtype => 'hippodrome',
 								  -coords => [[-46, -86], [46, 86]],
 								  -params => {-closed => 1,
@@ -266,7 +267,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 					   },
 
 				   'hp2' => {-itemtype => 'group',
-					     -coords => [-50, -40],
+					     -coords => [-40, -40],
 					     -params => {-priority => 40,
 							},
 					    -items => {'edge' => {-itemtype => 'hippodrome',
@@ -354,7 +355,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 									     -linecolor => '#aaaaaa',
 									     -relief => 'raised',
 									     -priority => 30,
-									     -tags => ['b3g','pushbtn'],
+									     -tags => ['b3g','pushbtn','ico'],
 									    },
 								 -contours =>  [['add',-1,[[0, 0],[16, 8],[16, -8]]]],
 								},
@@ -364,66 +365,66 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 					      -coords => [-80, 120],
 					      -params => {-priority => 40,
 							 },
-					      -items => {'form' => {-itemtype => 'hippodrome',
-								    -coords => [[-38, -20], [39, 20]],
-								    -params => {-closed => 1,
-										-filled => 1,
-										-fillcolor => 'pushbtn2',
-										-linewidth => 2,
-										-linecolor => '#000000',
-										-priority => 20,
-										-tags => ['b3c1','pushbtn'],
-									       },
-								    -trunc => 'both',
-								   },
-							 'ico' => {-itemtype => 'curve',
-								   -coords => [[-8, 0],[8, 8],[8, -8]],
-								   -params => {-closed => 1,
-									       -filled => 1,
-									       -fillcolor => '#000000',
-									       -linewidth => 1,
-									       -linecolor => '#aaaaaa',
-									       -priority => 30,
-									       -relief => 'raised',
-									       -tags => ['b3c1','pushbtn'],
-									      },
-								  },
-							},
-					     },
+					    -items => {'form' => {-itemtype => 'hippodrome',
+								  -coords => [[-38, -20], [39, 20]],
+								  -params => {-closed => 1,
+									      -filled => 1,
+									      -fillcolor => 'pushbtn2',
+									      -linewidth => 2,
+									      -linecolor => '#000000',
+									      -priority => 20,
+									      -tags => ['b3c1','pushbtn'],
+									     },
+								  -trunc => 'both',
+								 },
+						       'ico' => {-itemtype => 'curve',
+								 -coords => [[-8, 0],[8, 8],[8, -8]],
+								 -params => {-closed => 1,
+									     -filled => 1,
+									     -fillcolor => '#000000',
+									     -linewidth => 1,
+									     -linecolor => '#aaaaaa',
+									     -priority => 30,
+									     -relief => 'raised',
+									     -tags => ['b3c1','pushbtn','ico'],
+									    },
+								},
+						       },
+					      },
 				  'hp3c2' => {-itemtype => 'group',
 					      -coords => [0, 120],
 					      -params => {-priority => 40,
 							 },
 					      -items => {'form' => {-itemtype => 'hippodrome',
-								    -coords => [[-39, -20], [39, 20]],
-								    -params => {-closed => 1,
-										-filled => 1,
-										-fillcolor => 'pushbtn2',
-										-linewidth => 2,
-										-linecolor => '#000000',
-										-priority => 20,
-										-tags => ['b3c2','pushbtn'],
-									       },
-								    -trunc => 'both',
+								  -coords => [[-39, -20], [39, 20]],
+								  -params => {-closed => 1,
+									      -filled => 1,
+									      -fillcolor => 'pushbtn2',
+									      -linewidth => 2,
+									      -linecolor => '#000000',
+									      -priority => 20,
+									      -tags => ['b3c2','pushbtn'],
+									     },
+								  -trunc => 'both',
 								 },
-							 'ico' => {-itemtype => 'rectangle',
-								   -coords => [[-6, -6],[6, 6]],
-								   -params => {-filled => 1,
-									       -fillcolor => '#000000',
-									       -linewidth => 1,
-									       -linecolor => '#aaaaaa',
-									       -priority => 30,
-									       -tags => ['b3c2','pushbtn'],
+						       'ico' => {-itemtype => 'rectangle',
+								 -coords => [[-6, -6],[6, 6]],
+								 -params => {-filled => 1,
+									     -fillcolor => '#000000',
+									     -linewidth => 1,
+									     -linecolor => '#aaaaaa',
+									     -priority => 30,
+									     -tags => ['b3c2','pushbtn','ico'],
 									    },
-								  },
-							},
-					     },
-				  'hp3c3' => {-itemtype => 'group',
+								},
+						       },
+					      },
+				  'hp3C3' => {-itemtype => 'group',
 					      -coords => [80, 120],
 					      -params => {-priority => 40,
 							 },
 					      -items => {'form' => {-itemtype => 'hippodrome',
-								    -coords => [[-39, -20], [38, 20]],
+								    -coords => [[-39, -20], [39, 20]],
 								    -params => {-closed => 1,
 										-filled => 1,
 										-fillcolor => 'pushbtn2',
@@ -435,7 +436,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 								    -trunc => 'both',
 								   },
 							 'ico' => {-itemtype => 'curve',
-								   -coords => [[8, 0],[-8, 8],[-8, -8]],
+								   -coords => [[8, 0],[-8, -8],[-8, 8]],
 								   -params => {-closed => 1,
 									       -filled => 1,
 									       -fillcolor => '#000000',
@@ -443,16 +444,16 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 									       -linecolor => '#aaaaaa',
 									       -priority => 30,
 									       -relief => 'raised',
-									       -tags => ['b3c3','pushbtn'],
+									       -tags => ['b3c3','pushbtn','ico'],
 									      },
 								  },
 							},
 					     },
 
-				  'hp3d' => {-itemtype => 'group',
+				  'hp3D' => {-itemtype => 'group',
 					     -coords => [160, 120],
 					     -params => {-priority => 40,
-							},
+							 },
 					     -items => {'form' => {-itemtype => 'hippodrome',
 								   -coords => [[-40, -20], [40, 20]],
 								   -params => {-closed => 1,
@@ -472,11 +473,11 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 									      -fillcolor => '#000000',
 									      -linewidth => 1,
 									      -linecolor => '#aaaaaa',
-									      -relief => 'raised',
 									      -priority => 30,
-									      -tags => ['b3d','pushbtn'],
+									      -relief => 'raised',
+									      -tags => ['b3d','pushbtn','ico'],
 									     },
-								  -contours =>  [['add',-1,[[0, 0],[-16, -8],[-16, 8]]]],
+								  -contours =>  [['add',-1,[[0,0],[-16, -8],[-16, 8]]]],
 								 },
 						       },
 					    },
@@ -542,7 +543,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 								 -params => {-closed => 1,
 									     -filled => 1,
 									     -fillcolor => '=path 10 10|#ffffff 0|#ccccd0 50|#99999f 80|#99999f;0 100',
-									     -linewidth => 0, #1,
+									     -linewidth => 0,
 									     -linecolor => '#cccccc;80',
 									     -priority => 30,
 									     -tags => ['b4b','pushbtn'],
@@ -582,7 +583,6 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 								 },
 						       },
 					   },
-
 				 },
 
 		 'Polygone' => {'consigne' => {-itemtype => 'text',
@@ -610,10 +610,10 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 										},
 								    },
 							  'text' => {-itemtype => 'text',
-								     -coords => [0, 0],
+								     -coords => [0, -6],
 								     -params => {-font => $font_9b,
 										 -text => "Triangle",
-										 -anchor => 'center',
+										 -anchor => 'n',
 										 -alignment => 'center',
 										 -color => '#660000',
 										 -priority => 50,
@@ -640,10 +640,10 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 									      },
 								  },
 							'text' => {-itemtype => 'text',
-								   -coords => [0, 0],
+								   -coords => [0, -6],
 								   -params => {-font => $font_9b,
 									       -text => "Carré",
-									       -anchor => 'center',
+									       -anchor => 'n',
 									       -alignment => 'center',
 									       -color => '#660000',
 									       -priority => 50,
@@ -670,10 +670,10 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 										 },
 								     },
 							   'text' => {-itemtype => 'text',
-								      -coords => [0, 0],
+								      -coords => [0, -6],
 								      -params => {-font => $font_9b,
 										  -text => "Pentagone",
-										  -anchor => 'center',
+										  -anchor => 'n',
 										  -alignment => 'center',
 										  -color => '#660000',
 										  -priority => 50,
@@ -699,10 +699,10 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 										},
 								    },
 							  'text' => {-itemtype => 'text',
-								     -coords => [0, 0],
+								     -coords => [0, -6],
 								     -params => {-font => $font_9b,
 										 -text => "Hexagone",
-										 -anchor => 'center',
+										 -anchor => 'n',
 										 -alignment => 'center',
 										 -color => '#660000',
 										 -priority => 50,
@@ -728,10 +728,10 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 										 },
 								     },
 							   'text' => {-itemtype => 'text',
-								      -coords => [0, 0],
+								      -coords => [0, -6],
 								      -params => {-font => $font_9b,
 										  -text => "Heptagone",
-										  -anchor => 'center',
+										  -anchor => 'n',
 										  -alignment => 'center',
 										  -color => '#660000',
 										  -priority => 50,
@@ -758,10 +758,10 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 										},
 								    },
 							  'text' => {-itemtype => 'text',
-								     -coords => [0, 0],
+								     -coords => [0, -6],
 								     -params => {-font => $font_9b,
 										 -text => "Octogone",
-										 -anchor => 'center',
+										 -anchor => 'n',
 										 -alignment => 'center',
 										 -color => '#660000',
 										 -priority => 50,
@@ -787,10 +787,10 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 										},
 								    },
 							  'text' => {-itemtype => 'text',
-								     -coords => [0, 0],
+								     -coords => [0, -6],
 								     -params => {-font => $font_9b,
 										 -text => "32 cotés...",
-										 -anchor => 'center',
+										 -anchor => 'n',
 										 -alignment => 'center',
 										 -color => '#660000',
 										 -priority => 50,
@@ -808,7 +808,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 								   -inner_radius => 36,
 								   -corner_radius => 10,
 								   -startangle => 270,
-								   -corners => [1,0,1,0,1,0,1,0,1,0],
+								   -corners => [0,1,0,1,0,1,0,1,0,1],
 								   -params => {-closed => 1,
 									       -filled => 1,
 									       -fillcolor => 'roundpolyg',
@@ -819,18 +819,17 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 									      },
 								  },
 							'text' => {-itemtype => 'text',
-								   -coords => [0, 0],
+								   -coords => [0, -6],
 								   -params => {-font => $font_9b,
 									       -text => "Etoile",
-									       -anchor => 'center',
+									       -anchor => 'n',
 									       -alignment => 'center',
 									       -color => '#660000',
 									       -priority => 50,
 									      },
 								  },
 						       },
-					      },
-
+					    },
 			       },
 
 		 'Polyline' => {'consigne' => {-itemtype => 'text',
@@ -924,9 +923,10 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 										-priority => 10,
 										-fillrule => 'nonzero',
 									       },
-								    -contours => [['add',1,[[245,88],[245,47],[190,47],[190,158],
-											    [259,158],[259,117],[230,117],[230,88]],
-										   0, undef, [0,0,55,55,0,0,15,15]]],
+
+								    -contours => [['add', 1, [[245,88],[245,47],[190,47],[190,158],
+											       [259,158],[259,117],[230,117],[230,88]],
+										   5, undef, [0,0,55,55,0,0,15,15]]],
 								   },
 						       'shad' => {-itemtype => 'arc',
 								   -coords => [[75, 91],[115,131]],
@@ -1041,31 +1041,54 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 				    },
 
 		 'TabBox' => {'consigne' => {-itemtype => 'text',
-						 -coords => [-285, 160],
-						 -params => {-font => $font_9b,
-							     -text => "Click on thumbnail to select page\nChange anchor or alignment tabs options with radio buttons.\n",
-							     -color => '#2222cc',
-							    },
-					      },
+					     -coords => [-285, 160],
+					     -params => {-font => $font_9b,
+							 -text => "Click on thumbnail to select page\nChange anchor or alignment tabs options with radio buttons.\n",
+							 -color => '#2222cc',
+							},
+					    },
+
+			      'exemple' => {-itemtype => 'text',
+					    -coords => [-165, -105],
+					    -params => {-font => $font_9b,
+							-text => "",
+							-alignment => 'left',
+							-anchor => 'nw',
+							-color => '#000000',
+							-priority => 500,
+							-width => 350,
+							-tags => ['div2', 'fontname'],
+						       },
+					    },
+
 			      'bo1' => {-itemtype => 'tabbox',
-					 -coords => [[-240, -160], [240, 100]],
-					 -radius => 8,
-					 -tabwidth => 72,
-					 -tabheight => 28,
-					 -numpages => 8,
-					 -anchor => 'n',
-					 -alignment => 'left',
-					 -overlap => 3,
-					 -tabtitles => ['A', 'B', 'C', 'D', 'E', 'F','G','H'],
-					 -params => {-closed => 1,
-						     -priority => 100,
-						     -filled => 1,
-						     -fillcolor => '#ffffff',
-						     -linewidth => 1.2,
-						     -linecolor => '#000000',
-						     -tags => ['div2', 'divider', 'intercalaire'],
-						    },
-					},
+					-coords => [[-240, -160], [240, 100]],
+					-radius => 8,
+					-tabwidth => 72,
+					-tabheight => 28,
+					-numpages => 8,
+					-anchor => 'n',
+					-alignment => 'left',
+					-overlap => 3,
+					-params => {-closed => 1,
+						    -priority => 100,
+						    -filled => 1,
+						    -fillcolor => '#ffffff',
+						    -linewidth => 1.2,
+						    -linecolor => '#000000',
+						    -tags => ['div2', 'divider'],
+						   },
+					-tabtitles => {-text => ['A', 'B', 'C', 'D', 'E', 'F','G','H'],
+						       -params => {-text => 'titre',
+								   -color => '#2222cc',
+								   -font => $font_9b,
+								   -anchor => 'center',
+								   -alignment => 'center',
+								   -priority => 400,
+								   -visible => 1,
+								  },
+						      },
+				       },
 
 			       'back' => {-itemtype => 'roundedrectangle',
 					  -coords => [[-242, -162], [242, 102]],
@@ -1265,11 +1288,11 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 			      },
 
 		 'PathLine' => {'consigne' => {-itemtype => 'text',
-						 -coords => [-285, 155],
-						 -params => {-font => $font_9b,
-							     -text => "Mouse button 1 drag objects,\nEscape key reset transfos.",
-							     -color => '#2222cc',
-							    },
+					       -coords => [-285, 155],
+					       -params => {-font => $font_9b,
+							   -text => "Mouse button 1 drag objects,\nEscape key reset transfos.",
+							   -color => '#2222cc',
+							  },
 					      },
 				'pl1' => {-itemtype => 'pathline',
 					  -metacoords => {-type => 'polygone',
@@ -1284,7 +1307,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 					  -graduate => {-type => 'linear',
 							-colors => ['#ff0000', '#ff00ff', '#0000ff', '#00ffff',
 								    '#00ff00', '#ffff00', '#ff0000'],
-							},
+						       },
 					  -params => {-priority => 100,
 						      -tags => ['move'],
 						     },
@@ -1318,7 +1341,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 									   [60, 30],[60, -30],[30, -30]],
 							       -linewidth => 10,
 							       -closed => 1,
-							       -shifting => 'right',
+							       -shifting => 'in',
 							       -graduate => {-type => 'transversal',
 									     -colors => ['#00aa77;100', '#00aa77;0'],
 									    },
@@ -1351,7 +1374,7 @@ my %pagesconf = ('Rectangle' => {'consigne' => {-itemtype => 'text',
 										 -startangle => 240,
 										},
 								 -linewidth => 20,
-								 -shifting => 'right',
+								 -shifting => 'in',
 								 -closed => 1,
 								 -graduate => {-type => 'double',
 									       -colors => [['#ffffff;0', '#222299;0', '#ffffff;0'],
@@ -1426,6 +1449,7 @@ my %tabtable = ('n' => {-numpages => 8,
 		       },
 	       );
 
+
 # creation de la fenetre principale
 my $mw = MainWindow->new();
 $mw->geometry("700x560+0+0");
@@ -1469,9 +1493,7 @@ my ($shapes, $tcoords) = &tabBoxCoords([[-315, -210],[315, 210]],
 				      );
 
 # to find some images (used as textures) needed by this demo
-push @INC , Tk->findINC('demos/zinc_data');
-#print "image_path=$image_path\n";
-my $texture = $zinc->Photo(-file => Tk::findINC('paper.gif'));
+my $texture = $zinc->Photo('paper.gif', -file => Tk->findINC('demos/zinc_data/paper.gif'));
 
 # création des items zinc correspondants
 my $i = scalar(@{$shapes}) - 1;
@@ -1489,7 +1511,7 @@ foreach my $shape (reverse @{$shapes}) {
 			   -linecolor => '#000000',
 			   -filled => 1,
 			   -tile => $texture,
-			   -tags => ['div1', $i, 'divider', 'intercalaire'],
+			   -tags => ['div1', 'divider', $i, 'intercalaire'],
 			  );
 
   # groupe page clippé
@@ -1512,68 +1534,46 @@ foreach my $shape (reverse @{$shapes}) {
 
   push(@pagegroups, $pgroup);
 
+  $tcoords->[$i]->[1] -= 6;
+
   # titre de l'intercalaire
   $zinc->add('text', $divgroup,
 	     -position => $tcoords->[$i],
 	     -text => $pagenames[$i],
 	     -font => $font_9b,
 	     -alignment => 'center',
-	     -anchor => 'center',
+	     -anchor => 'n',
 	     -color => '#000099',
 	     -priority => 200,
-	     -tags => ['div1', $i, 'divider','titre'],
+	     -tags => ['div1', 'divider', $i, 'titre'],
 	    );
     $i--;
 }
 
 # création du contenu des pages
-$i = 0;
+my $i = 0;
 foreach my $pagename (reverse @pagenames) {
   my $pagestyle = $pagesconf{$pagename};
   if ($pagestyle) {
+
     my $pgroup = $pagegroups[$i];
     while (my ($itemname, $itemstyle) = each(%{$pagestyle})) {
-      if ($itemstyle->{'-itemtype'} eq 'tabbox') {
-	&buildTabBox($zinc, $pgroup, $itemstyle, $itemname);
-
-      } else {
-	if ($itemstyle->{'-itemtype'} eq 'group') {
-	  my $subgroup = &buildZincItem($zinc, $pgroup, $itemstyle, undef, $itemname);
-	  while (my ($name, $style) = each(%{$itemstyle->{'-items'}})) {
-	    &buildZincItem($zinc, $subgroup, $style, undef, $name);
-	  }
-
-	  if ($itemstyle->{'-repeat'}) {
-	    my $num = $itemstyle->{'-repeat'}->{'-num'};
-	    my ($dx, $dy) = @{$itemstyle->{'-repeat'}->{'-dxy'}};
-	    for (my $i = 1; $i < $num; $i++) {
-	      my $clone = $zinc->clone($subgroup);
-	      $zinc->translate($clone, $dx*$i, $dy*$i);
-	      my @items = $zinc->find('withtag', ".$clone*");
-	      foreach my $item (@items) {
-		my @tags = $zinc->itemcget($item, -tags);
-		if (@tags) {
-		  my ($name, $type) = @tags;
-		  $zinc->itemconfigure($item, -tags => [$name.$i, $type]);
-		}
-	      }
-	    }
-	  }
-	} else {
-	  my $group = ($itemname eq 'consigne') ? $zinc->group($pgroup) : $pgroup;
-
-	  &buildZincItem($zinc, $group, $itemstyle, undef, $itemname);
-	}
-      }
+      my $group = ($itemname eq 'consigne') ? $zinc->group($pgroup) : $pgroup;
+      $itemstyle->{'-name'} = $itemname;
+      &buildZincItem($zinc, $group, %{$itemstyle});
     }
   }
+
   $i++;
 }
 
+
+# initialisation de la TabBox
 &clickSelector('sel1','n');
 &clickSelector('sel2','left');
 &selectDivider('div1', 0);
 
+# initialisation des bindings
 &setBindings;
 
 
@@ -1601,8 +1601,7 @@ sub setBindings {
   $mw->Tk::bind('<less>', sub {viewRotate('ccw');});
 
   # Escape : reset transfos
-  $mw->Tk::bind('<Escape>', sub {$zinc->treset('poly');
-				 $zinc->treset('move');
+  $mw->Tk::bind('<Escape>', sub {$zinc->treset('move');
 				 $zinc->raise('move');
 				 $zinc->treset($curview);});
 
@@ -1622,12 +1621,15 @@ sub setBindings {
 }
 
 
+#-----------------------------------------------------------------------------------
+# Callback sur evt CLICK des items tagés 'divider'
+#-----------------------------------------------------------------------------------
 sub selectDivider {
   my ($divname, $numpage) = @_;
   if (!defined $divname) {
     my @tags = $zinc->itemcget('current', -tags);
     $divname = $tags[0];
-    $numpage = $tags[1];
+    $numpage = $tags[2];
   }
 
   $zinc->itemconfigure("($divname && titre)", -color => '#000099');
@@ -1652,6 +1654,9 @@ sub selectDivider {
 }
 
 
+#-----------------------------------------------------------------------------------
+# Callback sur evt CLICK des items tagés 'selector'
+#-----------------------------------------------------------------------------------
 sub clickSelector {
   my ($btngroup, $value) = @_;
 
@@ -1697,8 +1702,10 @@ sub clickSelector {
       $zinc->raise($divgroup);
       $zinc->itemconfigure("(div2 && $index)", -visible => 1);
       $zinc->coords("(div2 && $index && intercalaire)", $shapes->[$index]);
-      $zinc->coords("(div2 && $index && titre)", $tcoords->[$index]);
-      $zinc->itemconfigure("(div2 && $index && titre)", -text => $tabtable->{'-titles'}->[$index]);
+      if ($zinc->type("(div2 && $index && titre)")) {
+	$zinc->coords("(div2 && $index && titre)", $tcoords->[$index]);
+	$zinc->itemconfigure("(div2 && $index && titre)", -text => $tabtable->{'-titles'}->[$index]);
+      }
     }
 
   }
@@ -1712,8 +1719,20 @@ sub clickSelector {
 #-----------------------------------------------------------------------------------
 sub pushButton {
   my $tag = ($zinc->itemcget('current', -tags))[0];
+  if (scalar $zinc->find('withtag', $tag) > 1 and
+      !$zinc->find('withtag', "($tag && ico)")) {
+    $tag = 'current';
+  }
   $zinc->scale($tag, .975, .975);
   $zinc->translate($tag, 1, 1);
+
+  if ($zinc->find('withtag', "($tag && ico)")) {
+    my $oldcolor = $zinc->itemcget("($tag && ico)", -fillcolor);
+    $zinc->itemconfigure('ico', -fillcolor => '#000000');
+
+    my $newcolor = ($oldcolor eq '#000000') ?'#ffff00' : '#000000';
+    $zinc->itemconfigure("($tag && ico)", -fillcolor => $newcolor);
+  }
 }
 
 #-----------------------------------------------------------------------------------
@@ -1724,6 +1743,7 @@ sub pullButton {
   $zinc->treset($tag);
 }
 
+
 #-----------------------------------------------------------------------------------
 # Callback sur evt CATCH des items tagés 'poly'
 # armement de rotation des polygones
@@ -1731,7 +1751,7 @@ sub pullButton {
 sub startRotatePolygone {
   my $ev = $zinc->XEvent;
   my ($xref, $yref) = $zinc->transform($zinc->group('current'), 1, [0, 0]);
-  $previousangle = &lineAngle($ev->x, $ev->y, $xref, $yref);
+  $previousangle = &lineAngle([$ev->x, $ev->y], [$xref, $yref]);
 }
 
 #-----------------------------------------------------------------------------------
@@ -1742,7 +1762,7 @@ sub rotatePolygone {
   my $tag = ($zinc->itemcget('current', -tags))[0];
   my $ev = $zinc->XEvent;
   my ($xref, $yref) = $zinc->transform($zinc->group('current'), 1, [0, 0]);
-  my $newangle = &lineAngle($ev->x, $ev->y, $xref, $yref);
+  my $newangle = &lineAngle([$ev->x, $ev->y], [$xref, $yref]);
 
   $zinc->rotate($tag, deg2rad($newangle - $previousangle));
   $previousangle = $newangle;
@@ -1779,6 +1799,10 @@ sub mobileStop {
 }
 
 
+#-----------------------------------------------------------------------------------
+# Callback sur evénément Tk <KeyPress> flèche gauche, haut, droite, bas
+# pan (translation) du contenu de la page active (TabBox)
+#-----------------------------------------------------------------------------------
 sub viewTranslate {
   my $way = shift;
 
@@ -1789,6 +1813,10 @@ sub viewTranslate {
 
 }
 
+#-----------------------------------------------------------------------------------
+# Callback sur evénément Tk <KeyPress> "+" ou "-"
+# zoom du contenu de la page active (TabBox)
+#-----------------------------------------------------------------------------------
 sub viewZoom {
   my $key = shift;
   my $scaleratio = ($key eq 'up') ? 1+$zoomfactor : 1-$zoomfactor;
@@ -1797,6 +1825,11 @@ sub viewZoom {
 
 }
 
+
+#-----------------------------------------------------------------------------------
+# Callback sur evénément Tk <KeyPress> ">" ou "<"
+# rotation du contenu de la page active (TabBox)
+#-----------------------------------------------------------------------------------
 sub viewRotate {
   my $way = shift;
   my $delta_angle = $rotate_angle;
@@ -1807,64 +1840,6 @@ sub viewRotate {
 
 }
 
-
-
-
-sub buildTabBox {
-  my ($zinc, $parentgroup, $style, $name) = @_;
-  my $params = delete $style->{'-params'};
-  my @tags = @{$params->{'-tags'}};
-  my $coords = delete $style->{'-coords'};
-  my $table = $tabtable{$style->{'-anchor'}};
-  my $titles = $style->{'-tabtitles'};
-  my ($shapes, $tcoords, $invert) = &tabBoxCoords($coords, %{$style});
-  my $k = ($invert) ? scalar @{$shapes} : -1;
-  foreach my $shape (reverse @{$shapes}) {
-    $k += ($invert) ? -1 : +1;
-    my $group = $zinc->add('group', $parentgroup);
-    $params->{'-tags'} = [$tags[0], $k, $tags[1], 'intercalaire'];
-    $zinc->add('curve', $group, $shape, %{$params});
-
-    if ($style->{'-page'}) {
-      &buildZincItem($zinc, $group, $style->{'-page'});
-    }	
-
-    my $tindex = ($invert) ? $k : $#{$shapes} - $k;
-    if ($titles) {
-      my $titltags = [$tags[0], $k, $tags[1], 'titre'];
-      $zinc->add('text', $group,
-		 -position => $tcoords->[$tindex],
-		 -text => $titles->[$tindex],
-		 -font => $font_9b,
-		 -alignment => 'center',
-		 -anchor => 'center',
-		 -color => '#000099',
-		 -priority => 200,
-		 -tags => $titltags,
-		);
-
-    }
-
-    # exemple fonte
-    if ($tindex == 0) {
-      $zinc->add('text', $parentgroup,
-		 -position => [-165, -105],
-		 -text =>  $table->{'-names'}->[0],
-		 -font => $font_9b,
-		 -alignment => 'left',
-		 -anchor => 'nw',
-		 -color => '#000000',
-		 -priority => 500,
-		 -width => 350,
-		 -tags => [$tags[0], 'fontname'],
-		);
-
-    }
-
-  }
-
-  &selectDivider($tags[0], $k);
-}
 
 
 1;

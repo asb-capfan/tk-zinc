@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Mar 15 14:02:03 1999
  *
- * $Id: tkZinc.h,v 1.13 2003/10/02 12:46:45 lecoanet Exp $
+ * $Id: tkZinc.h,v 1.15 2004/03/23 14:53:46 lecoanet Exp $
  */
 
 /*
@@ -45,7 +45,7 @@ typedef struct _ZnTagSearch {
   ZnBool	over;		/* Non-zero means NextItem should always
 				 * return NULL. */
   int		type;		/* search type */
-  long		id;		/* item id for searches by id */
+  unsigned int	id;		/* item id for searches by id */
 
   Tk_Uid	tag;		/* tag expression string */
   int		tag_index;	/* current position in string scan */
@@ -60,6 +60,26 @@ typedef struct _ZnTagSearch {
   ZnList	item_stack;
 } ZnTagSearch;
 
+#ifdef GL
+typedef struct _ZnGLContextEntry {
+  ZnGLContext	context;
+  Display	*dpy;
+  ZnReal	max_line_width;
+  ZnReal	max_point_width;
+  unsigned int	max_tex_size;
+#ifdef WIN
+  HDC		hdc;
+#else
+  XVisualInfo	*visual; /* Should these two be managed by screen ? */
+  Colormap	colormap;
+#endif
+  struct _ZnGLContextEntry *next;
+} ZnGLContextEntry;
+
+ZnGLContextEntry *ZnGetGLContext(Display *dpy);
+void ZnGLMakeCurrent(Display *dpy, Tk_Window win);
+void ZnGLSwapBuffers(Display *dpy, Tk_Window win);
+#endif
 
 int ZnParseCoordList(ZnWInfo *wi, Tcl_Obj *arg, ZnPoint **pts,
 		     char **controls, unsigned int *num_pts, ZnBool *old_format);

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: test-no-crash.pl,v 1.18 2003/03/24 15:28:55 mertz Exp $
+# $Id: test-no-crash.pl,v 1.19 2004/03/31 13:55:03 mertz Exp $
 # This non-regression test has been developped by C. Mertz <mertz@cena.fr>
 
 use Tk;
@@ -28,8 +28,6 @@ my %testsHash;
       $testsHash{ $num } = $comment;
   }
 }
-
-unshift (@INC, "/usr/lib/perl5/Tk");  # for getting Tk some images;
 
 # les variables positionnées en fonction des options de la ligne de commande
 my $opt_log = 0;
@@ -170,10 +168,10 @@ sub creating_items {
     &test_eval (1, "add", 'triangles', 1, [200,200 , 300,200 , 300,300, 200,300],
 		-colors => ["blue;50", "red;20", "green;80"]);
     
-    $image1 = $zinc->Photo(-file => Tk::findINC("icon.gif") );
-    $image2 = $zinc->Photo(-file => Tk::findINC("Xcamel.gif") );
-    $image3 = $zinc->Photo(-file => Tk::findINC("tranicon.gif") );
-    $image4 = $zinc->Photo(-file => Tk::findINC("anim.gif") );
+    $image1 = $zinc->Photo(-file => Tk::findINC("Tk/icon.gif") );
+    $image2 = $zinc->Photo(-file => Tk::findINC("Tk/Xcamel.gif") );
+    $image3 = $zinc->Photo(-file => Tk::findINC("Tk/tranicon.gif") );
+    $image4 = $zinc->Photo(-file => Tk::findINC("Tk/anim.gif") );
 
     &creating_datas;  # some of the data are using items!
 } # end creating_items

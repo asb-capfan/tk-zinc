@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Tabular.c,v 1.20 2003/10/02 12:43:17 lecoanet Exp $
+ * $Id: Tabular.c,v 1.22 2004/03/03 10:16:24 lecoanet Exp $
  */
 
 /*
@@ -37,7 +37,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Tabular.c,v 1.20 2003/10/02 12:43:17 lecoanet Exp $";
+static const char rcsid[] = "$Id: Tabular.c,v 1.22 2004/03/03 10:16:24 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -274,7 +274,9 @@ ComputeCoordinates(ZnItem	item,
 					     &field_set->label_pos);
     }
     else {
-      ZnTransformPoint(wi->current_transfo, &tab->pos,
+      ZnPoint pos;
+      pos.x = pos.y = 0;
+      ZnTransformPoint(wi->current_transfo, &pos,
 			  &field_set->label_pos);
     }
 
@@ -400,8 +402,8 @@ Pick(ZnItem	item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -673,6 +675,7 @@ static ZnItemClassStruct TABULAR_ITEM_CLASS = {
   True,			/* has_anchors */
   "tabular",
   tabular_attrs,
+  Tk_Offset(TabularItemStruct, pos),
   Init,
   Clone,
   Destroy,

@@ -33,7 +33,7 @@
 #include "WidgetInfo.h"
 
 
-static const char rcsid[] = "$Id: Icon.c,v 1.33 2003/12/11 08:12:28 lecoanet Exp $";
+static const char rcsid[] = "$Id: Icon.c,v 1.39 2004/03/23 14:53:45 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -116,6 +116,9 @@ Init(ZnItem		item,
 {
   ZnWInfo	*wi = item->wi;
   IconItem	icon = (IconItem) item;
+
+  /*printf("size of an icon(header) = %d(%d)\n",
+    sizeof(IconItemStruct), sizeof(ZnItemStruct));*/
 
   /* Init attributes */
   SET(item->flags, ZN_VISIBLE_BIT);
@@ -247,7 +250,8 @@ ComputeCoordinates(ZnItem	item,
 {
   ZnWInfo	*wi = item->wi;
   IconItem	icon = (IconItem) item;
-  int		width, height;
+  int		width, height, i;
+  ZnPoint	pos, quad[4];
   
   ZnResetBBox(&item->item_bounding_box);
 
@@ -262,70 +266,40 @@ ComputeCoordinates(ZnItem	item,
     ZnSizeOfImage(icon->image, &width, &height);
   }
 
-  if (wi->render) {
-    ZnPoint	pos, quad[4];
-    int		i;
 
-    /*
-     * The connected item support anchors, this is checked by
-     * configure.
-     */
-    if (item->connected_item != ZN_NO_ITEM) {
-      ZnTransfo t;
-      
-      item->connected_item->class->GetAnchor(item->connected_item,
-					     icon->connection_anchor, quad);
-      ZnTransfoInvert(wi->current_transfo, &t);
-      ZnTransformPoint(&t, quad, &pos);
-    }
-    else {
-      pos = icon->pos;
-    }
-    ZnAnchor2Origin(&pos, (ZnReal) width, (ZnReal) height, icon->anchor, quad);
-    quad[1].x = quad[0].x;
-    quad[1].y = quad[0].y + height;
-    quad[2].x = quad[0].x + width;
-    quad[2].y = quad[1].y;
-    quad[3].x = quad[2].x;
-    quad[3].y = quad[0].y;
-    ZnTransformPoints(wi->current_transfo, quad, icon->dev, 4);
+  /*
+   * The connected item support anchors, this is checked by
+   * configure.
+   */
+  if (item->connected_item != ZN_NO_ITEM) {
+    ZnTransfo t;
     
-    for (i = 0; i < 4; i++) {
-      icon->dev[i].x = ZnNearestInt(icon->dev[i].x);
-      icon->dev[i].y = ZnNearestInt(icon->dev[i].y);
-    }
-
-    /*
-     * Compute the bounding box.
-     */
-    ZnAddPointsToBBox(&item->item_bounding_box, icon->dev, 4);
+    item->connected_item->class->GetAnchor(item->connected_item,
+					   icon->connection_anchor, quad);
+    ZnTransfoInvert(wi->current_transfo, &t);
+    ZnTransformPoint(&t, quad, &pos);
   }
   else {
-    if (item->connected_item != ZN_NO_ITEM) {
-      item->connected_item->class->GetAnchor(item->connected_item,
-					     icon->connection_anchor,
-					     icon->dev);
-    }
-    else {
-      ZnTransformPoint(wi->current_transfo, &icon->pos, icon->dev);
-    }
-    
-    ZnAnchor2Origin(icon->dev, (ZnReal) width, (ZnReal) height, icon->anchor, icon->dev);
-    icon->dev->x = ZnNearestInt(icon->dev->x);
-    icon->dev->y = ZnNearestInt(icon->dev->y);
-    
-    /*
-     * Compute the bounding box.
-     */
-    ZnAddPointToBBox(&item->item_bounding_box, icon->dev->x, icon->dev->y);
-    ZnAddPointToBBox(&item->item_bounding_box, icon->dev->x+width,
-		     icon->dev->y+height);
+    pos.x = pos.y = 0;
   }
-
-  item->item_bounding_box.orig.x -= 1.0;
-  item->item_bounding_box.orig.y -= 1.0;
-  item->item_bounding_box.corner.x += 1.0;
-  item->item_bounding_box.corner.y += 1.0;
+  ZnAnchor2Origin(&pos, (ZnReal) width, (ZnReal) height, icon->anchor, quad);
+  quad[1].x = quad[0].x;
+  quad[1].y = quad[0].y + height;
+  quad[2].x = quad[0].x + width;
+  quad[2].y = quad[1].y;
+  quad[3].x = quad[2].x;
+  quad[3].y = quad[0].y;
+  ZnTransformPoints(wi->current_transfo, quad, icon->dev, 4);
+  
+  for (i = 0; i < 4; i++) {
+    icon->dev[i].x = ZnNearestInt(icon->dev[i].x);
+    icon->dev[i].y = ZnNearestInt(icon->dev[i].y);
+  }
+  
+  /*
+   * Compute the bounding box.
+   */
+  ZnAddPointsToBBox(&item->item_bounding_box, icon->dev, 4);
 
   /*
    * Update connected items.
@@ -348,24 +322,12 @@ ToArea(ZnItem	item,
        ZnToArea	ta)
 {
   IconItem	icon = (IconItem) item;
-  ZnBBox	box, *area = ta->area;
   
   if (icon->image == ZnUnspecifiedImage) {
     return -1;
   }
-  if (item->wi->render) {
-    return ZnPolygonInBBox(icon->dev, 4, ta->area, NULL);
-  }
-  else {
-    int	w, h;
-   
-    box.orig = *icon->dev;
-    ZnSizeOfImage(icon->image, &w, &h);
-    box.corner.x = box.orig.x + w;
-    box.corner.y = box.orig.y + h;
-    
-    return ZnBBoxInBBox(&box, area);
-  }
+
+  return ZnPolygonInBBox(icon->dev, 4, ta->area, NULL);
 }
 
 
@@ -398,66 +360,254 @@ Draw(ZnItem	item)
   box.corner.x = icon->dev->x + w;
   box.corner.y = icon->dev->y + h;
   if (!ZnImageIsBitmap(icon->image)) {
-    /*
-     * The code below does not use of Tk_RedrawImage to be
-     * able to clip with the current clip region.
-     */
-    ZnIntersectBBox(&box, &wi->damaged_area, &inter);
-    box = inter;
-    ZnCurrentClip(wi, &clip_region, NULL, &simple);
-    pixmap = ZnImagePixmap(icon->image);
-    photo_region = ZnImageRegion(icon->image);
-    clip = TkCreateRegion();
-    /*
-     * ZnImageRegion may fail: perl/Tk 800.24 doesn't support
-     * some internal TkPhoto functions.
-     * This is a workaround using a rectangular region based
-     * on the image size.
-     */
-    if (photo_region == NULL) {
-      XRectangle rect;
-      rect.x = rect.y = 0;
-      rect.width = w;
-      rect.height = h;
-      TkUnionRectWithRegion(&rect, clip, clip);
+    if (ZnTransfoIsTranslation(item->wi->current_transfo)) {
+      /*
+       * The code below does not use of Tk_RedrawImage to be
+       * able to clip with the current clip region.
+       */
+      ZnIntersectBBox(&box, &wi->damaged_area, &inter);
+      box = inter;
+      ZnCurrentClip(wi, &clip_region, NULL, NULL);
+      pixmap = ZnImagePixmap(icon->image, wi->win);
+      photo_region = ZnImageRegion(icon->image);
+      clip = TkCreateRegion();
+      /*
+       * ZnImageRegion may fail: perl/Tk 800.24 doesn't support
+       * some internal TkPhoto functions.
+       * This is a workaround using a rectangular region based
+       * on the image size.
+       */
+      if (photo_region == NULL) {
+	XRectangle rect;
+	rect.x = rect.y = 0;
+	rect.width = w;
+	rect.height = h;
+	TkUnionRectWithRegion(&rect, clip, clip);
+      }
+      else {
+	ZnUnionRegion(clip, photo_region, clip);
+      }
+      ZnOffsetRegion(clip, (int) icon->dev->x, (int) icon->dev->y);
+      TkIntersectRegion(clip_region, clip, clip);
+      TkSetRegion(wi->dpy, wi->gc, clip);
+      XCopyArea(wi->dpy, pixmap, wi->draw_buffer, wi->gc,
+		(int) (box.orig.x-icon->dev->x),
+		(int) (box.orig.y-icon->dev->y),
+		(unsigned int) (box.corner.x-box.orig.x),
+		(unsigned int) (box.corner.y-box.orig.y),
+		(int) box.orig.x,
+		(int) box.orig.y);
+      values.clip_x_origin = values.clip_y_origin = 0;
+      XChangeGC(wi->dpy, wi->gc, GCClipXOrigin|GCClipYOrigin, &values);
+      TkSetRegion(wi->dpy, wi->gc, clip_region);
+      TkDestroyRegion(clip);
     }
     else {
-      ZnUnionRegion(clip, photo_region, clip);
+      ZnPoint	    box[4];
+      int	    i;
+      XImage	    *dest_im, *src_im;
+      XImage	    *dest_mask, *src_mask;
+      Pixmap	    drw, mask;
+      unsigned int  dest_im_width, dest_im_height;
+      unsigned int  max_width, max_height;
+      GC	    gc, mask_gc;
+      TkRegion	    current_clip;
+      ZnBBox	    *current_clip_box;
+
+      dest_im_width = (item->item_bounding_box.corner.x -
+		       item->item_bounding_box.orig.x);
+      max_width = MAX(dest_im_width, (unsigned int) w);
+      dest_im_height = (item->item_bounding_box.corner.y -
+			item->item_bounding_box.orig.y);
+      max_height = MAX(dest_im_height, (unsigned int) h);
+
+      mask = Tk_GetPixmap(wi->dpy, wi->draw_buffer, max_width, max_height, 1);
+
+      drw = Tk_GetPixmap(wi->dpy, wi->draw_buffer, max_width, max_height,
+			 Tk_Depth(wi->win));
+      mask_gc = XCreateGC(wi->dpy, mask, 0, NULL);
+      gc = XCreateGC(wi->dpy, drw, 0, NULL);
+      dest_mask = XCreateImage(wi->dpy, Tk_Visual(wi->win), 1,
+			     XYPixmap, 0, NULL, dest_im_width, dest_im_height,
+			     8, 0);
+      dest_mask->data = ZnMalloc(dest_mask->bytes_per_line * dest_mask->height);
+      memset(dest_mask->data, 0, dest_mask->bytes_per_line * dest_mask->height);
+      XSetForeground(wi->dpy, mask_gc, 0);
+      XFillRectangle(wi->dpy, mask, mask_gc, 0, 0, max_width, max_height);
+      dest_im = XCreateImage(wi->dpy, Tk_Visual(wi->win), Tk_Depth(wi->win),
+			     ZPixmap, 0, NULL, dest_im_width, dest_im_height,
+			     32, 0);
+      dest_im->data = ZnMalloc(dest_im->bytes_per_line * dest_im->height);
+      memset(dest_im->data, 0, dest_im->bytes_per_line * dest_im->height);
+
+      pixmap = ZnImagePixmap(icon->image, wi->win);
+      photo_region = ZnImageRegion(icon->image);
+      clip = TkCreateRegion();
+      /*
+       * ZnImageRegion may fail: perl/Tk 800.24 doesn't support
+       * some internal TkPhoto functions.
+       * This is a workaround using a rectangular region based
+       * on the image size.
+       */
+      if (photo_region == NULL) {
+	XRectangle rect;
+	rect.x = rect.y = 0;
+	rect.width = w;
+	rect.height = h;
+	TkUnionRectWithRegion(&rect, clip, clip);
+      }
+      else {
+	ZnUnionRegion(clip, photo_region, clip);
+      }
+      XSetForeground(wi->dpy, mask_gc, 1);
+      TkSetRegion(wi->dpy, mask_gc, clip);
+      XFillRectangle(wi->dpy, mask, mask_gc, 0, 0, w, h);
+  
+      src_mask = XGetImage(wi->dpy, mask, 0, 0, w, h, 1, XYPixmap);
+      src_im = XGetImage(wi->dpy, pixmap, 0, 0, w, h, ~0L, ZPixmap);
+
+      box[0] = icon->dev[0];
+      box[1] = icon->dev[1];
+      box[2] = icon->dev[3];
+      box[3] = icon->dev[2];
+      for (i = 0; i < 4; i++) {
+	box[i].x -= item->item_bounding_box.orig.x;
+	box[i].y -= item->item_bounding_box.orig.y;
+	box[i].x = ZnNearestInt(box[i].x);
+	box[i].y = ZnNearestInt(box[i].y);
+      }
+
+      ZnMapImage(src_mask, dest_mask, box);
+      ZnMapImage(src_im, dest_im, box);
+
+      ZnCurrentClip(wi, &current_clip, &current_clip_box, NULL);
+      TkSetRegion(wi->dpy, mask_gc, current_clip);
+      XSetClipOrigin(wi->dpy, mask_gc,
+		     -item->item_bounding_box.orig.x, -item->item_bounding_box.orig.y);
+      XPutImage(wi->dpy, mask, mask_gc, dest_mask,
+		0, 0, 0, 0, dest_im_width, dest_im_height);
+      XPutImage(wi->dpy, drw, gc, dest_im,
+		0, 0, 0, 0, dest_im_width, dest_im_height);
+
+      XSetClipMask(wi->dpy, gc, mask);
+      XSetClipOrigin(wi->dpy, gc,
+		     item->item_bounding_box.orig.x,
+		     item->item_bounding_box.orig.y);
+      XCopyArea(wi->dpy, drw, wi->draw_buffer, gc,
+		0, 0, dest_im_width, dest_im_height,
+		item->item_bounding_box.orig.x,
+		item->item_bounding_box.orig.y);
+
+      XFreeGC(wi->dpy, gc);
+      XFreeGC(wi->dpy, mask_gc);
+      Tk_FreePixmap(wi->dpy, drw);
+      Tk_FreePixmap(wi->dpy, mask);
+      XDestroyImage(src_mask);
+      XDestroyImage(dest_mask);
+      XDestroyImage(src_im);
+      XDestroyImage(dest_im);
     }
-    ZnOffsetRegion(clip, (int) icon->dev->x, (int) icon->dev->y);
-    TkIntersectRegion(clip_region, clip, clip);
-    TkSetRegion(wi->dpy, wi->gc, clip);
-    XCopyArea(wi->dpy, pixmap, wi->draw_buffer, wi->gc,
-	      (int) (box.orig.x-icon->dev->x),
-	      (int) (box.orig.y-icon->dev->y),
-	      (unsigned int) (box.corner.x-box.orig.x),
-	      (unsigned int) (box.corner.y-box.orig.y),
-	      (int) box.orig.x,
-	      (int) box.orig.y);
-    values.clip_x_origin = values.clip_y_origin = 0;
-    XChangeGC(wi->dpy, wi->gc, GCClipXOrigin|GCClipYOrigin, &values);
-    TkSetRegion(wi->dpy, wi->gc, clip_region);
-    TkDestroyRegion(clip);
   }
   else {
-    pixmap = ZnImagePixmap(icon->image);
-    ZnCurrentClip(wi, NULL, &clip_box, &simple);
-    if (simple) {
-      ZnIntersectBBox(&box, clip_box, &inter);
-      box = inter;
+    /*
+     * If the current transform is a pure translation, it is
+     * possible to optimize by directly drawing to the X back
+     * buffer. Else, we draw in a temporary buffer, get
+     * its content as an image, transform the image into another
+     * one and use this last image as a mask to draw in the X
+     * back buffer.
+     */
+    pixmap = ZnImagePixmap(icon->image, wi->win);
+    if (ZnTransfoIsTranslation(item->wi->current_transfo)) {
+      ZnCurrentClip(wi, NULL, &clip_box, &simple);
+      if (simple) {
+	ZnIntersectBBox(&box, clip_box, &inter);
+	box = inter;
+      }
+      values.fill_style = FillStippled;
+      values.stipple = pixmap;
+      values.ts_x_origin = (int) icon->dev->x;
+      values.ts_y_origin = (int) icon->dev->y;
+      values.foreground = ZnGetGradientPixel(icon->color, 0.0);
+      gc_mask |= GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground;
+      XChangeGC(wi->dpy, wi->gc, gc_mask, &values);
+      XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,
+		     (int) box.orig.x,
+		     (int) box.orig.y,
+		     (unsigned int) (box.corner.x-box.orig.x),
+		     (unsigned int) (box.corner.y-box.orig.y));
     }
-    values.fill_style = FillStippled;
-    values.stipple = pixmap;
-    values.ts_x_origin = (int) icon->dev->x;
-    values.ts_y_origin = (int) icon->dev->y;
-    values.foreground = ZnGetGradientPixel(icon->color, 0.0);
-    gc_mask |= GCFillStyle | GCStipple | GCTileStipXOrigin | GCTileStipYOrigin | GCForeground;
-    XChangeGC(wi->dpy, wi->gc, gc_mask, &values);
-    XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,
-		   (int) box.orig.x,
-		   (int) box.orig.y,
-		   (unsigned int) (box.corner.x-box.orig.x),
-		   (unsigned int) (box.corner.y-box.orig.y));
+    else {
+      ZnPoint	    box[4];
+      int	    i;
+      XImage	    *dest_im, *src_im;
+      Pixmap	    drw;
+      unsigned int  dest_im_width, dest_im_height;
+      unsigned int  max_width, max_height;
+      GC	    gc;
+
+      dest_im_width = (item->item_bounding_box.corner.x -
+		       item->item_bounding_box.orig.x);
+      max_width = MAX(dest_im_width, (unsigned int) w);
+      dest_im_height = (item->item_bounding_box.corner.y -
+			item->item_bounding_box.orig.y);
+      max_height = MAX(dest_im_height, (unsigned int) h);
+      
+      drw = Tk_GetPixmap(wi->dpy, wi->draw_buffer, max_width, max_height, 1);
+      gc = XCreateGC(wi->dpy, drw, 0, NULL);
+      XSetForeground(wi->dpy, gc, 0);
+      XFillRectangle(wi->dpy, drw, gc, 0, 0, max_width, max_height);
+      dest_im = XCreateImage(wi->dpy, Tk_Visual(wi->win), 1,
+			     XYPixmap, 0, NULL, dest_im_width, dest_im_height,
+			     8, 0);
+      dest_im->data = ZnMalloc(dest_im->bytes_per_line * dest_im->height);
+      memset(dest_im->data, 0, dest_im->bytes_per_line * dest_im->height);
+
+      values.fill_style = FillStippled;
+      values.stipple = pixmap;
+      values.ts_x_origin = 0;
+      values.ts_y_origin = 0;
+      values.foreground = 1;
+      gc_mask |= GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground;
+      XChangeGC(wi->dpy, gc, gc_mask, &values);
+      XFillRectangle(wi->dpy, drw, gc, 0, 0, w, h);
+
+      src_im = XGetImage(wi->dpy, drw, 0, 0, w, h, 1, XYPixmap);
+
+      box[0] = icon->dev[0];
+      box[1] = icon->dev[1];
+      box[2] = icon->dev[3];
+      box[3] = icon->dev[2];
+      for (i = 0; i < 4; i++) {
+	box[i].x -= item->item_bounding_box.orig.x;
+	box[i].y -= item->item_bounding_box.orig.y;
+	box[i].x = ZnNearestInt(box[i].x);
+	box[i].y = ZnNearestInt(box[i].y);
+      }
+
+      ZnMapImage(src_im, dest_im, box);
+
+      XPutImage(wi->dpy, drw, gc, dest_im,
+		0, 0, 0, 0, dest_im_width, dest_im_height);
+
+      values.foreground = ZnGetGradientPixel(icon->color, 0.0);
+      values.stipple = drw;
+      values.ts_x_origin = item->item_bounding_box.orig.x;
+      values.ts_y_origin = item->item_bounding_box.orig.y;
+      values.fill_style = FillStippled;
+      XChangeGC(wi->dpy, wi->gc,
+		GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground,
+		&values);
+      XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,
+		     item->item_bounding_box.orig.x,
+		     item->item_bounding_box.orig.y,
+		     dest_im_width, dest_im_height);
+
+      XFreeGC(wi->dpy, gc);
+      Tk_FreePixmap(wi->dpy, drw);
+      XDestroyImage(src_im);
+      XDestroyImage(dest_im);
+    }
   }
 }
 
@@ -521,31 +671,24 @@ Pick(ZnItem	item,
   double	dist;
   double	off_dist = MAX(1, wi->pick_aperture+1);
   int		x, y, width, height;
+  ZnPoint	p;
+  ZnBBox	bbox;
+  ZnTransfo	t;
 
   if (icon->image == ZnUnspecifiedImage) {
     return 1.0e40;
   }
-  if (wi->render) { 
-    ZnPoint	p;
-    ZnBBox	bbox;
-    ZnTransfo	t;
 
-    ZnTransfoInvert(wi->current_transfo, &t);
-    ZnTransformPoint(&t, ps->point, &p);
-    ZnTransformPoint(&t, &icon->dev[0], &bbox.orig);
-    ZnSizeOfImage(icon->image, &width, &height);
-    bbox.corner.x = bbox.orig.x + width;
-    bbox.corner.y = bbox.orig.y + height;
-    dist = ZnRectangleToPointDist(&bbox, &p);
-    x = (int) (p.x - bbox.orig.x);
-    y = (int) (p.y - bbox.orig.y);
-    /*printf("dist: %g\n", dist);*/
-  }
-  else {
-    dist = ZnRectangleToPointDist(&item->item_bounding_box, ps->point);
-    x = (int) (ps->point->x - item->item_bounding_box.orig.x);
-    y = (int) (ps->point->y - item->item_bounding_box.orig.y);
-  }
+  ZnTransfoInvert(wi->current_transfo, &t);
+  ZnTransformPoint(&t, ps->point, &p);
+  ZnTransformPoint(&t, &icon->dev[0], &bbox.orig);
+  ZnSizeOfImage(icon->image, &width, &height);
+  bbox.corner.x = bbox.orig.x + width;
+  bbox.corner.y = bbox.orig.y + height;
+  dist = ZnRectangleToPointDist(&bbox, &p);
+  x = (int) (p.x - bbox.orig.x);
+  y = (int) (p.y - bbox.orig.y);
+  /*printf("dist: %g\n", dist);*/
 
   /*
    * If inside the icon rectangle, try to see if the point
@@ -557,7 +700,7 @@ Pick(ZnItem	item,
    * no means to compute the real distance in the icon's
    * vicinity.
    */
-  if (dist <= 0) {    
+  if (dist <= 0) {
     dist = 0.0;
     if (icon->image != ZnUnspecifiedImage) {
       if (ZnPointInImage(icon->image, x, y)) {
@@ -594,8 +737,8 @@ Pick(ZnItem	item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -618,11 +761,12 @@ GetAnchor(ZnItem	item,
     *p = *icon->dev;
   }
   else {
-    ZnBBox *bbox = &item->item_bounding_box;
-    ZnOrigin2Anchor(&bbox->orig,
-		    bbox->corner.x - bbox->orig.x,
-		    bbox->corner.y - bbox->orig.y,
-		    anchor, p);
+    ZnPoint q[4];
+    q[0] = icon->dev[0];
+    q[1] = icon->dev[1];
+    q[2] = icon->dev[3];
+    q[3] = icon->dev[2];
+    ZnRectOrigin2Anchor(q, anchor, p);
   }
 }
 
@@ -641,33 +785,17 @@ GetClipVertices(ZnItem		item,
 		ZnTriStrip	*tristrip)
 {
   IconItem	icon = (IconItem) item;
-  int		w=0, h=0;
   ZnPoint	*points;
   
-  if (item->wi->render) {
-    ZnListAssertSize(item->wi->work_pts, 4);
-    points = ZnListArray(item->wi->work_pts);
-    points[0] = icon->dev[1];
-    points[1] = icon->dev[2];
-    points[2] = icon->dev[0];
-    points[3] = icon->dev[3];
-    ZnTriStrip1(tristrip, points, 4, False);
-    
-    return False;
-  }
-  else {
-    ZnListAssertSize(item->wi->work_pts, 2);
-    if (icon->image != ZnUnspecifiedImage) {
-      ZnSizeOfImage(icon->image, &w, &h);
-    }
-    points = ZnListArray(item->wi->work_pts);
-    ZnTriStrip1(tristrip, points, 2, False);
-    points[0] = *icon->dev;
-    points[1].x = points[0].x + w;
-    points[1].y = points[0].y + h;
-
-    return True;
-  }
+  ZnListAssertSize(item->wi->work_pts, 4);
+  points = ZnListArray(item->wi->work_pts);
+  points[0] = icon->dev[0];
+  points[1] = icon->dev[1];
+  points[2] = icon->dev[3];
+  points[3] = icon->dev[2];
+  ZnTriStrip1(tristrip, points, 4, False);
+  
+  return False;
 }
 
 
@@ -727,6 +855,7 @@ static ZnItemClassStruct ICON_ITEM_CLASS = {
   True,			/* has_anchors */
   "icon",
   icon_attrs,
+  Tk_Offset(IconItemStruct, pos),
   Init,
   Clone,
   Destroy,

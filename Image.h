@@ -4,7 +4,7 @@
  * Authors		: Patrick LECOANET
  * Creation date	: Wed Dec  8 11:04:44 1999
  *
- * $Id: Image.h,v 1.12 2003/10/02 12:44:25 lecoanet Exp $
+ * $Id: Image.h,v 1.15 2004/03/23 14:53:45 lecoanet Exp $
  */
 
 /*
@@ -52,7 +52,7 @@ ZnNameOfImage(ZnImage image);
 void
 ZnSizeOfImage(ZnImage image, int *width, int *height);
 Pixmap
-ZnImagePixmap(ZnImage image);
+ZnImagePixmap(ZnImage image, Tk_Window win);
 ZnBool
 ZnImageIsBitmap(ZnImage image);
 TkRegion
@@ -88,6 +88,10 @@ ZnTexGVI *
 ZnTexFontGVI(ZnTexFontInfo tfi, unsigned int c);
 GLuint
 ZnTexFontTex(ZnTexFontInfo tfi);
+#ifndef PTK_800
+Tcl_Encoding
+ZnTexFontEncoding(ZnTexFontInfo tfi);
+#endif
 #endif
 
 #endif	/* _Image_h */

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Wed Jun 23 10:09:20 1999
  *
- * $Id: Group.c,v 1.39 2003/10/02 07:48:23 lecoanet Exp $
+ * $Id: Group.c,v 1.45 2004/03/24 15:06:44 lecoanet Exp $
  */
 
 /*
@@ -39,7 +39,7 @@
 #endif
 
 
-static const char rcsid[] = "$Id: Group.c,v 1.39 2003/10/02 07:48:23 lecoanet Exp $";
+static const char rcsid[] = "$Id: Group.c,v 1.45 2004/03/24 15:06:44 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -52,7 +52,7 @@ typedef struct _GroupItemStruct {
   /* Public data */
   ZnItem		clip;
   unsigned char		alpha;
-  
+
   /* Private data */
   ZnItem		head;		/* Doubly linked list of all items.	*/
   ZnItem		tail;
@@ -551,13 +551,23 @@ PopClip(GroupItem	group,
 static void
 PushTransform(ZnItem	item)
 {
+  ZnPoint *pos;
+  
+  pos = NULL;
+  if (item->class->pos_offset >= 0) {
+    pos = (ZnPoint *) (((char *) item) + item->class->pos_offset);
+    if (pos->x == 0 && pos->y == 0) {
+      pos = NULL;
+    }
+  }
   if (!item->transfo &&
+      !pos &&
       ISSET(item->flags, ZN_COMPOSE_SCALE_BIT) &&
       ISSET(item->flags, ZN_COMPOSE_ROTATION_BIT)) {
     return;
   }
 
-  ZnPushTransform(item->wi, item->transfo,
+  ZnPushTransform(item->wi, item->transfo, pos,
 		  ISSET(item->flags, ZN_COMPOSE_SCALE_BIT),
 		  ISSET(item->flags, ZN_COMPOSE_ROTATION_BIT));
   /*printf("Pushing transfo for item: %d\n;", item->id);
@@ -576,7 +586,17 @@ PushTransform(ZnItem	item)
 static void
 PopTransform(ZnItem	item)
 {
+  ZnPoint *pos;
+  
+  pos = NULL;
+  if (item->class->pos_offset >= 0) {
+    pos = ((void *) item) + item->class->pos_offset;
+    if (pos->x == 0 && pos->y == 0) {
+      pos = NULL;
+    }
+  }
   if (!item->transfo &&
+      !pos &&
       ISSET(item->flags, ZN_COMPOSE_SCALE_BIT) &&
       ISSET(item->flags, ZN_COMPOSE_ROTATION_BIT)) {
     return;
@@ -681,6 +701,7 @@ ComputeCoordinates(ZnItem	item,
   ZnItem	current_item;
   ZnItem	*deps;
   int		num_deps, i;
+  ZnBBox	*clip_box;
 
   PushTransform(item);
   /*  printf("Group.c\n");
@@ -783,6 +804,14 @@ ComputeCoordinates(ZnItem	item,
     ZnAddBBoxToBBox(&item->item_bounding_box, &current_item->item_bounding_box);
     current_item = current_item->next;    
   }
+  /*
+   * Limit the group actual bounding box to
+   * the clip shape boundary.
+   */
+  if (group->clip) {
+    clip_box = &group->clip->item_bounding_box;
+    ZnIntersectBBox(&item->item_bounding_box, clip_box, &item->item_bounding_box);
+  }
   item->inv_flags = 0;
 
   PopClip(group, False);
@@ -855,7 +884,7 @@ ToArea(ZnItem	item,
      * ask the child groups to report instead of adding their
      * children to the result.
      */
-    atomic = ISSET(item->flags, ATOMIC_BIT);
+    atomic = ISSET(item->flags, ATOMIC_BIT) && !ta->override_atomic;
     ta->report |= atomic;
   }
 
@@ -1211,7 +1240,7 @@ Pick(ZnItem	item,
   }
   
   current_item = (ps->start_item == ZN_NO_ITEM) ? group->head : ps->start_item;
-  atomic = ISSET(item->flags, ATOMIC_BIT);
+  atomic = ISSET(item->flags, ATOMIC_BIT) && !ps->override_atomic;
 
   for ( ; current_item != ZN_NO_ITEM; current_item = current_item->next) {
     /*
@@ -1221,6 +1250,10 @@ Pick(ZnItem	item,
      */
     if (ISCLEAR(current_item->flags, ZN_SENSITIVE_BIT) &&
 	ISCLEAR(current_item->flags, ZN_VISIBLE_BIT)) {
+      continue;
+    }
+    ZnIntersectBBox(&bbox, &current_item->item_bounding_box, &inter);
+    if (ZnIsEmptyBBox(&inter)) {
       continue;
     }
     if (current_item->class != ZnGroup) {
@@ -1291,7 +1324,7 @@ Coords(ZnItem		item,
 {
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp,
-		     " groups can't add or remove vertices", NULL);
+		     " can't add or remove vertices in groups", NULL);
     return TCL_ERROR;
   }
   else if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
@@ -1300,10 +1333,13 @@ Coords(ZnItem		item,
 		       " coords command need 1 point on groups", NULL);
       return TCL_ERROR;
     }
+    if (!item->transfo && ((*pts)[0].x == 0.0) && ((*pts)[0].y == 0.0)) {
+      return TCL_OK;
+    }
     if (!item->transfo) {
       item->transfo = ZnTransfoNew();
     }
-    ZnSetTranslation(item->transfo, (*pts)[0].x, (*pts)[0].y);
+    ZnTranslate(item->transfo, (*pts)[0].x, (*pts)[0].y, True);
     ZnITEM.Invalidate(item, ZN_TRANSFO_FLAG);
   }
   else if ((cmd == ZN_COORDS_READ) || (cmd == ZN_COORDS_READ_ALL)) {
@@ -1327,8 +1363,8 @@ Coords(ZnItem		item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -1661,6 +1697,7 @@ static ZnItemClassStruct GROUP_ITEM_CLASS = {
   False,		/* has_anchors */
   "group",
   group_attrs,
+  -1,
   Init,
   Clone,
   Destroy,

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: text.t,v 1.4 2003/12/11 16:44:31 mertz Exp $
+# $Id: text.t,v 1.5 2004/04/02 12:01:49 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -14,8 +14,8 @@
 my $mw;
 BEGIN {
     if (!eval q{
-        use Test::More qw(no_plan);
-#        use Test::More tests => 31;
+#        use Test::More qw(no_plan);
+        use Test::More tests => 55;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";

@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
-# $Id: simpleradar.pl,v 1.6 2003/09/24 15:10:39 mertz Exp $
+# $Id: simpleradar.pl,v 1.7 2004/03/19 11:34:25 mertz Exp $
 # This simple radar has been initially developped by P. Lecoanet <lecoanet@cena.fr>
 # It has been adapted by C. Mertz <mertz@cena.fr> for demo purpose.
 
 package simpleradar; # for avoiding symbol collision between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 
 use Tk;
@@ -16,9 +16,6 @@ use strict;
 
 # to find the SimpleRadarControls module
 require Tk->findINC('demos/zinc_pm/SimpleRadarControls.pm');
-
-# to find some maps needed by these demo
-my $map_path = Tk->findINC('demos/zinc_data');
 
 my $mw = MainWindow->new();
 
@@ -424,9 +421,9 @@ $zinc->bind("$ministrip:$field", '<Leave>',
 ###################################################
 # creation map
 ###################################################
-$mw->videomap("load", "$map_path/videomap_paris-w_90_2", 0, "paris-w");
-$mw->videomap("load", "$map_path/videomap_orly", 17, "orly");
-$mw->videomap("load", "$map_path/hegias_parouest_TE.vid", 0, "paris-ouest");
+$mw->videomap("load", Tk->findINC("demos/zinc_data/videomap_paris-w_90_2"), 0, "paris-w");
+$mw->videomap("load", Tk->findINC("demos/zinc_data/videomap_orly"), 17, "orly");
+$mw->videomap("load", Tk->findINC("demos/zinc_data/hegias_parouest_TE.vid"), 0, "paris-ouest");
 
 my $map = $zinc->add("map", $radar,
 		     -color => 'gray80');

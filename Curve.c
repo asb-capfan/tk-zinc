@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Fri Mar 25 15:32:17 1994
  *
- * $Id: Curve.c,v 1.45 2003/12/11 08:10:00 lecoanet Exp $
+ * $Id: Curve.c,v 1.49 2004/03/23 14:53:45 lecoanet Exp $
  */
 
 /*
@@ -39,7 +39,7 @@
 
 #include <ctype.h>
 
-static const char rcsid[] = "$Id: Curve.c,v 1.45 2003/12/11 08:10:00 lecoanet Exp $";
+static const char rcsid[] = "$Id: Curve.c,v 1.49 2004/03/23 14:53:45 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -1211,14 +1211,14 @@ Draw(ZnItem	item)
     if (cv->tile != ZnUnspecifiedImage) {
       if (!ZnImageIsBitmap(cv->tile)) { /* Fill tiled */
 	values.fill_style = FillTiled;
-	values.tile = ZnImagePixmap(cv->tile);
+	values.tile = ZnImagePixmap(cv->tile, wi->win);
 	values.ts_x_origin = ZnNearestInt(item->item_bounding_box.orig.x);
 	values.ts_y_origin = ZnNearestInt(item->item_bounding_box.orig.y);
 	gc_mask |= GCTileStipXOrigin|GCTileStipYOrigin|GCTile;
       }
       else { /* Fill stippled */
 	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(cv->tile);
+	values.stipple = ZnImagePixmap(cv->tile, wi->win);
 	values.ts_x_origin = ZnNearestInt(item->item_bounding_box.orig.x);
 	values.ts_y_origin = ZnNearestInt(item->item_bounding_box.orig.y);
 	gc_mask |= GCTileStipXOrigin|GCTileStipYOrigin|GCStipple|GCForeground;
@@ -1298,7 +1298,7 @@ Draw(ZnItem	item)
       }
       else {
 	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(cv->line_pattern);
+	values.stipple = ZnImagePixmap(cv->line_pattern, wi->win);
 	XChangeGC(wi->dpy, wi->gc,
 		  GCFillStyle|GCStipple|GCLineWidth|GCJoinStyle|GCCapStyle|GCForeground,
 		  &values);
@@ -1350,7 +1350,7 @@ Draw(ZnItem	item)
     h_width = (width+1)/2;
     h_height = (height+1)/2;
     values.fill_style = FillStippled;
-    values.stipple = ZnImagePixmap(cv->marker);
+    values.stipple = ZnImagePixmap(cv->marker, wi->win);
     values.foreground = ZnGetGradientPixel(cv->marker_color, 0.0);
     XChangeGC(wi->dpy, wi->gc, GCFillStyle|GCStipple|GCForeground, &values);
     for (j = 0; j < cv->outlines.num_contours; j++) {
@@ -1723,8 +1723,8 @@ Pick(ZnItem	item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -2220,9 +2220,9 @@ PickVertex(ZnItem	item,
        */
       if (i == (unsigned int) *contour) {
 	j = (*vertex+1) % num_points;
-	new_dist = ZnLineToPointDist(&points[*vertex], &points[j], &po);
+	new_dist = ZnLineToPointDist(&points[*vertex], &points[j], &po, NULL);
 	k = ((unsigned int)(*vertex-1)) % num_points;
-	dist2 = ZnLineToPointDist(&points[*vertex], &points[k], &po);
+	dist2 = ZnLineToPointDist(&points[*vertex], &points[k], &po, NULL);
 	if (dist2 < new_dist) {
 	  *o_vertex = k;
 	}
@@ -2268,6 +2268,7 @@ static ZnItemClassStruct CURVE_ITEM_CLASS = {
   False,		/* has_anchors */
   "curve",
   cv_attrs,
+  -1,
   Init,
   Clone,
   Destroy,

@@ -22,21 +22,21 @@ ZincObjCmd(
 	   ClientData client_data,
 	   Tcl_Interp* interp,
 	   int argc,
-	   Tcl_Obj *args[]);
+	   Tcl_Obj* CONST args[]);
 
 extern int
 ZnVideomapObjCmd(
 	         ClientData client_data,
 	         Tcl_Interp* interp,
 	         int argc,
-	         Tcl_Obj *args[]);
+	         Tcl_Obj* CONST args[]);
 
 extern int
 ZnMapInfoObjCmd(
 	        ClientData client_data,
 	        Tcl_Interp* interp,
 	        int argc,
-	        Tcl_Obj *args[]);
+	        Tcl_Obj* CONST args[]);
 
 DECLARE_VTABLES;
 TkimgphotoVtab *TkimgphotoVptr;

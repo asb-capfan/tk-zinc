@@ -2,7 +2,7 @@
 # TripleRotatingWheel gambling game contributed by "zentara"
 
 # Idea derived from the wheelOfFortune.pl demo by D. Etienne etienne@cena.fr
-# $Id: TripleRotatingWheel.pl,v 1.1 2003/11/04 12:31:26 mertz Exp $ 
+# $Id: TripleRotatingWheel.pl,v 1.2 2004/03/05 14:54:23 etienne Exp $ 
 
 
 use Tk; 
@@ -435,6 +435,11 @@ sub _clipAndTranslate {
     $x = 0 unless $x;
     $y = 0 unless $y;
     $self->{widget}->scale($self->{itemclip}, $shrinkfactor, $shrinkfactor);
-    $self->{widget}->translate($self->{topgroup}, $x, $y);
+    if ($Tk::Zinc::VERSION lt "3.297") {
+	$self->{widget}->translate($self->{topgroup}, $x, $y);
+    } else {
+	my ($xc, $yc) = $self->{widget}->coords($self->{topgroup});
+	$self->{widget}->coords($self->{topgroup}, [$xc + $x, $yc + $y]);
+    }
 }
 1;

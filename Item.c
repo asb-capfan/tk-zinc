@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: Item.c,v 1.76 2003/12/11 08:18:23 lecoanet Exp $
+ * $Id: Item.c,v 1.82 2004/03/24 15:06:44 lecoanet Exp $
  */
 
 /*
@@ -39,7 +39,9 @@
 #include "Image.h"
 #include "Color.h"
 #include "tkZinc.h"
+#ifdef OM
 #include "OverlapMan.h"
+#endif
 
 #include <limits.h>		/* For INT_MAX */
 #include <stdarg.h>
@@ -47,7 +49,7 @@
 #include <string.h>
 
 
-static const char rcsid[] = "$Id: Item.c,v 1.76 2003/12/11 08:18:23 lecoanet Exp $";
+static const char rcsid[] = "$Id: Item.c,v 1.82 2004/03/24 15:06:44 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -57,7 +59,7 @@ static	ZnList	item_stack = NULL;
 
 /*
  * This array must be kept in sync with the
- * corresponding defines in Types.h.
+ * corresponding defines in Item.h.
  */
 static char *attribute_type_strings[] = {
   "",
@@ -93,6 +95,10 @@ static char *attribute_type_strings[] = {
   "window",
   "alpha",
   "fillrule",
+  "short",
+  "unsignedshort"
+  "char"
+  "unsignedchar"
 };
 
 
@@ -632,6 +638,7 @@ ZnConfigureAttributes(ZnWInfo		*wi,
 	    ZnPoint	point;
 	    int		largc;
 	    Tcl_Obj	**largv;
+	    double	d;
 
 	    if ((Tcl_ListObjGetElements(wi->interp, args[i+1],
 					&largc, &largv) == TCL_ERROR) ||
@@ -641,10 +648,14 @@ ZnConfigureAttributes(ZnWInfo		*wi,
 			       Tcl_GetString(args[i]), "\"", NULL);
 	      return TCL_ERROR;
 	    }
-	    if ((Tcl_GetDoubleFromObj(wi->interp, largv[0], &point.x) == TCL_ERROR) ||
-		(Tcl_GetDoubleFromObj(wi->interp, largv[1], &point.y) == TCL_ERROR)) {
+	    if (Tcl_GetDoubleFromObj(wi->interp, largv[0], &d) == TCL_ERROR) {
 	      goto point_error;
 	    }
+	    point.x = d;
+	    if (Tcl_GetDoubleFromObj(wi->interp, largv[1], &d) == TCL_ERROR) {
+	      goto point_error;
+	    }
+	    point.y = d;
 	    if ((point.x != ((ZnPoint *) valp)->x) ||
 		(point.y != ((ZnPoint *) valp)->y)) {
 	      *((ZnPoint *) valp) = point;
@@ -677,8 +688,8 @@ ZnConfigureAttributes(ZnWInfo		*wi,
 			       Tcl_GetString(args[i+1]), "\"", NULL);
 	      return TCL_ERROR;
 	    }
-	    if (pri != *((int *) valp)) {
-	      *((int *) valp) = pri;
+	    if (pri != *((unsigned short *) valp)) {
+	      *((unsigned short *) valp) = pri;
 	      ZnITEM.UpdateItemPriority(item, ZN_NO_ITEM, True);
 	      *flags |= desc->flags;
 	    }
@@ -761,10 +772,70 @@ ZnConfigureAttributes(ZnWInfo		*wi,
 	    }
 	  }
 	  break;
+	case ZN_CONFIG_CHAR:
+	case ZN_CONFIG_UCHAR:
+	case ZN_CONFIG_ALPHA:
+	  {
+	    int integer;
+	    if (Tcl_GetIntFromObj(wi->interp, args[i+1], &integer) == TCL_ERROR) {
+	      return TCL_ERROR;
+	    }
+	    switch (desc->type) {
+	    case ZN_CONFIG_UCHAR:
+	      if (integer < 0) {
+		integer = 0;
+	      }
+	    case ZN_CONFIG_ALPHA:
+	      if (integer < 0) {
+		integer = 0;
+	      }
+	      if (integer > 100) {
+		integer = 100;
+	      }
+	      break;
+	    }
+	    if (integer != *((char *) valp)) {
+	      *((char *) valp) = integer;
+	      *flags |= desc->flags;
+	    }
+	    break;
+	  }
+	case ZN_CONFIG_SHORT:
+	case ZN_CONFIG_USHORT:
+	  {
+	    int integer;
+	    if (Tcl_GetIntFromObj(wi->interp, args[i+1], &integer) == TCL_ERROR) {
+	      return TCL_ERROR;
+	    }
+	    if (desc->type == ZN_CONFIG_SHORT) {
+	      if (integer < SHRT_MIN) {
+		integer = SHRT_MIN;
+	      }
+	      else if (integer > SHRT_MAX) {
+		integer = SHRT_MAX;
+	      }
+	      if (integer != *((short *) valp)) {
+		*((short *) valp) = integer;
+		*flags |= desc->flags;
+	      }
+	    }
+	    else {
+	      if (integer < 0) {
+		integer = 0;
+	      }
+	      else if (integer > USHRT_MAX) {
+		integer = USHRT_MAX;
+	      }
+	      if (integer != *((unsigned short *) valp)) {
+		*((unsigned short *) valp) = integer;
+		*flags |= desc->flags;
+	      }
+	    }
+	    break;
+	  }
 	case ZN_CONFIG_INT:
 	case ZN_CONFIG_UINT:
 	case ZN_CONFIG_ANGLE:
-	case ZN_CONFIG_ALPHA:
 	  {
 	    int integer;
 	    if (Tcl_GetIntFromObj(wi->interp, args[i+1], &integer) == TCL_ERROR) {
@@ -779,14 +850,6 @@ ZnConfigureAttributes(ZnWInfo		*wi,
 	    case ZN_CONFIG_UINT:
 	      if (integer < 0) {
 		integer = 0;
-	      }
-	      break;
-	    case ZN_CONFIG_ALPHA:
-	      if (integer < 0) {
-		integer = 0;
-	      }
-	      if (integer > 100) {
-		integer = 100;
 	      }
 	      break;
 	    }
@@ -1068,11 +1131,25 @@ AttributeToObj(ZnWInfo		*wi,
       str = Tk_PathName(*((Tk_Window *) valp));
     }
     break;
-  case ZN_CONFIG_INT:
-  case ZN_CONFIG_UINT:
-  case ZN_CONFIG_PRI:
-  case ZN_CONFIG_ANGLE:
+  case ZN_CONFIG_CHAR:
+    Tcl_SetIntObj(result, *((char *) valp));
+    return;    
+  case ZN_CONFIG_UCHAR:
   case ZN_CONFIG_ALPHA:
+    Tcl_SetIntObj(result, *((unsigned char *) valp));
+    return;    
+  case ZN_CONFIG_USHORT:
+  case ZN_CONFIG_PRI:
+    Tcl_SetIntObj(result, *((unsigned short *) valp));
+    return;
+  case ZN_CONFIG_SHORT:
+    Tcl_SetIntObj(result, *((short *) valp));
+    return;
+  case ZN_CONFIG_UINT:
+    Tcl_SetIntObj(result, *((unsigned int *) valp));
+    return;
+  case ZN_CONFIG_INT:
+  case ZN_CONFIG_ANGLE:
     Tcl_SetIntObj(result, *((int *) valp));
     return;
   case ZN_CONFIG_DIM:
@@ -1710,22 +1787,24 @@ QueryItem(ZnItem		item,
  **********************************************************************************
  *
  * ComposeTransform --
- *	Compose a (item) transform with current_t in new_t.
+ *	Compose a transform transfo with current_t to new_t.
  *
  **********************************************************************************
  */
 static void
 ComposeTransform(ZnTransfo	*transfo,
+		 ZnPoint	*pos,
 		 ZnTransfo	*current_t,
 		 ZnTransfo	*new_t,
 		 ZnBool		compose_scale,
 		 ZnBool		compose_rot)
 {
   ZnBool	full;
+  ZnTransfo	t, t2;
 
   full = compose_scale && compose_rot;
   
-  if (!transfo && full) {
+  if (!transfo && !pos && full) {
     *new_t = *current_t;
     return;
   }
@@ -1734,32 +1813,48 @@ ComposeTransform(ZnTransfo	*transfo,
      * Full concatenation.
      */
     /*ZnPrintTransfo(transfo);*/
-    ZnTransfoCompose(new_t, transfo, current_t);
+    if (pos) {
+      if (!transfo) {
+	ZnTransfoSetIdentity(&t);
+      }
+      else {
+	t = *transfo;
+      }
+      ZnTranslate(&t, pos->x, pos->y, False);
+      ZnTransfoCompose(new_t, &t, current_t);
+    }
+    else {
+      ZnTransfoCompose(new_t, transfo, current_t);
+    }
   }
   else {
-    ZnPoint	scale, trans, local_scale, local_trans;
+    ZnPoint	scale, trans, local_scale, local_trans, p;
     ZnReal	local_rot, rot;
-    ZnTransfo	t, t2;
     
-    /*
-     * Need to decompose the local transform in translation,
-     * rotation and scale.
-     */
-    ZnTransfoSetIdentity(&t);
     ZnTransfoSetIdentity(new_t);
     ZnTransfoDecompose(transfo, &local_scale, &local_trans, &local_rot, NULL);
-    ZnTranslate(&t, local_trans.x, local_trans.y);
-    ZnTransfoCompose(&t2, &t, current_t);
-    ZnTransfoDecompose(&t2, &scale, &trans, &rot, NULL);
+    ZnScale(new_t, local_scale.x, local_scale.y);
+    ZnRotateRad(new_t, local_rot);
+
+    ZnTransfoDecompose(current_t, &scale, &trans, &rot, NULL);
+
+    if (pos) {
+      ZnTransfoSetIdentity(&t);
+      ZnTranslate(&t, pos->x, pos->y, False);
+      ZnTransfoCompose(&t2, &t, current_t);
+      ZnTransformPoint(&t2, &local_trans, &p);
+    }
+    else {
+      ZnTransformPoint(current_t, &local_trans, &p);
+    }
+
     if (compose_scale) {
       ZnScale(new_t, scale.x, scale.y);
     }
     if (compose_rot) {
       ZnRotateRad(new_t, rot);
     }
-    ZnScale(new_t, local_scale.x, local_scale.y);
-    ZnRotateRad(new_t, local_rot);
-    ZnTranslate(new_t, trans.x, trans.y);
+    ZnTranslate(new_t, p.x, p.y, False);
   }
 }
 
@@ -1776,10 +1871,11 @@ static void
 GetItemTransform(ZnItem		item,
 		 ZnTransfo	*t)
 {
-  ZnItem		*items;
+  ZnItem	*items;
   int		i;
   ZnTransfo	t_tmp, *t1, *t2, *swap;
-  
+  ZnPoint	*pos;
+
   if (item_stack == NULL) {
     item_stack = ZnListNew(16, sizeof(ZnItem));
   }
@@ -1797,7 +1893,14 @@ GetItemTransform(ZnItem		item,
   t2 = &t_tmp;
   items = (ZnItem *) ZnListArray(item_stack);
   for (i = ZnListSize(item_stack)-1; i >= 0; i--) {
-    ComposeTransform(items[i]->transfo, t1, t2,
+    pos = NULL;
+    if (items[i]->class->pos_offset >= 0) {
+      pos = (ZnPoint *) (((char *) items[i]) + items[i]->class->pos_offset);
+      if (pos->x == 0 && pos->y == 0) {
+	pos = NULL;
+      }
+    }
+    ComposeTransform(items[i]->transfo, pos, t1, t2,
 		     ISSET(items[i]->flags, ZN_COMPOSE_SCALE_BIT),
 		     ISSET(items[i]->flags, ZN_COMPOSE_ROTATION_BIT));
     swap = t2;
@@ -1847,6 +1950,7 @@ ZnFreeTransformStack(ZnWInfo	*wi)
 void
 ZnPushTransform(ZnWInfo		*wi,
 		ZnTransfo	*transfo,
+		ZnPoint		*pos,
 		ZnBool		compose_scale,
 		ZnBool		compose_rot)
 {
@@ -1861,7 +1965,7 @@ ZnPushTransform(ZnWInfo		*wi,
   num_t = ZnListSize(wi->transfo_stack);
   ZnListAssertSize(wi->transfo_stack, num_t+1);
   next_t = (ZnTransfo *) ZnListAt(wi->transfo_stack, num_t);
-  ComposeTransform(transfo, wi->current_transfo, next_t,
+  ComposeTransform(transfo, pos, wi->current_transfo, next_t,
 		   compose_scale, compose_rot);
   wi->current_transfo = next_t;
 }
@@ -2334,12 +2438,13 @@ SetTransfo(ZnItem	item,
 static void
 TranslateItem(ZnItem	item,
 	      ZnReal	dx,
-	      ZnReal	dy)
+	      ZnReal	dy,
+	      ZnBool	abs)
 {
   if (!item->transfo) {
     item->transfo = ZnTransfoNew();
   }
-  ZnTranslate(item->transfo, dx, dy);
+  ZnTranslate(item->transfo, dx, dy, abs);
   Invalidate(item, ZN_TRANSFO_FLAG);
 }
 
@@ -2347,12 +2452,19 @@ TranslateItem(ZnItem	item,
 static void
 ScaleItem(ZnItem	item,
 	  ZnReal	sx,
-	  ZnReal	sy)
+	  ZnReal	sy,
+	  ZnPoint	*p)
 {
   if (!item->transfo) {
     item->transfo = ZnTransfoNew();
   }
+  if (p) {
+    ZnTranslate(item->transfo, -p->x, -p->y, False);
+  }
   ZnScale(item->transfo, sx, sy);
+  if (p) {
+    ZnTranslate(item->transfo, p->x, p->y, False);
+  }
   Invalidate(item, ZN_TRANSFO_FLAG);
 }
 
@@ -2373,17 +2485,23 @@ SkewItem(ZnItem	item,
 static void
 RotateItem(ZnItem	item,
 	   ZnReal	angle,
+	   ZnBool	deg,
 	   ZnPoint	*p)
 {
   if (!item->transfo) {
     item->transfo = ZnTransfoNew();
   }
   if (p) {
-    ZnTranslate(item->transfo, -p->x, -p->y);
+    ZnTranslate(item->transfo, -p->x, -p->y, False);
   }
-  ZnRotateRad(item->transfo, angle);
+  if (deg) {
+    ZnRotateDeg(item->transfo, angle);
+  }
+  else {
+    ZnRotateRad(item->transfo, angle);
+  }
   if (p) {
-    ZnTranslate(item->transfo, p->x, p->y);
+    ZnTranslate(item->transfo, p->x, p->y, False);
   }
 
   Invalidate(item, ZN_TRANSFO_FLAG);

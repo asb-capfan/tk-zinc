@@ -18,7 +18,7 @@ use vars qw/$COLOR $FONT_STYLE $POINT_SIZE $DEMO_FILE %DEMO_DESCRIPTION/;
 use strict;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.24 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.26 $ =~ /(\d+)\.(\d+)/);
 
 my $version = $Tk::Zinc::VERSION;
 print "Tkzinc version: $version\n";
@@ -161,7 +161,7 @@ $T->insert('end', "6. A magic lens based on Graphics.pm. (nicer with openGL)\n",
 
 
 $T->insert('end', "\n", '', "All Items\n", 'title');
-$T->insert('end', "1. Exemples of all items.\n", [qw/demo demo-items/]);
+$T->insert('end', "1. Examples of all items.\n", [qw/demo demo-items/]);
 $T->insert('end', "2. All items options (and their types).\n", [qw/demo demo-all_options/]);
 $T->insert('end', "3. Examples of line style and line termination.\n", [qw/demo demo-lines/]);
 $T->insert('end', "4. Curves with multiple contours.\n", [qw/demo demo-contours/]);
@@ -189,7 +189,7 @@ $T->insert('end', "1. Translating.\n", [qw/demo demo-translation/]);
 $T->insert('end', "2. Rotating.\n",    [qw/demo demo-rotation/]);
 $T->insert('end', "3. Zooming.\n",     [qw/demo demo-zoom/]);
 $T->insert('end', "4. Transformation testbed.\n",     [qw/demo demo-transforms/]);
-$T->insert('end', "5. zooming/Rotating icons. (requires openGL)\n",     [qw/demo demo-icon_zoom_resize/]);
+$T->insert('end', "5. Zooming/Rotating icon and text. (even without openGL)\n",     [qw/demo demo-icon_zoom_resize/]);
 
 $T->insert('end', "\n", '', "Use of openGL\n", 'title');
 $T->insert('end', "1. A zoomable/rotatable TkZinc Logo (better with openGL).\n",  [qw/demo demo-tkZincLogo/]);

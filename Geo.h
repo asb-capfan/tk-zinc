@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Geo.h,v 1.16 2003/06/16 14:49:46 lecoanet Exp $
+ * $Id: Geo.h,v 1.18 2004/02/13 15:57:29 lecoanet Exp $
  */
 
 /*
@@ -62,12 +62,18 @@
 #define ZN_CIRCLE_FINEST ZN_CIRCLE_FINER+1
   
 
+/*
+ * I would like to make these be floats,
+ * but have to investigate how. Structures
+ * handed to GL or GLU tess _must_ have
+ * points has doubles.
+ */
 typedef struct {
-  ZnPos	x, y;
+  double	x, y;
 } ZnPoint;
 
 typedef struct {
-  ZnPos	x, y, w, h;
+  double	x, y, w, h;
 } ZnRect;
 
 /*
@@ -178,6 +184,7 @@ ZnOrigin2Anchor(ZnPoint		*origin,
 		ZnDim		height,
 		Tk_Anchor	anchor,
 		ZnPoint		*position);
+void ZnRectOrigin2Anchor(ZnPoint *rect, Tk_Anchor anchor, ZnPoint *position);
 void
 ZnBBox2XRect(ZnBBox	*bbox,
 	     XRectangle	*rect);
@@ -286,10 +293,7 @@ ZnProjectionToAngle(ZnReal	dx,
 ZnDim
 ZnRectangleToPointDist(ZnBBox	*bbox,
 		       ZnPoint	*p);
-ZnDim
-ZnLineToPointDist(ZnPoint	*p1,
-		  ZnPoint	*p2,
-		  ZnPoint	*p);
+ZnDim ZnLineToPointDist(ZnPoint *p1, ZnPoint *p2, ZnPoint *p, ZnPoint *closest);
 
 ZnDim
 ZnPolygonToPointDist(ZnPoint		*points,

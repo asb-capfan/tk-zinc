@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Geo.c,v 1.45 2003/06/16 14:50:54 lecoanet Exp $
+ * $Id: Geo.c,v 1.47 2004/02/23 10:42:33 lecoanet Exp $
  */
 
 /*
@@ -37,7 +37,7 @@
 #include <memory.h>
 
 
-static const char rcsid[] = "$Id: Geo.c,v 1.45 2003/06/16 14:50:54 lecoanet Exp $";
+static const char rcsid[] = "$Id: Geo.c,v 1.47 2004/02/23 10:42:33 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -59,6 +59,7 @@ ZnPolyContour1(ZnPoly		*poly,
   poly->contour1.num_points = num_pts;
   poly->contour1.points = pts;
   poly->contour1.cw = cw;
+  poly->contour1.controls = NULL;
 }
 
 void
@@ -86,6 +87,9 @@ ZnPolyFree(ZnPoly	*poly)
     unsigned int i;
     for (i = 0; i < poly->num_contours; i++) {
       ZnFree(poly->contours[i].points);
+/*      if (poly->contours[i].controls) {
+	  ZnFree(poly->contours[i].controls);
+      }*/
     }
     if ((poly->contours != &poly->contour1) &&
         (poly->num_contours > 1)) {
@@ -227,6 +231,56 @@ ZnOrigin2Anchor(ZnPoint		*origin,
   }
 }
 
+/*
+ * Compute the anchor position given a rectangle and
+ * the anchor. The rectangle vertices must be ordered
+ * as for a triangle strip: 
+ *
+ *    v0 ------------ v2
+ *       |          |
+ *       |          |
+ *    v1 ------------ v3
+ */
+void
+ZnRectOrigin2Anchor(ZnPoint	*rect,
+		    Tk_Anchor	anchor,
+		    ZnPoint	*position)
+{
+  switch (anchor) {
+  case TK_ANCHOR_CENTER:
+    position->x = (rect[0].x + rect[3].x) / 2.0;
+    position->y = (rect[0].y + rect[3].y) / 2.0;
+    break;
+  case TK_ANCHOR_NW:
+    *position = *rect;
+    break;
+  case TK_ANCHOR_N:
+    position->x = (rect[0].x + rect[2].x) / 2.0;
+    position->y = (rect[0].y + rect[2].y) / 2.0;
+    break;
+  case TK_ANCHOR_NE:
+    *position = rect[2];
+    break;
+  case TK_ANCHOR_E:
+    position->x = (rect[2].x + rect[3].x) / 2.0;
+    position->y = (rect[2].y + rect[3].y) / 2.0;
+    break;
+  case TK_ANCHOR_SE:
+    *position = rect[3];
+    break;
+  case TK_ANCHOR_S:
+    position->x = (rect[1].x + rect[3].x) / 2.0;
+    position->y = (rect[1].y + rect[3].y) / 2.0;
+    break;
+  case TK_ANCHOR_SW:
+    *position = rect[1];
+    break;
+  case TK_ANCHOR_W:
+    position->x = (rect[0].x + rect[1].x) / 2.0;
+    position->y = (rect[0].y + rect[1].y) / 2.0;
+    break;
+  }
+}
 
 void
 ZnBBox2XRect(ZnBBox	*bbox,
@@ -1392,14 +1446,14 @@ ZnRectangleToPointDist(ZnBBox	*bbox,
   p1.x = bbox->orig.x;
   p1.y = p2.y = bbox->orig.y;
   p2.x = bbox->corner.x;
-  dist = ZnLineToPointDist(&p1, &p2, p);
+  dist = ZnLineToPointDist(&p1, &p2, p, NULL);
   if (dist == 0.0) {
     return 0.0;
   }
 
   p1 = p2;
   p2.y = bbox->corner.y;
-  new_dist = ZnLineToPointDist(&p1, &p2, p);
+  new_dist = ZnLineToPointDist(&p1, &p2, p, NULL);
   dist = MIN(dist, new_dist);
   if (dist == 0.0) {
     return 0.0;
@@ -1407,7 +1461,7 @@ ZnRectangleToPointDist(ZnBBox	*bbox,
 
   p1 = p2;
   p2.x = bbox->orig.x;
-  new_dist = ZnLineToPointDist(&p1, &p2, p);
+  new_dist = ZnLineToPointDist(&p1, &p2, p, NULL);
   dist = MIN(dist, new_dist);
   if (dist == 0.0) {
     return 0.0;
@@ -1415,7 +1469,7 @@ ZnRectangleToPointDist(ZnBBox	*bbox,
   
   p1 = p2;
   p2.y = bbox->orig.y;
-  new_dist = ZnLineToPointDist(&p1, &p2, p);
+  new_dist = ZnLineToPointDist(&p1, &p2, p, NULL);
   dist = MIN(dist, new_dist);
 
   if (ZnPointInBBox(bbox, p->x, p->y)) {
@@ -1434,7 +1488,8 @@ ZnRectangleToPointDist(ZnBBox	*bbox,
 ZnDim
 ZnLineToPointDist(ZnPoint	*p1,
 		  ZnPoint	*p2,
-		  ZnPoint	*p)
+		  ZnPoint	*p,
+		  ZnPoint	*closest)
 {
   ZnReal	x, y;
   ZnReal	x_int, y_int;
@@ -1510,6 +1565,11 @@ ZnLineToPointDist(ZnPoint	*p1,
 	y = p1->y;
       }
     }
+  }
+  
+  if (closest) {
+    closest->x = x;
+    closest->y = y;
   }
 
   /* Return the distance */
@@ -1994,9 +2054,9 @@ ZnGetBezierPoints(ZnPoint	*p1,
 {
   ZnReal	dist;
 
-  dist = ZnLineToPointDist(p1, p2, c1);
+  dist = ZnLineToPointDist(p1, p2, c1, NULL);
   if ((dist < eps) && ((c1->x != c2->x) || (c1->y != c2->y))) {
-    dist = ZnLineToPointDist(p1, p2, c2);
+    dist = ZnLineToPointDist(p1, p2, c2, NULL);
   }
 
   if (dist > eps) {

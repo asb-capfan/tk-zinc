@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Transfo.h,v 1.4 2003/12/11 08:20:06 lecoanet Exp $
+ * $Id: Transfo.h,v 1.6 2004/03/24 15:06:44 lecoanet Exp $
  */
 
 /*
@@ -43,7 +43,7 @@
  * is lower left corner.
  */
 typedef struct  _ZnTransfo {
-  ZnReal	_[3][2];
+  float	_[3][2];
 } ZnTransfo;
 
 
@@ -92,11 +92,8 @@ ZnTransformPoints(ZnTransfo	*t,
 ZnTransfo *
 ZnTranslate(ZnTransfo	*t,
 	    ZnReal	delta_x,
-	    ZnReal	delta_y);
-ZnTransfo *
-ZnSetTranslation(ZnTransfo	*t,
-		 ZnReal		delta_x,
-		 ZnReal		delta_y);
+	    ZnReal	delta_y,
+	    ZnBool	abs);
 ZnTransfo *
 ZnScale(ZnTransfo	*t,
 	ZnReal		scale_x,

@@ -1,3 +1,91 @@
+zinc-tk (3.2.97) unstable; urgency=low
+
+  * Added a tget command. If called with a transform or an
+    item as parameter, it returns the transform factors as
+    a list (compatible with tset). An optional second parameter
+    can be given, either 'all' meaning decompose the transform
+    in translation, scale, rotation, skew and return the list
+    in this order, or 'translation', 'scale', 'rotation', 'skew'
+    which means return the corresponding value.
+  * Added an optional boolean parameter abs to the translate
+    command. If true it means that the translation should be
+    interpreted as absolute. If absent or false the usual
+    behavior is preserved.
+  * Under OpenGL, a single graphic context is used for all
+    zincs on a single display. Textures are put in common
+    for the display. This should greatly reduce the resource
+    consumption with GL.
+  * Potential memory bugs have been fixed thanks to valgrind.
+  * The code can be compiled either for perl/Tk 800 (define
+    PTK and PTK_800) or perl/Tk 804 (define PTK alone).
+  * The coords command returns a flat point instead of a list
+    of one point for all items with a -position attribute.
+  * The transformation of items with a -position has been slightly
+    modified. The point described by -position is no longer considered
+    in the coordinate space of the item but in the coordinate space
+    of its parent group. The item is always located in 0,0 of its
+    own coordinate space. This is so to make use of -composescale and
+    -composerotation a lot more useful (and compatible).
+  * The default value of -composescale and -composerotation on texts
+    and icons is now false. This is coherent with the default behavior
+    of these items (being rigids). The impact of this change is
+    greatly minored by the new processing of the -position attribute.
+  * Modified the command bindings for the transform
+    testbed demo. Added a new delete item command.
+  * Added two new Tcl demos ported from perl, testGraphics
+    and magicLens.
+  * Ported the Graphics package by JL Vinot to Tcl as
+    zincGraphics.
+  * Modified the behavior of options and arguments controlling
+    the display of track history. The -trackmanagehistory is
+    gone, a -trackvisiblehistorysize option has appeared, it
+    describe the length of the history for ALL tracks in a zinc
+    instance. In the Track class -visiblehistorysize has been
+    removed and replaced by a boolean attribute -historyvisible
+    that can be used to switch off the history for the concerned
+    track instance. !!! INCOMPATIBLE CHANGE !!!
+  * Fixed several problems with respect to UTF8 strings
+    rendering. It should be possible for the text item
+    to render OpenGL strings in all configurations.
+  * Fixed a bug in indexing a Text item with utf8 characters
+    (above 127).
+  * Re-ported the pathtag demo from Perl to Tcl.
+  * Fixed some bugs in the transform code (core dumps)
+  * The scale method takes an optional center
+  * The angle in the rotate method can be specified in
+    degrees, a flag has been added to tell if the angle
+    is given in degrees or radians.
+  * The find and addtag method can do spacial searches
+    (overlapping, enclosed, closest) in atomic
+    groups overriding the atomic specification. The
+    recursive flag takes the new value 'override' to do
+    so.
+  * a new command fieldbbox has been added. It returns the bounding
+    box of the given field for the specified item or the item's label
+    bounding box.
+  * The bounding box reported for groups with clip areas
+    takes into account the clipping. This was a long
+    standing bug.
+  * The enter leave processing as been sped somewhat by
+    correcting an omission in the detection code.
+  * The bind method now handles virtual events (an omission).
+  * The bind method accept an alternative syntax for specifying
+    bindings on fields instead of saying:
+        .z bind $id:3 <1> "script"
+    it is possible to say: 
+        .z bind $id 3 <1> "script"
+    This is coherent with the syntax used by the other methods.
+  * Icons are fully transformable in X. The same behavior is
+    achieved in both graphical environments.
+  * The anchors positions have been fixed for rotated icons.
+  * The text items are fully transformable in both environments.
+  * The insertion cursor wasn't displayed on the last text line
+    if empty. Fixed.
+  * The last character of a text selection was never displayed
+    as part of the selection (but correctly reported). Fixed.
+
+ -- Patrick Lecoanet <lecoanet@ath.cena.fr>  Mon,  26 Jan 2004 13:37:48 +0200
+	
 zinc-tk (3.2.96) unstable; urgency=low
 
   * Fixed a bad redraw of maps (traces) and adapted for floating

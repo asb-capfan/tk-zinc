@@ -1,11 +1,11 @@
 #!/usr/bin/perl
-# $Id: icon_zoom_resize.pl,v 1.5 2003/09/24 15:10:39 mertz Exp $
+# $Id: icon_zoom_resize.pl,v 1.6 2004/04/01 13:32:59 mertz Exp $
 # this simple demo has been developped by C. Mertz <mertz@cena.fr>
 
 package icon_zoom__resize; # for avoiding symbol re-use between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -36,8 +36,8 @@ my $zinc = $mw->Zinc(-width => 350, -height => 250,
 
 my $earth_group = $zinc->add('group', 1, );
 
-my $image_name = 'earth.gif';  # this image is included in Perl/Tk distrib
-my $image = $zinc->Photo($image_name, -file => Tk->findINC("demos/images/$image_name"));
+# the following image is included in Perl/Tk distrib
+my $image = $zinc->Photo('earth.gif', -file => Tk->findINC('demos/images/earth.gif'));
 
 my $earth = $zinc->add('icon', $earth_group,
 		      -image => $image,
@@ -45,8 +45,9 @@ my $earth = $zinc->add('icon', $earth_group,
 		      -composerotation => 1,
 		      );
 $zinc->add('text', $earth_group,
-	   -connecteditem => $earth,
-	   -text => "try to zoom/resize the earth!",
+           -position => [30,30],
+#	   -connecteditem => $earth,
+	   -text => "try to zoom/resize the earth!\nWorks even without openGL!!",
 	   -color => "white",
 	   -composescale => 1,
 	   -composerotation => 1,

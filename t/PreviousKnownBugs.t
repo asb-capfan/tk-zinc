@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: PreviousKnownBugs.t,v 1.2 2003/10/02 09:15:35 mertz Exp $
+# $Id: PreviousKnownBugs.t,v 1.3 2004/04/02 12:01:49 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -9,7 +9,8 @@
 
 BEGIN {
     if (!eval q{
-        use Test::More qw(no_plan);
+#        use Test::More qw(no_plan);
+        use Test::More tests => 2;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";
@@ -51,17 +52,10 @@ $zinc->coords($curve,  [[500,0], [500, 100], [600, 100], [600, 0]]);
 my @coords = $zinc->coords($curve,0);
 
 
-TODO:
-    {
-    local $TODO = "after coords, zinc leave some 'c' in the coords in v3.294";
-
-    is_deeply([ @coords ],
-	      [ [500,0], [500, 100], [600, 100], [600, 0] ],
-	      "lemort bug 17 sept 2003 v3.2.94; testing correct value");
-}
-
 is_deeply([ @coords ],
-	  [ [500,0], [500, 100, 'c'], [600, 100, 'c'], [600, 0] ],
-	  "lemort bug 17 sept 2003 v3.2.94; testing false return"); 
+          [ [500,0], [500, 100], [600, 100], [600, 0] ],
+          "lemort bug 17 sept 2003 v3.2.94; testing correct value");
+
+
 
 diag("############## all known bugs");

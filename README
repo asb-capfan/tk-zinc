@@ -24,11 +24,13 @@ to all flavors of Tk::Zinc (tcl and perl, linux and windows)
 
 For the copyright, please, read the COPYRIGHT file.
 
-For any question or patch proposal for Tk::Zinc (perl module) build
-and installation, please send email to zinc-dev@tls.cena.fr
+For any question on Tk::Zinc usage, build or installation pb,
+please send email to zinc@tls.cena.fr 
+This mailing list can be subscribed from 
+http://www.openatc.org/zinc/documentation.html#ml. You can
+also send a question without subscribing, but you will be asked
+for a confirmation to avoid spam on the list!
 
-For any question on Tk::Zinc usage, please use the zinc@tls.cena.fr or look at
-http://www.openatc.org/zinc/documentation.html#ml
 
 
 Tk::Zinc main author is Patrick Lecoanet

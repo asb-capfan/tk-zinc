@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	:
  *
- * $Id: Map.c,v 1.54 2003/12/11 08:17:51 lecoanet Exp $
+ * $Id: Map.c,v 1.57 2004/03/23 14:53:45 lecoanet Exp $
  */
 
 /*
@@ -40,7 +40,7 @@
 #include <stdio.h>
 
 
-static const char rcsid[] = "$Id: Map.c,v 1.54 2003/12/11 08:17:51 lecoanet Exp $";
+static const char rcsid[] = "$Id: Map.c,v 1.57 2004/03/23 14:53:45 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -1024,7 +1024,7 @@ Draw(ZnItem	item)
       }
       else { /* Fill stippled */
 	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(map->fill_pattern);
+	values.stipple = ZnImagePixmap(map->fill_pattern, wi->win);
 	XChangeGC(wi->dpy, wi->gc,
 		  GCFillStyle | GCStipple | GCForeground, &values);
       }
@@ -1278,7 +1278,7 @@ Draw(ZnItem	item)
 	    ZnSizeOfImage(sym, &w ,&h);
 	    ox = ((int) points[i].x) - w/2;
 	    oy = ((int) points[i].y) - h/2;
-	    values.stipple = ZnImagePixmap(sym);
+	    values.stipple = ZnImagePixmap(sym, wi->win);
 	    values.ts_x_origin = ox;
 	    values.ts_y_origin = oy;
 	    XChangeGC(wi->dpy, wi->gc,
@@ -1292,7 +1292,7 @@ Draw(ZnItem	item)
 	ZnSizeOfImage(wi->map_distance_symbol, &w, &h);
 	cnt = ZnListSize(map->marks);
 	points = ZnListArray(map->marks);
-	values.stipple = ZnImagePixmap(wi->map_distance_symbol);
+	values.stipple = ZnImagePixmap(wi->map_distance_symbol, wi->win);
 	XChangeGC(wi->dpy, wi->gc, GCStipple, &values);
 	for (i = 0; i < cnt; i++) {
 	  ox = ((int) points[i].x) - w/2;
@@ -1591,8 +1591,8 @@ Coords(ZnItem		item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -1611,6 +1611,7 @@ static ZnItemClassStruct MAP_ITEM_CLASS = {
   False,		/* has_anchors */
   "map",
   map_attrs,
+  -1,
   Init,
   Clone,
   Destroy,

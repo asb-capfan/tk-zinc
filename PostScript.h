@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Wed Jan  4 11:30:00 1995
  *
- * $Id: PostScript.h,v 1.3 2003/04/16 09:49:22 lecoanet Exp $
+ * $Id: PostScript.h,v 1.4 2004/02/13 10:37:43 lecoanet Exp $
  */
 
 /*
@@ -39,43 +39,10 @@
 #include <X11/Xlib.h>
 
 
-/*
- * PostScript information record --
- */
-typedef struct _ZnPostScriptStruct {
-  FILE		*file;
-  char		*title;
-  ZnBool	landscape;
-  int		color_mode;
-  int		x_world;
-  int		y_world;
-  int		world_width;
-  int		world_height;
-  ZnBBox	page_bbox;
-  ZnList	fonts;
-} ZnPostScriptStruct, *ZnPostScriptInfo;
-
-
 struct _ZnWInfo;
 
 
-/*
- **********************************************************************************
- *
- * Methods defined in PostScript.c for internal use.
- *
- **********************************************************************************
- */
-
-extern struct _ZnPOSTSCRIPT {
-  void (*EmitPostScript)(struct _ZnWInfo *wi, FILE *file, char *title,
-			 ZnBool landscape, int color_mode,
-			 int x_world, int y_world, int world_width,
-			 int world_height, int bbox_ox, int bbox_oy,
-			 int bbox_cx, int bbox_cy);
-  void (*SetPostScriptFont)(struct _ZnWInfo *wi, ZnPostScriptInfo ps_info,
-			    XFontStruct *fs);
-} ZnPOSTSCRIPT;
+int ZnPostScriptCmd(struct _ZnWInfo *wi, int argc, Tcl_Obj *CONST *args);
 
 
 #endif	/* _PostScript_h */

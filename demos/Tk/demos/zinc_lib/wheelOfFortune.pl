@@ -3,12 +3,12 @@
 # This short script tries to demonstrate with a simple example what you can 
 # do with Tk Zinc widget, in particular how to use group item, clipping, and
 # transformations. 
-# $Id: wheelOfFortune.pl,v 1.4 2003/09/15 12:25:05 mertz Exp $
+# $Id: wheelOfFortune.pl,v 1.6 2004/03/05 12:36:08 etienne Exp $
 # this demo has been developped by D. Etienne etienne@cena.fr
 #
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 use Tk; 
 # Zinc module is loaded...
@@ -356,11 +356,17 @@ sub _fortune {
 # Update group clipping and translation, using 'scale' and 'translate'
 # Zinc methods.
 sub _clipAndTranslate {
+    
     my ($self, $shrinkfactor, $x, $y) = @_;
     $x = 0 unless $x;
     $y = 0 unless $y;
     $self->{widget}->scale($self->{itemclip}, $shrinkfactor, $shrinkfactor);
-    $self->{widget}->translate($self->{topgroup}, $x, $y);
+    if ($Tk::Zinc::VERSION lt "3.297") {
+	$self->{widget}->translate($self->{topgroup}, $x, $y);
+    } else {
+	my ($xc, $yc) = $self->{widget}->coords($self->{topgroup});
+	$self->{widget}->coords($self->{topgroup}, [$xc + $x, $yc + $y]);
+    }
 
 }
 

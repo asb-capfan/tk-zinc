@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: MapInfo.c,v 1.21 2003/12/11 08:15:16 lecoanet Exp $
+ * $Id: MapInfo.c,v 1.22 2004/03/03 16:38:18 lecoanet Exp $
  */
 
 /*
@@ -42,7 +42,7 @@
 
 
 
-static const char rcsid[] = "$Id: MapInfo.c,v 1.21 2003/12/11 08:15:16 lecoanet Exp $";
+static const char rcsid[] = "$Id: MapInfo.c,v 1.22 2004/03/03 16:38:18 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -1619,7 +1619,7 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
   int		  index, index2, result;
   ZnMapInfoMaster *master;
   Tcl_Obj	  *l;
-#ifdef PTK
+#ifdef PTK_800
   static char *sub_cmd_strings[] =
 #else
   static CONST char *sub_cmd_strings[] =
@@ -1628,7 +1628,7 @@ ZnMapInfoObjCmd(ClientData	client_data __unused,
     "add", "count", "create", "delete", "duplicate",
     "get", "remove", "replace", "scale", "translate", NULL
   };
-#ifdef PTK
+#ifdef PTK_800
   static char *e_type_strings[] =
 #else
   static CONST char *e_type_strings[] =
@@ -2098,7 +2098,7 @@ ZnVideomapObjCmd(ClientData	client_data __unused,
   int		index;
   int		*id_array, id_num, i;
   Tcl_Obj	*l;
-#ifdef PTK
+#ifdef PTK_800
   static char *sub_cmd_strings[] =
 #else
   static CONST char *sub_cmd_strings[] =

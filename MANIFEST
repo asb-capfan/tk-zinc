@@ -48,6 +48,7 @@ Zinc.pm
 Zinc.xs
 Zinc/Debug.pm
 Zinc/Graphics.pm
+Zinc/Graphics.pod
 Zinc/Logo.pm
 Zinc/Text.pm
 Zinc/Trace.pm
@@ -128,6 +129,7 @@ render.c
 render.h
 sweep.c
 sweep.h
+t/Coords.t
 t/Images.t
 t/Import.t
 t/PreviousKnownBugs.t

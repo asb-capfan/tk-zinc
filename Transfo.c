@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: Transfo.c,v 1.11 2003/12/11 08:20:16 lecoanet Exp $
+ * $Id: Transfo.c,v 1.13 2004/03/24 15:06:44 lecoanet Exp $
  */
 
 /*
@@ -151,10 +151,16 @@ ZnPrintTransfo(ZnTransfo	*t)
    * 0  sy	-sin(rot) cos(rot)	tan(skewx) 1	        0  1
    * 0  0	0         0		0          0	        tx ty
    */
-  printf("(%5g %5g\n %5g %5g\n %5g %5g)\n",
-	 t->_[0][0], t->_[0][1],
-	 t->_[1][0], t->_[1][1],
-	 t->_[2][0], t->_[2][1]);
+  if (t) {
+    printf("(%5g %5g\n %5g %5g\n %5g %5g)\n",
+	   t->_[0][0], t->_[0][1],
+	   t->_[1][0], t->_[1][1],
+	   t->_[2][0], t->_[2][1]);
+  }
+  else {
+    printf("(%5g %5g\n %5g %5g\n %5g %5g)\n",
+	   1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+  }
 }
 
 
@@ -277,7 +283,8 @@ ZnTransfoInvert(ZnTransfo	*t,
   ZnReal	pos, neg, temp, det_l;
 
   if (t == NULL) {
-    return NULL;
+    ZnTransfoSetIdentity(inv);
+    return inv;
   }
 
   /*
@@ -521,10 +528,13 @@ ZnTransfoHasSkew(ZnTransfo	*t)
 ZnBool
 ZnTransfoIsTranslation(ZnTransfo	*t)
 {
-  return (t->_[0][0] == 0.0 &&
+  if (!t) {
+    return True;
+  }
+  return (t->_[0][0] == 1.0 &&
 	  t->_[0][1] == 0.0 &&
 	  t->_[1][0] == 0.0 &&
-	  t->_[1][1] == 0.0);
+	  t->_[1][1] == 1.0);
 }
 
 
@@ -534,6 +544,7 @@ ZnTransfoIsTranslation(ZnTransfo	*t)
  * ZnTransformPoint --
  *	Apply the transformation to the point. The point is
  *	modified and returned as the value of the function.
+ *	It is safe for p and xp to be the same point (structure).
  *	A NULL transformation means identity. This is only used
  *	in the toolkit to optimize some cases. It should never
  *	happen in user code.
@@ -550,8 +561,10 @@ ZnTransformPoint(ZnTransfo		*t,
     xp->y = p->y;
   }
   else {
-    xp->x = t->_[0][0]*p->x + t->_[1][0]*p->y + t->_[2][0];
+    ZnReal a;
+    a = t->_[0][0]*p->x + t->_[1][0]*p->y + t->_[2][0];
     xp->y = t->_[0][1]*p->x + t->_[1][1]*p->y + t->_[2][1];
+    xp->x = a;
   }
   return xp;
 }
@@ -562,6 +575,7 @@ ZnTransformPoint(ZnTransfo		*t,
  *
  * ZnTransformPoints --
  *	Apply the transformation to the points in p returning points in xp.
+ *	It is safe for p and xp to be the same array of ponits.
  *	The number of points is in num.
  *	A NULL transformation means identity. This is only used
  *	in the toolkit to optimize some cases. It should never
@@ -582,8 +596,10 @@ ZnTransformPoints(ZnTransfo	*t,
     unsigned int i;
 
     for (i = 0; i < num; i++) {
-      xp[i].x = t->_[0][0]*p[i].x + t->_[1][0]*p[i].y + t->_[2][0];
+      ZnReal a;
+      a = t->_[0][0]*p[i].x + t->_[1][0]*p[i].y + t->_[2][0];
       xp[i].y = t->_[0][1]*p[i].x + t->_[1][1]*p[i].y + t->_[2][1];
+      xp[i].x = a;
     }
   }
 }
@@ -594,36 +610,28 @@ ZnTransformPoints(ZnTransfo	*t,
  *
  * ZnTranslate --
  *	Translate the given transformation by delta_x, delta_y. Returns
- *	the resulting transformation.
- *
- * ZnSetTranslation --
- *	Set the translation instead of combining it into the
- *	transformation.
+ *	the resulting transformation. If abs is true, delta_x and
+ *	delta_y are used to set the translation instead of adding deltas.
  *
  *************************************************************************
  */
 ZnTransfo *
 ZnTranslate(ZnTransfo	*t,
 	    ZnReal	delta_x,
-	    ZnReal	delta_y)
+	    ZnReal	delta_y,
+	    ZnBool	abs)
 {
-  t->_[2][0] = t->_[2][0] + delta_x;
-  t->_[2][1] = t->_[2][1] + delta_y;
+  if (abs) {
+    t->_[2][0] = delta_x;
+    t->_[2][1] = delta_y;
+  }
+  else {
+    t->_[2][0] = t->_[2][0] + delta_x;
+    t->_[2][1] = t->_[2][1] + delta_y;
+  }
 
   return t;
 }
-
-ZnTransfo *
-ZnSetTranslation(ZnTransfo	*t,
-		 ZnReal		delta_x,
-		 ZnReal		delta_y)
-{
-  t->_[2][0] = delta_x;
-  t->_[2][1] = delta_y;
-
-  return t;
-}
-
 
 /*
  *************************************************************************
@@ -667,7 +675,7 @@ ZnRotateRad(ZnTransfo	*t,
   register ZnReal	c = cos(angle);
   register ZnReal	s = sin(angle);
   register ZnReal	tmp;
-
+  
   tmp = t->_[0][0];
   t->_[0][0] = tmp*c - t->_[0][1]*s;
   t->_[0][1] = tmp*s + t->_[0][1]*c;

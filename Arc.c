@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Wed Mar 30 16:24:09 1994
  *
- * $Id: Arc.c,v 1.49 2003/10/02 07:41:59 lecoanet Exp $
+ * $Id: Arc.c,v 1.53 2004/03/23 14:53:45 lecoanet Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Arc.c,v 1.49 2003/10/02 07:41:59 lecoanet Exp $";
+static const char rcsid[] = "$Id: Arc.c,v 1.53 2004/03/23 14:53:45 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -1005,7 +1005,7 @@ Draw(ZnItem	item)
     if (arc->tile != ZnUnspecifiedImage) {
       if (!ZnImageIsBitmap(arc->tile)) { /* Fill tiled */
 	values.fill_style = FillTiled;
-	values.tile = ZnImagePixmap(arc->tile);
+	values.tile = ZnImagePixmap(arc->tile, wi->win);
 	values.ts_x_origin = (int) item->item_bounding_box.orig.x;
 	values.ts_y_origin = (int) item->item_bounding_box.orig.y;
 	XChangeGC(wi->dpy, wi->gc,
@@ -1014,7 +1014,7 @@ Draw(ZnItem	item)
       }
       else { /* Fill stippled */
 	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(arc->tile);
+	values.stipple = ZnImagePixmap(arc->tile, wi->win);
 	values.ts_x_origin = (int) item->item_bounding_box.orig.x;
 	values.ts_y_origin = (int) item->item_bounding_box.orig.y;
 	XChangeGC(wi->dpy, wi->gc,
@@ -1060,7 +1060,7 @@ Draw(ZnItem	item)
     }
     else {
       values.fill_style = FillStippled;
-      values.stipple = ZnImagePixmap(arc->line_pattern);
+      values.stipple = ZnImagePixmap(arc->line_pattern, wi->win);
       XChangeGC(wi->dpy, wi->gc,
 		GCFillStyle|GCStipple|GCLineWidth|GCCapStyle|GCJoinStyle|GCForeground,
 		&values);
@@ -1450,8 +1450,8 @@ Pick(ZnItem	item,
    * angular extent).
    */
   if (ISSET(arc->flags, PIE_SLICE_BIT)) {
-    dist = ZnLineToPointDist(&center, &arc->center1, p);
-    new_dist = ZnLineToPointDist(&center, &arc->center2, p);
+    dist = ZnLineToPointDist(&center, &arc->center1, p, NULL);
+    new_dist = ZnLineToPointDist(&center, &arc->center2, p, NULL);
     if (new_dist < dist) {
       dist = new_dist;
     }
@@ -1492,7 +1492,7 @@ Pick(ZnItem	item,
   /*
    * This is a chord closed oval.
    */    
-  dist = ZnLineToPointDist(&arc->center1, &arc->center2, p);
+  dist = ZnLineToPointDist(&arc->center1, &arc->center2, p, NULL);
   if (arc->line_width > 1) {
     if (closed) {
       dist -= arc->line_width/2;
@@ -1744,8 +1744,8 @@ GetAnchor(ZnItem	item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -1763,6 +1763,7 @@ static ZnItemClassStruct ARC_ITEM_CLASS = {
   False,		/* has_anchors */
   "arc",
   arc_attrs,
+  -1,
   Init,
   Clone,
   Destroy,

@@ -7,7 +7,7 @@ use strict;
 my $TkLibDir = $Tk::library;
 my $platform = $Tk::platform;
 
-my $VERSION = 3.296;
+my $VERSION = 3.297;
 
 
 if (!$TkLibDir)
@@ -110,6 +110,12 @@ sub get_flags {
 		push @C, @OM_C
 	    }
 	}
+    }
+    if ($Tk::VERSION =~ /^800/) {
+      $defines .= " -DPTK_800";
+      print "PTK=800";
+    } else {
+      print "PTK=804";
     }
     print "\n";
     return $defines;

@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: Reticle.c,v 1.37 2003/10/02 09:08:49 lecoanet Exp $
+ * $Id: Reticle.c,v 1.39 2004/03/03 10:16:24 lecoanet Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
 #include <math.h>
 
 
-static const char rcsid[] = "$Id: Reticle.c,v 1.37 2003/10/02 09:08:49 lecoanet Exp $";
+static const char rcsid[] = "$Id: Reticle.c,v 1.39 2004/03/03 10:16:24 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -262,12 +262,12 @@ ComputeCoordinates(ZnItem	item,
   ZnPoint	p, xp;
   
   /* Compute center device coordinates */
-  ZnTransformPoint(wi->current_transfo, &reticle->pos, &reticle->dev);
-  p.x = reticle->pos.x + reticle->step_size;
-  p.y = reticle->pos.y;
+  p.x = p.y = 0;
+  ZnTransformPoint(wi->current_transfo, &p, &reticle->dev);
+  p.x = reticle->step_size;
   ZnTransformPoint(wi->current_transfo, &p, &xp);
   reticle->step_size_dev = hypot(xp.x - reticle->dev.x, xp.y - reticle->dev.y);
-  p.x = reticle->pos.x + reticle->first_radius;
+  p.x = reticle->first_radius;
   ZnTransformPoint(wi->current_transfo, &p, &xp);
   reticle->first_radius_dev = hypot(xp.x - reticle->dev.x, xp.y - reticle->dev.y);
   if (reticle->first_radius_dev < 1.0) {
@@ -580,8 +580,8 @@ Coords(ZnItem		item,
  **********************************************************************************
  */
 static void
-PostScript(ZnItem		item __unused,
-	   ZnPostScriptInfo	ps_info __unused)
+PostScript(ZnItem	item __unused,
+	   ZnBool	prepass __unused)
 {
 }
 
@@ -599,6 +599,7 @@ static ZnItemClassStruct RETICLE_ITEM_CLASS = {
   False,		/* has_anchors */
   "reticle",
   reticle_attrs,
+  Tk_Offset(ReticleItemStruct, pos),
   Init,
   Clone,
   Destroy,

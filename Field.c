@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: 
  *
- * $Id: Field.c,v 1.18 2003/10/02 12:03:00 lecoanet Exp $
+ * $Id: Field.c,v 1.20 2004/03/23 14:53:45 lecoanet Exp $
  */
 
 /*
@@ -38,7 +38,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Field.c,v 1.18 2003/10/02 12:03:00 lecoanet Exp $";
+static const char rcsid[] = "$Id: Field.c,v 1.20 2004/03/23 14:53:45 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -155,12 +155,14 @@ ComputeFieldAttachment(ZnFieldSet	field_set,
   Field		fptr;
   Tk_FontMetrics fm;
 
+  /*printf("ComputeFieldAttachment in\n");*/
   fptr = &field_set->fields[field];
   if (ISSET(fptr->flags, CACHE_OK)) {
     field_bbox->orig.x = (ZnPos) fptr->orig_x;
     field_bbox->orig.y = (ZnPos) fptr->orig_y;
     field_bbox->corner.x = fptr->corner_x;
     field_bbox->corner.y = fptr->corner_y;
+    /*printf("ComputeFieldAttachment in cache\n");*/
     return;
   }
 
@@ -221,7 +223,7 @@ ComputeFieldAttachment(ZnFieldSet	field_set,
   case ZN_LF_DIM_LABEL:
     {
       ZnDim	lh;
-      
+
       GetLabelBBox(field_set, &real_width, &lh);
       break;
     }
@@ -399,6 +401,8 @@ ComputeFieldAttachment(ZnFieldSet	field_set,
   fptr->corner_x = (short) field_bbox->corner.x;
   fptr->corner_y = (short) field_bbox->corner.y;
   SET(fptr->flags, CACHE_OK);
+
+  /*printf("ComputeFieldAttachment out\n");*/
 }
 
 
@@ -494,15 +498,18 @@ GetLabelBBox(ZnFieldSet	field_set,
   unsigned int	i, num_fields;
   ZnDim		clip_w, clip_h;
   
+  /*printf("GetLabelBBox in\n");*/
   if ((field_set->label_width >= 0.0) && (field_set->label_height >= 0.0)) {
     *w = field_set->label_width;
     *h = field_set->label_height;
+    /*printf("GetLabelBBox in cache\n");*/
     return;
   }
 
   lf = field_set->label_format;
   if (lf == NULL) {
     *w = *h = field_set->label_width = field_set->label_height = 0.0;
+    /*printf("GetLabelBBox no labelformat\n");*/
     return;
   }
 
@@ -550,6 +557,7 @@ GetFieldBBox(ZnFieldSet		field_set,
 {
   ZnReal	ox, oy;
   
+  /*printf("GetFieldBBox in\n");*/
   if (field_set->label_format) {
     ox = ZnNearestInt(field_set->label_pos.x);
     oy = ZnNearestInt(field_set->label_pos.y);
@@ -562,6 +570,7 @@ GetFieldBBox(ZnFieldSet		field_set,
   else {
     ZnResetBBox(field_bbox);
   }
+  /*printf("GetFieldBBox out\n");*/
 }
 
 
@@ -1784,7 +1793,7 @@ DrawField(ZnWInfo	*wi,
     if (fptr->tile != ZnUnspecifiedImage) {
       if (!ZnImageIsBitmap(fptr->tile)) { /* Fill tiled */
 	values.fill_style = FillTiled;
-	values.tile = ZnImagePixmap(fptr->tile);
+	values.tile = ZnImagePixmap(fptr->tile, wi->win);
 	values.ts_x_origin = (int) bbox->orig.x;
 	values.ts_y_origin = (int) bbox->orig.y;
 	XChangeGC(wi->dpy, wi->gc,
@@ -1793,7 +1802,7 @@ DrawField(ZnWInfo	*wi,
       }
       else { /* Fill stippled */
 	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(fptr->tile);
+	values.stipple = ZnImagePixmap(fptr->tile, wi->win);
 	values.ts_x_origin = (int) bbox->orig.x;
 	values.ts_y_origin = (int) bbox->orig.y;
 	XChangeGC(wi->dpy, wi->gc,
@@ -1824,7 +1833,7 @@ DrawField(ZnWInfo	*wi,
 	fw = ZnNearestInt(bbox->corner.x - bbox->orig.x);
 	fh = ZnNearestInt(bbox->corner.y - bbox->orig.y);
 
-	pixmap = ZnImagePixmap(fptr->image);
+	pixmap = ZnImagePixmap(fptr->image, wi->win);
 	photo_region = ZnImageRegion(fptr->image);
 	ZnCurrentClip(wi, &clip_region, NULL, &simple);
 	clip = TkCreateRegion();

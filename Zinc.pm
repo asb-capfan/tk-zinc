@@ -1,5 +1,5 @@
-# $Id: Zinc.pm,v 1.24 2003/12/11 08:00:53 lecoanet Exp $
-# $Name: cpan_3_296 $
+# $Id: Zinc.pm,v 1.26 2004/03/26 16:24:37 lecoanet Exp $
+# $Name: cpan_3_297 $
 
 package Tk::Zinc;
 
@@ -13,8 +13,8 @@ Construct Tk::Widget 'Zinc';
 
 use vars qw($VERSION $REVISION);
 
-$REVISION = q$Revision: 1.24 $ ;  # this line is automagically modified by CVS
-$VERSION = 3.296;
+$REVISION = q$Revision: 1.26 $ ;  # this line is automagically modified by CVS
+$VERSION = 3.297;
 
 
 bootstrap Tk::Zinc $Tk::VERSION;
@@ -28,13 +28,13 @@ sub CreateOptions
 
 Tk::Methods("add", "addtag", "anchorxy", "bbox", "becomes", "bind", "cget",
 	    "chggroup", "clone", "configure", "contour", "coords", "currentpart",
-	    "cursor", "dchars", "dtag", "find", "fit", "focus", "gdelete", "gettags",
+	    "cursor", "dchars", "dtag", "fieldbbox", "find", "fit", "focus", "gdelete", "gettags",
 	    "gname", "group", "hasanchors", "hasfields", "hastag", "index",
 	    "insert", "itemcget", "itemconfigure", "lower", "monitor",
 	    "numparts", "postscript", "raise", "remove", "rotate", "scale",
-	    "select", "skew", "smooth", "tapply", "tcompose", "tdelete", "transform",
-	    "translate", "treset", "trestore", "tsave", "tset", "type", "vertexat",
-	    "xview", "yview");
+	    "select", "skew", "smooth", "tapply", "tcompose", "tdelete", "tget",
+	    "transform", "translate", "treset", "trestore", "tsave", "tset",
+	    "type", "vertexat", "xview", "yview");
 
 ## coord0 is a compatibility function usefull for porting old application
 ## previously running with Tk::Zinc V <= 3.2.6a

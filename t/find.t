@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: find.t,v 1.1 2003/10/16 12:10:03 mertz Exp $
+# $Id: find.t,v 1.2 2004/04/02 12:01:49 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -13,8 +13,8 @@
 
 BEGIN {
     if (!eval q{
-        use Test::More qw(no_plan);
-#        use Test::More tests => 31;
+#        use Test::More qw(no_plan);
+        use Test::More tests => 16;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";

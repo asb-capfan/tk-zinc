@@ -4,7 +4,7 @@
  * Authors		: Patrick Lecoanet.
  * Creation date	: Mon Feb  1 12:13:24 1999
  *
- * $Id: Types.h,v 1.39 2003/12/11 08:18:56 lecoanet Exp $
+ * $Id: Types.h,v 1.41 2004/03/23 14:53:46 lecoanet Exp $
  */
 
 /*
@@ -60,6 +60,9 @@
 #  include <tkPort.h>
 #  include <tkImgPhoto.h>
 #  include <tkVMacro.h>
+#  ifndef PTK_800
+#    define Arg Tcl_Obj *
+#  endif
 #else
 #  include <tkDecls.h>
 #  include <tkIntDecls.h>
@@ -112,7 +115,7 @@ typedef void	*ZnPtr;
 #  define TCL_INTEGER_SPACE	24
 #endif
 
-#ifdef PTK
+#ifdef PTK_800
 /*
  * Macros for Tk8.4/perl/Tk utf compatibility
  */
@@ -171,17 +174,6 @@ EXTERN TkRegion ZnPolygonRegion(XPoint *points, int n,
 				int fill_rule);
 #  ifdef GL
 #    define ZnGLContext HGLRC
-#    define ZnGLMakeCurrent(wi)  \
-{			     \
-  wi->hdc = GetDC(wi->hwnd); \
-  wglMakeCurrent(wi->hdc, wi->gl_context); \
-}
-#    define ZnGLRelease(wi) \
-  ReleaseDC(wi->hwnd, wi->hdc);
-#    define ZnGLDestroyContext(wi) \
-  wglDeleteContext(wi->gl_context)
-#    define ZnGLSwapBuffers(wi) \
-  SwapBuffers(wi->hdc)
 #    define ZnGLWaitGL()
 #    define ZN_GL_LINE_WIDTH_RANGE GL_LINE_WIDTH_RANGE
 #    define ZN_GL_POINT_SIZE_RANGE GL_POINT_SIZE_RANGE
@@ -197,13 +189,6 @@ EXTERN TkRegion ZnPolygonRegion(XPoint *points, int n,
   XOffsetRegion((Region) reg, dx, dy)
 #  ifdef GL
 #    define ZnGLContext GLXContext
-#    define ZnGLMakeCurrent(wi) \
-  glXMakeCurrent(wi->dpy, Tk_WindowId(wi->win), wi->gl_context);
-#    define ZnGLRelease(wi)
-#    define ZnGLDestroyContext(wi) \
-  glXDestroyContext(wi->dpy, wi->gl_context);
-#    define ZnGLSwapBuffers(wi) \
-  glXSwapBuffers(wi->dpy, Tk_WindowId(wi->win))
 #    define ZnGLWaitGL() \
   glXWaitGL()
 #    define ZN_GL_LINE_WIDTH_RANGE GL_SMOOTH_LINE_WIDTH_RANGE
