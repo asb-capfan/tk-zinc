@@ -1,5 +1,61 @@
-zinc-tk (3.294) unstable; urgency=low
+zinc-tk (3.2.95) unstable; urgency=low
 
+  * Configuration of image and bitmap valued attibutes is now
+    optimized against reconfiguration with the same value (image).
+    This has the side benefit of fixing a core dump ;-).
+  * Fixed the return type of the ZnPointInRegion prototype to return
+    a ZnBool (A. Lemort).
+  * Stephane Conversy has contributed diffs to compile the tcl
+    version on MacOs X Fink.
+  * ZincDebug: Contours of curves can be displayed and explored
+    (D. Etienne).
+  * ZincDebug: Fixed a bug in device coordinates when a non group
+    item has a transformation (D. Etienne).
+  * a new debian package has been created to install the doc
+    files (pdf and html) separately.
+  * Integrated the export script and Makefile contributed for
+    Perl by Somanos Sar. Merged the CPAN features written by
+    C. Mertz.
+  * The scrollbar protocol should now work with perl as well as
+    with tcl.
+  * libom is no more. It will be made into a loadable module
+    as soon as Tkzinc will have stubs and a tcl binding will be
+    written for the overlap manager api.
+  * No more perl building/configure code in the main trunk. All
+    perl related build and configuring tools are in Perl.
+  * Fixed a font texture allocation problem with large fonts.
+    The texture sizing has been changed with better results.
+  * Added a -tracksymbol option to act as the default value
+    for the -symbol attributes of tracks.
+  * The track default symbol for current positon is now correctly
+    read from the -tracksymbol option and not statically fixed.
+  * Changed the parameters of the new conical gradient.
+    If only one value is given, it is taken to be the gradient
+    starting angle, the center being 0,0. If two values are given,
+    they are taken as the gradient center, the starting angle being 0.
+    If three values are given, it's the gradient center followed by
+    the gradient starting angle. If four values are given, they are
+    two points defining the center and the angle/extent of the gradient
+    (vector based definition).
+  * Corrected a bug when tiling aligned rectangles under GL.
+    The rectangular form was not correctly clipped so that
+    it showed outside its area.
+  * Shaped icons should be rendered correctly under all environments
+    and for all image formats.
+    In fact the image/bitmap code has been reworked and integrated.
+    For the internals there is no difference now between images,
+    image supported bitmaps and old style bitmaps obtained by
+    Tk_DefineBitmap.
+  * The image update mecanism is now fully functional. It will
+    work for tiles, icon, symbols and even patterns if they are
+    made with image bitmaps.
+  * Icon item picking should be ok in all cases and all environments.
+    It used to be limited for rotated shaped images.
+  * Change in the font texture allocation to guarantee that it
+    will not fail. This is now postponed until first use for
+    drawing.
+  * Videomap loading is done through the Tcl_Channel api enabling
+    the use of Tkzinc and all of its datas in a starkit.
   * no more dependencies between zinc-perl and zinc-tk
   * a new perl module for building complex graphic objects:
     Tk::Zinc::Graphics.pm
@@ -12,7 +68,7 @@ zinc-tk (3.294) unstable; urgency=low
     - testGraphics.pl to demonstrate the power of Graphics.pm
     - Magiclens.pl 
 
- -- Christophe Mertz <mertz@cena.fr>  Tue, 16 Sep 2003 10:28:18 +0200
+ -- Patrick Lecoanet <lecoanet@ath.cena.fr>  Fri,  5 Sep 2003 13:37:48 +0200
 
 zinc-tk (3.2.94) unstable; urgency=low
 

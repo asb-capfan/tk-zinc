@@ -4,15 +4,17 @@ Install:
 
   perl Makefile.PL
   make
-  make test      # There isn't test scripts yet.  
-  make demoperl  # a kind of manual test
+  make test
+  # to make demos before installing:
+  perl -Iblib/arch -Iblib/lib demos/zinc-demos
   make install
 
-  make doc       # requires latex and latex2html
 
-up-to-date doc also available at www.openatc.org/zinc/documentation.html
+up-to-date documentation is also available at www.openatc.org/zinc/documentation.html
 You will find there the reference manual, a FAQ, a mailing list, its archive
 etc...
+The source of the documentation is available in the full source package,
+which also includes TkZinc for Tcl/Tk, for Perl/Tk, and for Python.
 
 After installation, we recommend you to launch the zinc-demos script,
 a frontend to more than 30 small demos.

@@ -1,102 +1,121 @@
-# this code has been developped by Somanos Sar from CENA
-# and modified par C.Mertz from CENA
-# $Id: Makefile.PL,v 1.3 2003/09/22 10:01:03 mertz Exp $
+use 5.006;
+use Tk;
+use Tk::Config;
+use ExtUtils::MakeMaker;
+use strict;
 
-use 5.00404;
-use Cwd;
-use Config;
-use File::Basename;
-use Carp;
+my $TkLibDir = $Tk::library;
+my $platform = $Tk::platform;
+
+my $VERSION = 3.295;
 
 
-BEGIN
+if (!$TkLibDir)
 {
-  my $IsWin32 = ($^O eq 'MSWin32' || $Config{'ccflags'} =~ /-D_?WIN32_?/);
+    print stderr "==================================================================\n";
+    print stderr "Could not find the Perl/Tk (pTk) library.\n";
+    print stderr "Please, install first Perl/Tk interface before installing Tk::Zinc\n";
+    print stderr "==================================================================\n";
+    die;
 }
 
-my %opt = parse_opt();
 
+print "Configuring version $VERSION for $platform platform...\n";
+print "Using $TkLibDir as Tk library...\n";
 
-print "Trying to find a libGL by myself (may be long)...\n";
-my $gl_lib = guess_libs('libGL.so');
-if ($gl_lib)
-{
-    my $gl_lib_a = guess_libs('libGL.a');
-    if ($gl_lib_a) {
-	warn ("### you have both libGL.so [in $gl_lib] and libGL.a [in $gl_lib_a].
-### Tk::Zinc may have trouble building a correct libTkzinc3.x.yy.so library.
-### We suggest you to put the libGL.a aside ....")
-	}
-    $gl_lib = 'yes';
+#
+# Humm! inclusion of Zinc.c here is needed to include Zinc.o in the link but it create
+# a circular dependancy in the generated Makefile. Another solution ?
+#
+my @GENERIC_C = ('Track.c', 'Tabular.c', 'Reticle.c', 'Map.c', 'Rectangle.c', 'Arc.c', 'Curve.c',
+		 'Item.c', 'PostScript.c', 'MapInfo.c', 'Attrs.c', 'Draw.c', 'Geo.c', 'List.c',
+		 'perfos.c', 'Transfo.c', 'Group.c', 'Icon.c', 'Text.c', 'Image.c', 'Color.c',
+		 'Field.c', 'Triangles.c', 'Window.c', 'tkZinc.c', 'Zinc.c');
+
+my @LIBTESS_C = ('dict.c', 'geom.c', 'memalloc.c', 'mesh.c', 'normal.c', 'priorityq.c',
+		 'render.c', 'sweep.c', 'tess.c', 'tessmono.c');
+
+my @OM_C = ('OverlapMan.c');
+
+my @WIN_C = ('WinPort.c');
+
+my @C;
+
+my $WIN = ($platform =~ /win/i);
+
+push @C, @LIBTESS_C, @GENERIC_C ;
+
+if ($WIN) {
+    push @C, @WIN_C;
 }
-else
-{
-    $gl_lib = 'no';
-}
 
-# Directories
-my $prefix="";
-$prefix = "--prefix=" . $opt{'--prefix'} if ($opt{'--prefix'});
+# See lib/ExtUtils/MakeMaker.pm for details of how to influence
+# the contents of the Makefile that is written.
+WriteMakefile(
+	      'AUTHOR'          => 'Patrick Lecoanet <lecoanet@cena.fr>',
+	      'NAME'		=> 'Tk::Zinc',
+	      'VERSION'	        => $VERSION,
+	      'PREREQ_PM'	=> {Tk => 8.0},
+	      'LIBS'		=> ['-L/usr/X11R6/lib -lXext -lX11 -lGL -lpthread -L.'], 
+	      'DEFINE'		=> &get_flags,
+	      'INC'		=> "-I. -I$TkLibDir -I$TkLibDir/pTk",
+	      'C'               => [@C],
+	      'XS_VERSION'      => $Tk::Config::VERSION,
+	      'XS'              => {'Zinc.sx' => 'Zinc.c'},
+	      'linkext'         => {LINKTYPE => 'dynamic'},
+	      'depend'          => {'Zinc.o' => '$(O_FILES) Zinc.o'},
+	      'LDFROM' => '$(O_FILES)',
+	      );
 
-
-#############################################
-#   SUBROUTINES 
-#############################################
-
-# Try to guess which library are to be use for tk and tcl
-sub guess_libs
-{
-    my $lib_name = shift;
+sub get_flags {
+    my %DEF_FLAGS = ('GL'        => 1,
+		     'SHAPE'     => 1,
+		     'GL_DAMAGE' => 1,
+		     'OM'        => 1
+		     );
     
-    my @libs = split(/[ \t]+/, $Config{'libpth'});
-    foreach my $lib (@libs)
-    {
-	my @configs = (`find  /usr/lib -name $lib_name`, `find  /usr/local/lib -name $lib_name` , );
-	if (@configs)
-	{
-	    print "Using $configs[0]\n";
-	    $configs[0] = dirname($configs[0]);
-	    return $configs[0];
+    foreach my $arg (@ARGV) {
+	print "$arg ....\n";
+	my ($name, $value) = split(/[=]+/, $arg);
+	if ($name =~ /(with-gl)/i) {
+	    if ($value =~ /no/i) {
+		$DEF_FLAGS{'GL'} = 0;
+		$DEF_FLAGS{'GL_DAMAGE'} = 0;
+	    }
+	}
+	elsif ($name =~ /(with-om)/i) {
+	    if ($value =~ /no/i) {
+		$DEF_FLAGS{'OM'} = 0;
+	    }
+	}
+	elsif ($name =~ /(with-shape)/i) {
+	    if ($value =~ /no/i) {
+		$DEF_FLAGS{'SHAPE'} = 0;
+	    }
 	}
     }
-    return undef;
-}
-
-# Parse option from command line
-sub parse_opt
-{
-    my $args = join(/_IFS_/, @ARGV);
-    my @tokens = split(/_IFS_/, $args);
-    my %options;
     
-    foreach my $token (@tokens)
-    {
-	my ($key, $value) = split(/[ =]+/, $token);
-	$options{$key} = $value;
+    #
+    # No shape extension on Windows (planned later).
+    if ($WIN) {
+	$DEF_FLAGS{'SHAPE'} = 0;
     }
-    return %options;
+    my $defines = '-DPTK';
+    print "Configuring with:\n    ";
+    foreach my $flag (keys %DEF_FLAGS) {
+	print "$flag=", $DEF_FLAGS{$flag} ? 'ok' : 'no', " ";
+	if ($DEF_FLAGS{$flag}) {	    
+	    $defines = $defines . " " . "-D$flag";
+	    if ($flag eq 'OM') {
+		push @C, @OM_C
+	    }
+	}
+    }
+    print "\n";
+    return $defines;
 }
 
-
-
-#print "Installing in $prefix gl_lib=$gl_lib\n";
-
-my @withTclTk=();
-if (-f "fake_TCL_libs/tclConfig.sh" &&
-    -f "fake_TCL_libs/tkConfig.sh") {
-    @withTclTk = ("--with-tcl=fake_TCL_libs", "--with-tk=fake_TCL_libs");
-}
-else {
-    print "### configure will search tcl / tk configs in thje system\n";
-}
-my @args =  ("./configure",
-	     "--enable-ptk=yes",
-	     "--enable-gl=$gl_lib",
-	     "--enable-shared=yes",
-	     @withTclTk,
-	     $prefix,
-#	     INSTALL_PERL=\"yes\""
-	     );
-print "\nConfiguring with... ", join (' ', @args), "\n";
-
-system (@args);
+#
+# For the demo
+#
+# perl -Mblib demos/zinc-demos
