@@ -15,7 +15,7 @@
 #-----------------------------------------------------------------------------------
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -100,9 +100,7 @@ my $zinc = $mw->Zinc(-render => 1,
 		     );
 $zinc->pack(-fill => 'both', -expand => 1);
 
-# to find some images (used as textures) needed by this demo
-push @INC , Tk->findINC('demos/zinc_data');
-my $texture = &getTexture($zinc, 'paper-grey1.gif');
+my $texture = $zinc->Photo(-file => Tk->findINC('demos/zinc_data/paper-grey1.gif'));
 $zinc->configure(-tile => $texture);
 
 # création des 2 vues
@@ -113,7 +111,7 @@ my $infoview = $zinc->add('group', $lensview);
 my $zoom=1.20;
 $zinc->scale($infoview, $zoom, $zoom);
 
-my $lenstexture = &getTexture($zinc, 'paper-grey.gif');
+my $lenstexture = $zinc->Photo(-file => Tk->findINC('demos/zinc_data/paper-grey.gif'));
 $zinc->add('rectangle', $infoview,
 	   [[0,0],[1000,900]],
 	   -filled => 1,

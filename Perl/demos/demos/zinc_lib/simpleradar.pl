@@ -1,21 +1,21 @@
 #!/usr/bin/perl -w
-# $Id: simpleradar.pl,v 1.5 2003/09/15 12:25:05 mertz Exp $
+# $Id: simpleradar.pl,v 1.6 2003/09/24 15:10:39 mertz Exp $
 # This simple radar has been initially developped by P. Lecoanet <lecoanet@cena.fr>
 # It has been adapted by C. Mertz <mertz@cena.fr> for demo purpose.
 
 package simpleradar; # for avoiding symbol collision between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 
 use Tk;
 use Tk::Zinc;
 
 use strict;
-# to find the SimpleRadarControls module. Should be included in this source file! 
-use lib Tk->findINC('demos/zinc_pm');
-use SimpleRadarControls;
+
+# to find the SimpleRadarControls module
+require Tk->findINC('demos/zinc_pm/SimpleRadarControls.pm');
 
 # to find some maps needed by these demo
 my $map_path = Tk->findINC('demos/zinc_data');

@@ -1,10 +1,10 @@
 #!/usr/bin/perl -w
 
-# $Id: transforms.pl,v 1.6 2003/09/15 12:25:05 mertz Exp $
+# $Id: transforms.pl,v 1.7 2003/09/24 15:10:39 mertz Exp $
 # This simple demo has been developped by P. Lecoanet <lecoanet@cena.fr>
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 #
 # TODO:
@@ -29,8 +29,7 @@ my $composerot = 1;
 my $composescale = 1;
 my $drag = 0;
 
-my $image_path = Tk->findINC('demos/zinc_data');
-my $logo = $mw->Photo(-file => "$image_path/zinc_anti.gif");
+my $logo = $mw->Photo(-file => Tk->findINC('demos/zinc_data/zinc_anti.gif'));
 
 my $text = $mw->Text(-relief => 'sunken',
 		     -borderwidth => 2,

@@ -41,14 +41,16 @@
 package groups_in_ATC_strips; # for avoiding symbol collision between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
 use strict;
 
 # to find some images (used as textures) needed by this demo
-my $image_path = Tk->findINC('demos/zinc_data');
+# we avoids empty 'demos/zinc_data' directory!
+my $image_path = Tk->findINC('demos/zinc_data/background_texture.gif');
+$image_path =~ s:/background_texture.gif$:: ;
 
 $| = 1;
 
@@ -372,7 +374,8 @@ my $zinc = $mw->Zinc(-render => 1,
 		     
 $zinc->pack(-fill => 'both', -expand => 1);
 
-my $texture = $zinc->Photo('background_texture.gif', -file => "$image_path/background_texture.gif");
+my $texture = $zinc->Photo('background_texture.gif',
+			   -file => Tk->findINC('demos/zinc_data/background_texture.gif'));
 $zinc->configure(-tile => $texture) if $texture;
 
 

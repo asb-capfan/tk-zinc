@@ -18,7 +18,7 @@ use vars qw/$COLOR $FONT_STYLE $POINT_SIZE $DEMO_FILE %DEMO_DESCRIPTION/;
 use strict;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.21 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.23 $ =~ /(\d+)\.(\d+)/);
 
 my $version = $Tk::Zinc::VERSION;
 print "Tkzinc version: $version\n";
@@ -47,9 +47,14 @@ $MW->configure(-menu => my $menubar = $MW->Menu);
 $MW->title('TkZinc Perl demonstrations');
 $FONT = '-*-Helvetica-Medium-R-Normal--*-140-*-*-*-*-*-*';
 my $widget_lib = Tk->findINC('demos/widget_lib');
-my $zinc_lib = Tk->findINC('demos/zinc_lib');
+# the previous simple statement $zinc_lib = Tk->findINC('demos/zinc_lib');
+# found in some cases such old directory empty (e.g. after a previous package de-installation)
+# So now, we look for a non-empty demos/zinc_lib directory (ie containing one of the demo!)
+my $zinc_lib = Tk->findINC('demos/zinc_lib/tiger.pl');
+($zinc_lib) = $zinc_lib =~ /(.*)\/tiger\.pl/;
 my $wd = "$widget_lib/WidgetDemo.pm";
-$WIDTRIB = Tk->findINC('demos/zinc_contrib_lib');
+$WIDTRIB = Tk->findINC('demos/zinc_contrib_lib/README');
+($WIDTRIB) = $WIDTRIB =~ /(.*)\/README/;
 unless (Tk::tainting) {
     $WIDTRIB = $ENV{WIDTRIB} if defined $ENV{WIDTRIB};
     $WIDTRIB = $ARGV[0] if defined $ARGV[0];

@@ -1,223 +1,37 @@
+Tk::Zinc - another Canvas which proposes many new functions, some based on openGL
 
+Install:
 
+  perl Makefile.PL
+  make
+  make test      # There isn't test scripts yet.  
+  make demoperl  # a kind of manual test
+  make install
 
+  make doc       # requires latex and latex2html
 
+up-to-date doc also available at www.openatc.org/zinc/documentation.html
+You will find there the reference manual, a FAQ, a mailing list, its archive
+etc...
 
-	*===========================================*
-		The TkZinc widget version 3.3
-	*===========================================*
+After installation, we recommend you to launch the zinc-demos script,
+a frontend to more than 30 small demos.
 
+For more information on building Tk::Zinc, please read the README which applies
+to all flavors of Tk::Zinc (tcl and perl, linux and windows)
 
+For the copyright, please, read the COPYRIGHT file.
 
-WHAT IS THIS?
+For any question or patch proposal for Tk::Zinc (perl module) build
+and installation, please send email to zinc-dev@tls.cena.fr
 
-  TkZinc is a canvas like widget extension to Tcl/Tk. It adds
-support for ATC displays, provides structured assembly of
-items, transformations, clipping, and openGL based rendering
-features such as gradients and alpha blending.
+For any question on Tk::Zinc usage, please use the zinc@tls.cena.fr or look at
+http://www.openatc.org/zinc/documentation.html#ml
 
-  It is currently available on Unices (tested on Linux) and
-Windows.
 
+Tk::Zinc main author is Patrick Lecoanet
+Sub-Modules, demos and documentation have been developped by
+Daniel Etienne, Christophe Mertz, with contributions from
+Stéphane Chatty, Céline Schlienger, Alexandre Lemort
 
-WHERE DOES IT COME FROM?
 
-  The newest version is found at: http://www.openatc.org/zinc
-  It should be at least available in source form in a file
-  named Tkzinc<version>.tgz.
-  Distribution specific packages may also be available for
-  Debian/Mandrake/Red Hat distributions, most likely for stable
-  versions.
-  As a convenience the documentation (pdf+html) is made available
-  on the web site as a separate package.
-
-
-BUILDING AND INSTALLATION
-
-
-0. Get, build and _install_ the Tcl/Tk distribution. You need a 8.4
-   distribution to use TkZinc. On Windows there is currently an
-   incompatibility when using a TkZinc compiled under mingw32 with
-   a core Tcl/Tk compiled with visual C++. You need to grab a Tcl/Tk
-   compiled with the same environment as TkZinc.
-
-
-1. Unpack the distribution
-
-   On Unix/Linux:
-
-	tar zxf Tkzinc<version>.tgz
-
-   On Windows:
-
-	Use WinZip or something like this to unpack
-
-   This creates a directory Tkzinc<version> with all the
-   needed files. This directory should be in the same
-   directory as the Tcl/Tk sources.
-
-
-2. Configure
-
-   On Unix/Linux:
-
-	cd Tkzinc<version>
-	./configure  <option>*
-
-   This will configure the package for your platform. It
-   will install it in /usr/local. If you want it elsewhere
-   you can use the --prefix and --exec-prefix options of
-   configure to assign another location.
-
-   On Windows:
-
-   TkZinc has been built using the msys/mingw32 environment.
-   It is known to work with Tcl/Tk 8.4.2 compiled using the
-   same environment. CAUTION: It doesn't work with Tcl/Tk 8.4.1
-   using mingw32.
-   The steps for building under mingw32 are the same as on Unices.
-   Currently there is no support for building with visual C++.
-
-   On all platforms:
-
-   It is possible to customize TkZinc through configure options:
-
-	--enable-gl=[yes|no|damage]
-	--disable-gl
-
-	This is turned off by default. Building with --enable-gl=damage
-	is the recommanded way for openGL support.
-
-	--enable-om=[yes|no]
-	--disable-om
-
-	This is turned on by default. It controls the inclusion of
-	code for avoid overlap between track labels in radar images.
-
-	--enable-shape=[yes|no]
-	--disable-shape
-
-	This is turned on by default except on Windows where support
-	code is not currently available (it may become available).
-	It allows for non rectangular TkZinc windows optionally including 
-	the top level window.
-
-	--enable-ptk=[yes|no]
-	--disable-ptk
-
-	This is turned off by default. It builds TkZinc for use in
-	perl/tk. This is not currently supported on Windows.
-
-   And the Tcl standards:
-
-	--enable-threads=[yes|no]
-	--disable-threads
-
-	Compile a thread aware/thread safe version (not tested in multi
-	threaded environment). Needed if Tcl/Tk has been compiled with
-	the same configure option.
-
-	--enable-symbols=[yes|no|mem|all]
-	--disable-symbols
-
-	Turn on debugging symbols. If the form --enable-symbols=mem is 
-	used, turn on memory debugging as well.
-
-
-3. Make and Install
-
-   For use with Tcl on Unix/Linux and Windows using mingw32:
-
-	make
-	make install-tcl
-
-   It is recommended to do a make distclean before actual building if you
-   have done a previous build, especially between Tcl and Perl variants.
-
-   The warnings while compiling libtess are harmless (or so I believe ;-).
-   libtess is a tesselation library extracted from GLU/Mesa. I trust it as
-   robust unless proven wrong. I do not want to modify the code just to
-   shut up some warnings.
-
-
-   For use with Tcl on Windows using Visual C++:
-
-	nmake /F win/makefile.vc
-
-   There is no install target. You are left with the dlls and the start of
-   pkgIndex.tcl (it lacks the entries for the Tcl modules in library).
-   It is needed to compile with Visual C++ if TkZinc is to be used with a
-   Tcl/Tk compiled with Visual C++.
-
-   P.S: If a pkgIndex.tcl for Tkzinc exists in the autoload path before
-   installing, it will interfere with the generation of the new pkgIndex.tcl.
-   It should be removed or renamed. echo 'puts $auto_path' | tclsh will
-   tell the current load path.
-
-
-   For use with Perl/Tk only on Unix/Linux, the better would be to read
-   the README.PERL file, which describres the usual way of buildind, testing,
-   and installing TkZinc. You can also do the following:  
-
-	## Remember: you must use the --enable-ptk=yes option in ./configure
-
-	make perl
-	make testperl ## this currently does not test many thing
-	make demoperl ## launches a demo similar to the Perl/Tk widget demo
-	make install  
-   
-
-4. Run the demos
-
-   In the Tkzinc<version> directory run:
-
-	wish8.4 demos/zinc-widget
-
-   Under windows do:
-
-	wish84 demos/zinc-widget
-
-   It should start a Tk like 'widget' demo showing TkZinc
-   features. You can also run the demo with: demos/zinc-widget
-   if you have in the PATH a wish that is greater or equal to
-   8.4.2.
-
-   If the perl/tk version is installed you can run a
-   similar demo with:
-
-	zinc-demos
-
-
-5. Make and read the documentation
-
-   It is available in pdf and html forms.
-   To make the pdf doc you need pdflatex installed. Then do:
-
-	cd Tkzinc<version>
-	make pdf
-
-   This should create a refman.pdf in the doc directory.
-
-   To make the html doc you need latex and latex2html. Then do:
-
-	cd Tkzinc<version>
-	make html
-
-   This should create a refman directory in the doc directory
-   with all the html pages and images. The entry point is
-   index.html.
-
-   You can also download the doc on TkZinc website:
-   http://www.openatc.org/zinc/documentation.html
-
-
-6. Report bugs and wishes
-
-   Please report bugs and suggestions to the TkZinc mailing list
-   at zinc@tls.cena.fr.
-
-   When reporting bugs try to be as specific as possible.
-   Include, if possible, the output from the program. Compile
-   TkZinc with debugging symbols and include a backtrace of the
-   debugger. Send a small Tcl (or Perl) script reproducing the problem.
-   The availability of a correction may dependent on these infos.

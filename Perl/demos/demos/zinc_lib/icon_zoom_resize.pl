@@ -1,11 +1,11 @@
 #!/usr/bin/perl
-# $Id: icon_zoom_resize.pl,v 1.4 2003/09/15 12:25:05 mertz Exp $
+# $Id: icon_zoom_resize.pl,v 1.5 2003/09/24 15:10:39 mertz Exp $
 # this simple demo has been developped by C. Mertz <mertz@cena.fr>
 
 package icon_zoom__resize; # for avoiding symbol re-use between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Zinc;
@@ -36,9 +36,8 @@ my $zinc = $mw->Zinc(-width => 350, -height => 250,
 
 my $earth_group = $zinc->add('group', 1, );
 
-my $image_path = Tk->findINC('demos/images');
-my $image_name = 'earth.gif';
-my $image = $zinc->Photo($image_name, -file => "$image_path/$image_name");
+my $image_name = 'earth.gif';  # this image is included in Perl/Tk distrib
+my $image = $zinc->Photo($image_name, -file => Tk->findINC("demos/images/$image_name"));
 
 my $earth = $zinc->add('icon', $earth_group,
 		      -image => $image,

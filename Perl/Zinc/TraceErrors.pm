@@ -18,7 +18,7 @@
 # module name, the line number and the complete error messages are reported
 # for each error.
 #
-# $Id: TraceErrors.pm,v 1.5 2003/09/15 16:17:05 mertz Exp $
+# $Id: TraceErrors.pm,v 1.6 2003/09/19 12:40:47 mertz Exp $
 #
 # When you have no idea where this happens in your code or when your
 # application segfaults, use the Tk::Zinc::Trace package which traces every
@@ -30,7 +30,7 @@
 package Tk::Zinc::TraceErrors;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use strict;
@@ -92,4 +92,58 @@ sub Tk::Zinc::WidgetMethod {
 1;
 
 
+__END__
+
+=head1 NAME
+
+Tk::Zinc::TraceErrors - A module to trace all Tk::Zinc method calls which generate an error
+
+=head1 SYNOPSIS
+
+use Tk::Zinc::TraceErrors;
+
+or
+
+perl -MTk::Zinc::TraceErrors YourZincBasedScript.pl
+
+=head1 DESCRIPTION
+
+When loaded, this module overloads a Tk mechanism so that every
+Tk::Zinc method call will be traced if it provokes an error. The execution
+will then continue.
+
+This module can be very effective for debugging and application, specially
+when Tk gives an unusuable error message such as ".... errors in Tk.pm line 228"
+    
+=over 6
+
+=item * the source filename where the method has been invoked
+
+=item * the line number in the source file
+
+=item * the TkZinc method name
+
+=item * the list of arguments in a human-readable form
+
+=item * the error message
+
+=back
+
+=head1 AUTHOR
+
+D.Etienne <etienne@cena.fr> and C.Mertz <mertz@cena.fr>
+
+=head1 CAVEAT
+
+This module cannot be used when Tk::Zinc::Trace is already in use.
+
+=head1 COPYRIGHT
+
+See Tk::Zinc copyright; LGPL
+
+=head1 SEE ALSO
+
+L<Tk::Zinc(3pm)>, L<Tk::Zinc::Trace(3pm)>. L<Tk::Zinc::Debug(3pm)>.
+
+=cut
 

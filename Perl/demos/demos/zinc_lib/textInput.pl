@@ -1,18 +1,18 @@
 #!/usr/bin/perl -w
-# $Id: textInput.pl,v 1.3 2003/09/15 12:25:05 mertz Exp $
+# $Id: textInput.pl,v 1.4 2003/09/24 15:08:37 mertz Exp $
 # This simple demo has been developped by C. Mertz <mertz@cena.fr>
 
 package textInput; # for avoiding symbol re-use between different demos
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 
 use Tk;
 use Tk::Zinc;
 use strict;
 
-use Tk::ZincText;  # the module for facilitating text input with zinc
+use Tk::Zinc::Text;  # the module for facilitating text input with zinc
 
 my $mw = MainWindow->new();
 
@@ -25,7 +25,7 @@ $text->pack(qw/-expand yes -fill both/);
 
 $text->insert('0.0',
 'This toy-appli demonstrates the use of the
-Tk::ZincText module. This module is designed for
+Tk::Zinc::Text module. This module is designed for
 facilitating text input "a la emacs" on text items or on
 fields of items such as tracks, waypoints or tabulars.');
 
@@ -38,7 +38,7 @@ my $zinc = $mw->Zinc(-width => 500, -height => 300,
 		     -borderwidth => 3, -relief => 'sunken',
 		     )->pack;
 
-new ZincText ($zinc);  # for mapping text input bindings on item with a 'text' tag.
+Tk::Zinc::Text->new ($zinc);  # for mapping text input bindings on item with a 'text' tag.
 
 
 ### creating a tabular with 3 fields, 2 of them being editable
