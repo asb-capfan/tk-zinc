@@ -1,0 +1,21 @@
+
+In perl/tk icons can't be neither shaped nor transparent (for
+image formats that support tranparency). This is not really
+a bug more a limitation due to the very old version of Tk
+available within perl/tk and the way images are handled in
+Tkzinc.
+
+Text stippling is not available under openGL.
+
+Line ends and line joins are not fully implemented under openGL.
+The default behavior if to draw round ends and joins.
+
+Line dashes are not really usable in openGL. Some cases work ok,
+like aligned rectangles and other not, like curves and arcs.
+
+Tiling/stippling begin on the item or item bounding box edge
+rather than on the border edge so that the tile/stipple is
+partially masked by the border.
+
+Maps are not rendered filled in openGL. The code of maps still
+lags behind.

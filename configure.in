@@ -1,0 +1,243 @@
+dnl 
+dnl Process this file with autoconf to produce a configure script.
+dnl autoconf 2.13 should work fine. However autoconf >= 2.53 and
+dnl perhaps versions in between (2.50 and 2.52) are not directly usuable.
+dnl 
+dnl
+dnl This configure.in is derived from the Sample TEA template which is:
+dnl
+dnl Copyright (c) 1999 Scriptics Corporation.
+dnl Copyright (c) 2002 ActiveState SRL.
+dnl
+dnl
+dnl $Id: configure.in,v 1.13 2003/06/16 15:05:19 lecoanet Exp $
+
+#-----------------------------------------------------------------------
+# Check the source path of the package
+#-----------------------------------------------------------------------
+AC_INIT
+
+#-----------------------------------------------------------------------
+# Setup the CONFIGDIR to the path of the directory containing the
+# configuration files
+#-----------------------------------------------------------------------
+AC_CONFIG_AUX_DIR(tclconfig)
+CONFIGDIR=${srcdir}/tclconfig
+AC_SUBST(CONFIGDIR)
+
+#-----------------------------------------------------------------------
+# Define the PACKAGE variable
+#--------------------------------------------------------------------
+PACKAGE=Tkzinc
+
+#--------------------------------------------------------------------
+# Call TEA_INIT as the first TEA_ macro to set up initial vars.
+# This will define a ${TEA_PLATFORM} variable == "unix" or "windows".
+#
+# Keep it here we will need ${TEA_PLATFORM} soon.
+#--------------------------------------------------------------------
+TEA_INIT
+
+#-----------------------------------------------------------------------
+# Define the VERSION variable
+#
+# VERSION is constructed from MAJOR_VERSION, MINOR_VERSION and
+# PATCHLEVEL. The windows variant does not containt a dot.
+#-----------------------------------------------------------------------
+MAJOR_VERSION=3
+MINOR_VERSION=2
+PATCHLEVEL=94
+
+VERSION=${MAJOR_VERSION}.${MINOR_VERSION}.${PATCHLEVEL}
+
+AC_SUBST(VERSION)
+AC_SUBST(PACKAGE)
+AC_SUBST(Tkzinc_LIB_FILE)
+AC_SUBST(Tkzincstub_LIB_FILE)
+
+#--------------------------------------------------------------------
+# This define a preprocessor macro -DVERSION=3.2.6i to include
+# the package version in the sources.
+#--------------------------------------------------------------------
+eval AC_DEFINE_UNQUOTED(VERSION, "${VERSION}")
+
+#--------------------------------------------------------------------
+# Load the tclConfig.sh file
+#--------------------------------------------------------------------
+TEA_PATH_TCLCONFIG
+TEA_LOAD_TCLCONFIG
+
+#--------------------------------------------------------------------
+# Load the tkConfig.sh file
+#--------------------------------------------------------------------
+TEA_PATH_TKCONFIG
+TEA_LOAD_TKCONFIG
+
+#-----------------------------------------------------------------------
+# Handle the --prefix=... option by defaulting to what Tcl gave.
+# Must be called after TEA_LOAD_TCLCONFIG and before TEA_SETUP_COMPILER.
+#-----------------------------------------------------------------------
+TEA_PREFIX
+
+#-----------------------------------------------------------------------
+# Standard compiler checks.
+# This sets up CC by using the CC env var, or looks for gcc otherwise.
+# This also calls AC_PROG_CC, AC_PROG_INSTALL and a few others to create
+# the basic setup necessary to compile executables.
+#-----------------------------------------------------------------------
+TEA_SETUP_COMPILER
+AC_CYGWIN
+AC_MINGW32
+
+#--------------------------------------------------------------------
+# Choose which headers you need.  Extension authors should try very
+# hard to only rely on the Tcl public header files.  Internal headers
+# contain private data structures and are subject to change without
+# notice.
+# This MUST be called after TEA_LOAD_TCLCONFIG / TEA_LOAD_TKCONFIG
+#
+# Sorry but zinc needs the internal functionality provided by Tk
+# even if this is less convenient and secure.
+#--------------------------------------------------------------------
+TEA_PRIVATE_TCL_HEADERS
+TEA_PRIVATE_TK_HEADERS
+
+#--------------------------------------------------------------------
+# A few miscellaneous platform-specific items:
+#
+# Define the special symbol BUILD_Tkzinc for Windows so
+# that we create the export library with the dll.
+#
+# Windows creates a few extra files that need to be cleaned up.
+#
+# Define any extra compiler flags in the PACKAGE_CFLAGS variable.
+# These will be appended to the current set of compiler flags for
+# your system.
+#--------------------------------------------------------------------
+if test "${TEA_PLATFORM}" = "windows" ; then
+    AC_DEFINE(BUILD_Tkzinc)
+    CLEANFILES="pkgIndex.tcl *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
+    EXTRA_SOURCES='$(WIN_SOURCES)'
+else
+    CLEANFILES="pkgIndex.tcl"
+    EXTRA_SOURCES='$(UNIX_SOURCES)'
+fi
+CLEANFILES="${CLEANFILES} doc/*.dvi doc/*.aux doc/*.idx doc/*.ilg doc/*.ind"
+CLEANFILES="${CLEANFILES} doc/*.lof doc/*.log doc/*.out doc/*.toc doc/*.tpt"
+CLEANFILES="${CLEANFILES} doc/refman doc/refman.pdf"
+CLEANFILES="${CLEANFILES} Perl/Zinc.o Perl/Zinc.c Perl/Zinc.bs Perl/blib"
+CLEANFILES="${CLEANFILES} Perl/pm_to_blib Perl/Makefile Perl/Makefile.PL"
+CLEANFILES="${CLEANFILES} Perl/debug/Makefile Perl/debug/pm_to_blib Perl/debug/blib"
+CLEANFILES="${CLEANFILES} Perl/demos/Makefile Perl/demos/pm_to_blib Perl/demos/blib"
+CLEANFILES="${CLEANFILES} Python/Zinc.py"
+
+AC_SUBST(CLEANFILES)
+AC_SUBST(EXTRA_SOURCES)
+
+#--------------------------------------------------------------------
+# Check whether --enable-threads or --disable-threads was given.
+# This call disable threading support as a default.
+#--------------------------------------------------------------------
+TEA_ENABLE_THREADS(no)
+
+#--------------------------------------------------------------------
+# The statement below defines a collection of symbols related to
+# building as a shared library instead of a static library.
+#--------------------------------------------------------------------
+TEA_ENABLE_SHARED
+
+#--------------------------------------------------------------------
+# This macro figures out what flags to use with the compiler/linker
+# when building shared/static debug/optimized objects.  This information
+# can be taken from the tclConfig.sh file, but this figures it all out.
+#--------------------------------------------------------------------
+TEA_CONFIG_CFLAGS
+
+#--------------------------------------------------------------------
+# Set the default compiler switches based on the --enable-symbols option.
+#--------------------------------------------------------------------
+TEA_ENABLE_SYMBOLS
+
+#--------------------------------------------------------------------
+# For Unix/Tk builds, make sure that the X libraries/headers are found.
+# This must be called after TEA_CONFIG_CFLAGS as it adjusts LIBS.
+#--------------------------------------------------------------------
+TEA_PATH_X
+
+#--------------------------------------------------------------------
+# This sets the tesselation library name and adjust LIBS to
+# include this library.
+#--------------------------------------------------------------------
+if test "${TEA_PLATFORM}" = "windows" ; then
+    Tess_LIB_FILE=tess.lib
+else
+    Tess_LIB_FILE=libtess.a
+fi
+LIBS="${LIBS} -L. -ltess"
+AC_SUBST(Tess_LIB_FILE)
+
+#--------------------------------------------------------------------
+# Tkzinc is always linked against the tcl and tk stubs libraries
+#--------------------------------------------------------------------
+AC_DEFINE(USE_TCL_STUBS)
+AC_DEFINE(USE_TK_STUBS)
+
+#--------------------------------------------------------------------
+# This macro generates a line to use when building a library.  It
+# depends on values set by the TEA_ENABLE_SHARED, TEA_ENABLE_SYMBOLS,
+# and TEA_LOAD_TCLCONFIG macros above.
+#--------------------------------------------------------------------
+TEA_MAKE_LIB
+
+#--------------------------------------------------------------------
+# Add platform libs to LIBS or SHLIB_LD_LIBS as necessary.
+#--------------------------------------------------------------------
+if test "${TEA_PLATFORM}" = "windows" ; then
+    LIBS="${LIBS} -lgdi32 -luser32 -lwsock32"
+fi
+#SHLIB_LD_LIBS="${SHLIB_LD_LIBS} -lxxxx"
+
+#--------------------------------------------------------------------
+# Find tclsh so that we can run pkg_mkIndex to generate the pkgIndex.tcl
+# file during the install process.  Don't run the TCLSH_PROG through
+# ${CYGPATH} because it's being used directly by make.
+# Require that we use a tclsh shell version 8.2 or later since earlier
+# versions have bugs in the pkg_mkIndex routine.
+# Add WISH as well since Tkzinc  is a Tk extension.
+#--------------------------------------------------------------------
+TEA_PROG_TCLSH
+TEA_PROG_WISH
+
+#--------------------------------------------------------------------
+# Define the SHAPE symbol to control the X shape extension support.
+# This must be called after TEA_CONFIG_CFLAGS as it adjusts LIBS.
+#--------------------------------------------------------------------
+ZINC_ENABLE_SHAPE
+
+#--------------------------------------------------------------------
+# Adjust the library set based on --enable-gl option. Define also
+# the GL and GL_DAMAGE symbols to configure the code.
+# This must be called after TEA_CONFIG_CFLAGS as it adjusts LIBS.
+#--------------------------------------------------------------------
+ZINC_ENABLE_GL
+
+#--------------------------------------------------------------------
+# Define the OM symbol to control inclusion of the overlap manager
+# support.
+#--------------------------------------------------------------------
+ZINC_ENABLE_OM
+
+#--------------------------------------------------------------------
+# Define the PTK symbol to control whether zinc is built for Tk or
+# for perl/Tk.
+#--------------------------------------------------------------------
+ZINC_ENABLE_PTK
+
+#--------------------------------------------------------------------
+# Finally, substitute all of the various values into the Makefile.
+# Add other files needing substitution after Makefile.
+#--------------------------------------------------------------------
+AC_SUBST(aux_BINARIES)
+AC_SUBST(bin_BINARIES)
+
+AC_OUTPUT([Makefile Python/Zinc.py Perl/Makefile.PL])

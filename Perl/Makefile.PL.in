@@ -1,0 +1,15 @@
+#
+#
+use Tk::MMutil;
+use Tk::Config;
+
+Tk::MMutil::TkExtMakefile(
+			  'CC' => 'gcc',
+			  'LD' => 'gcc',
+			  'CCCDLFLAGS' => '-fPIC',
+			  'NAME' => 'Tk::Zinc',
+			  'OBJECT' => '$(O_FILES)',
+			  'VERSION_FROM' => 'Zinc.pm',
+			  'XS_VERSION' => $Tk::Config::VERSION,
+			  'INC' => "-I. -I@PERL_TK_LIB@/pTk",
+			  'LIBS' => ["-L/usr/X11R6/lib -lX11 -L.. -l@PACKAGE@@VERSION@"]);

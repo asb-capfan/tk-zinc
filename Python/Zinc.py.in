@@ -1,0 +1,452 @@
+#
+# Zinc.py -- Python interface to the tkzinc widget.
+#
+# Authors         : Frederic Lepied, Patrick Lecoanet
+# Created Date    : Thu Jul 22 09:36:04 1999
+#
+# $Id: Zinc.py.in,v 1.2 2003/04/16 10:17:51 lecoanet Exp $
+#
+#
+# Copyright (c) 1999 CENA --
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Library General Public
+# License as published by the Free Software Foundation; either
+# version 2 of the License, or (at your option) any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Library General Public License for more details.
+#
+# You should have received a copy of the GNU Library General Public
+# License along with this code; if not, write to the Free
+# Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+#
+
+__version__ = "$Revision: 1.2 $"
+
+import string, types
+from Tkinter import *
+from Tkinter import _cnfmerge, _flatten
+import traceback
+
+ZINC_NO_PART=-1
+ZINC_CURRENT_POSITION=-2
+ZINC_SPEED_VECTOR=-3
+ZINC_LEADER=-4
+ZINC_CONNECTION=-5
+
+# current part dictionnary
+ZINC_DPART = { 'position'      : ZINC_CURRENT_POSITION,
+			   'speedvector'   : ZINC_SPEED_VECTOR ,
+			   'leader'        : ZINC_LEADER,
+			   'connection'    : ZINC_CONNECTION}
+# notes : 'field' will be return when currentpart is a field 
+
+def havetkzinc(window):
+	'''load Zinc dynamic sharable object library , test if everything is ok
+if  ok :return zinc version
+if nok : return 0 '''
+	try:
+		window.tk.call('load', '@Tkzinc_LIB_FILE@')
+		# Call a function from the package to autoload it
+		# and verify that all is OK.
+		sversion = window.tk.call('zinc') + " Zinc.py %s" % __version__
+	except TclError:
+		traceback.print_exc()
+		return 0
+	return sversion
+
+class Zinc(Widget):
+	def __str__(self):
+                return("Zinc instance")
+	def __init__(self, master=None, cnf={}, **kw):
+		Widget.__init__(self, master, 'zinc', cnf, kw)
+		self.items = {}
+
+	def add(self, itemType, *args, **kw):
+# 		if len(args) != 0:
+# 			cnf = args[-1]
+# 		else:
+# 			cnf={}
+# 		if type(cnf) in (DictionaryType, TupleType):
+# 			args = args[:-1]
+# 		else:
+# 			cnf = {}
+		#args = _flatten(args)
+		args=list(args)
+		args=args+list(self._options(kw))
+		return self.tk.getint(
+			self.tk.call(self._w, 'add', itemType,*args))
+	
+	def addtag(self, *args):
+		self._do('addtag', args)
+
+	def addtag_above(self, newtag, tagOrId):
+		self.addtag(newtag, 'above', tagOrId)
+
+	def addtag_all(self, newtag):
+		self.addtag(newtag, 'all')
+
+	def addtag_atpoint(self, newtag, x, y, halo=None, start=None):
+		self.addtag(newtag, 'atpoint', x, y, halo, start)
+
+	def addtag_atpriority(self, newtag, pri):
+		self.addtag(newtag, 'atpriority', pri)
+
+	def addtag_below(self, newtag, tagOrId):
+		self.addtag(newtag, 'below', tagOrId)
+
+	def addtag_enclosed(self, newtag, x1, y1, x2, y2):
+		self.addtag(newtag, 'enclosed', x1, y1, x2, y2)
+
+	def addtag_overlapping(self, newtag, x1, y1, x2, y2):
+		self.addtag(newtag, 'overlapping', x1, y1, x2, y2)
+
+	def addtag_withtag(self, newtag, tagOrId):
+		self.addtag(newtag, 'withtag', tagOrId)
+
+	def addtag_withtype(self, newtag, type):
+		self.addtag(newtag, 'withtype', type)
+
+	def anchorxy(self, *args):
+		self._do('anchorxy', args)
+
+	def bbox(self, *args):
+		self._do('bbox', args)
+
+	def becomes(self, *args):
+		self._do('becomes', args)
+
+#     def bind(self):
+#         pass
+
+	def bind_tag(self, tagOrId, sequence=None, func=None, add=None):
+		'''return a funcid which can be usefull for unbinding'''
+		return self._bind((self._w, 'bind', tagOrId),
+						  sequence, func, add)
+
+#     def cget(self):
+#         pass
+
+	def chggroup(self, *args):
+		self._do('chggroup', args)
+
+	def clone(self, *args):
+		self._do('clone', args)
+
+#     def configure(self):
+#         pass
+
+	def coords(self, *args):
+		self._do('coords', args)
+
+	def currentpart(self):
+		'''return a string (result from zinc current part function) and an
+integer representing either the number of the field either the number of the
+item part either ZINC_NO_PART'''
+		scurrentp = self._do('currentpart')
+		if scurrentp == "":
+			rvalue = ZINC_NO_PART
+		else:
+			try:
+				rvalue = string.atoi(scurrentp)
+			except:
+				try:
+					rvalue = ZINC_DPART[scurrentp]
+				except:
+					rvalue = ZINC_NO_PART
+			else:
+				# string to integer succeeded
+				scurrentp = "field"
+		return(scurrentp,rvalue)
+				   
+	def dtag(self, *args):
+		self._do('dtag', args)
+
+	def find(self, *args):
+		return self._getints(self._do('find', args)) or ()
+
+	def find_above(self, tagOrId):
+		return self.find('above', tagOrId)
+
+	def find_all(self):
+		return self.find('all')
+
+	def find_atpoint(self, x, y, halo=None, start=None):
+		return self.find('atpoint', x, y, halo, start)
+
+	def find_atpriority(self, pri):
+		return self.find('atpriority', pri)
+
+	def find_below(self, tagOrId):
+		return self.find('below', tagOrId)
+
+	def find_enclosed(self, x1, y1, x2, y2):
+		return self.find('enclosed', x1, y1, x2, y2)
+
+	def find_overlapping(self, x1, y1, x2, y2):
+		return self.find('overlapping', x1, y1, x2, y2)
+
+	def find_withtag(self, tagOrId):
+		return self.find('withtag', tagOrId)
+
+	def find_withtype(self, type):
+		return self.find('withtag', type)
+
+	def gettags(self, *args):
+		return self.tk.splitlist(self._do('gettags', args))
+
+	def group(self, *args):
+		self._do('group', args)
+
+	def hasanchors(self, *args):
+		self._do('hasanchors', args)
+
+	def hasfields(self, *args):
+		self._do('hasanchors', args)
+
+	def hasparts(self, *args):
+		self._do('hasanchors', args)
+
+#     def hastag(self):
+#         pass
+
+	def itemcget(self, tagOrId, option):
+		return self._do('itemcget', (tagOrId, '-'+option))
+
+	def itemfieldcget(self, tagOrId, field, option):
+		return self._do('itemcget', (tagOrId, field, '-'+option))
+
+	def itemconfigure(self, tagOrId, field=None, **kw):
+		'''either get the dictionnary of possible attributes (if kw is None)
+either allow to set Items attributes or Field attributes '''
+		if not kw:
+			cnf = {}
+			for x in self.tk.split(
+				field != None and self._do('itemconfigure', (tagOrId, field)) or
+				self._do('itemconfigure', (tagOrId,))):
+				cnf[x[0][1:]] = (x[0][1:],) + x[1:]
+			return cnf
+		if field != None:
+			self._do('itemconfigure', (tagOrId, str(field),)
+					 + self._options({}, kw))
+		else:
+			self._do('itemconfigure', (tagOrId,) + self._options({},kw))
+
+	# _dp voir si cette instruction est a execute ici
+	# permet de creer un synonyme de itemconfigure
+	itemconfig = itemconfigure
+
+	def loweritem(self, *args):
+		self._do('lower', args)
+
+	def monitor(self, *args):
+		self._do('monitor', args)
+	
+	def raiseitem(self, *args):
+		self._do('raise', args)
+
+	def remove(self, *args):
+		self._do('remove', args)
+	
+	def rotate(self, *args):
+		self._do('rotate', args)
+	
+	def scale(self, xFactor=None, yFactor=None, tagOrId=None):
+		if yFactor == None:
+			return self.tk.getdouble(self._do('scale'))
+		else:
+			if tagOrId == None:
+				self._do('scale', (xFactor, yFactor))
+			else:
+				self._do('scale', (tagOrId, xFactor, yFactor))
+
+	def tdelete(self, *args):
+		self._do('tdelete', args)
+	
+	def transform(self, *args):
+		# self._getints(self._do('transform', args))
+		return self._getdoubles(self._do('transform', args))
+	
+	def translate(self, dx=None, dy=None, tagOrId=None):
+		if dx == None:
+			return self._getints(self._do('translate'))
+		else:
+			if tagOrId == None:
+				self._do('translate', (dx, dy))
+			else:
+				self._do('translate', (tagOrId, dx, dy))
+
+	def treset(self, *args):
+		self._do('treset', args)
+	
+	def trestore(self, *args):
+		self._do('trestore', args)
+	
+	def tsave(self, *args):
+		self._do('tsave', args)
+	
+	def type(self, tagOrId):
+		return self._do('type', (tagOrId,))
+
+
+class ZincItem:
+	def __init__(self, zinc, itemType, *args, **kw):
+		self.zinc = zinc
+		self.id = zinc.add(itemType, *args, **kw)
+		zinc.items[self.id] = self
+		
+	def __str__(self):
+		return str(self.id)
+
+	def __repr__(self):
+		return str(self.id)
+
+	def delete(self):
+		del self.zinc.items[self.id]
+		try:
+			self.zinc.remove(self.id)
+		except:
+			pass
+	def __getitem__(self, key):
+		'''allow to get attribute by self["key"] '''
+		if ( key == "coords" ):
+			return self.zinc.coords()
+		return self.zinc.itemcget(self.id, key)
+
+	def __setitem__(self, key, value):
+		'''allow to set item attrbutes, eg. for a track position attributes
+just writing :
+a = ZincItem(myzinc, ...)
+a["position"]    = (x,y)
+Notes : when setting multiple attributes using itemconfigure is more efficient '''
+		if ( key is "coords" ):
+			self.zinc.coords(self.id,value)
+		else:
+			self.zinc.itemconfigure(self.id, **{key:value})
+
+	def keys(self):
+		if not hasattr(self, '_keys'):
+			self._keys = {}
+			config=self.zinc.itemconfig(self.id)
+			for x in config.keys():
+				self._keys[x] = config[x][1]
+		return self._keys
+
+	def has_key(self, key):
+		return key in self.keys()
+
+	def bind(self, sequence=None, command=None, add=None):
+		'''return a funcid which can be used to unbind
+notes: unbinding can be done by bind("<seq>","") or using native tkinter
+unbind method '''
+		return(self.zinc.bind_tag(self.id, sequence, command, add))
+		
+	def cget(self, attr):
+		return self.zinc.itemcget(self.id, attr)
+		   
+	def fieldcget(self, field, attr):
+		return self.zinc.itemfieldcget(self.id, field, attr)
+
+	def itemconfigure(self, field=None, **kw):
+		self.zinc.itemconfigure(self, field,**kw)
+
+	def rotate(self, factor):
+		return self.zinc.rotate(factor,self.id)
+	
+	def scale(self, xFactor=None, yFactor=None):
+		return self.zinc.scale(xFactor, yFactor,self.id)
+
+	def translate(self, dx=None, dy=None):
+		self.zinc.translate(self.id,dx,dy)
+				
+class Arc(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'arc', *args, **kw)    
+
+class Group(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'group', *args, **kw)    
+
+class Icon(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'icon', *args, **kw)    
+
+class Map(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'map', *args, **kw)
+	
+class Curve(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'curve', *args, **kw)    
+
+class Rectangle(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'rectangle', *args, **kw)    
+
+class Reticle(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'reticle', *args, **kw)    
+
+class Tabular(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'tabular', *args, **kw)    
+
+class Text(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'text', *args, **kw)    
+
+class Track(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'track', *args, **kw)
+	
+class WayPoint(ZincItem):
+	def __init__(self, zinc, *args, **kw):
+		ZincItem.__init__(self, zinc, 'waypoint', *args, **kw)
+	
+
+# Class to hold mapinfos used by the Map Item class 
+class Mapinfo:
+	def __init__(self, interp, *args):
+		self.interp=interp.tk
+		apply(self.interp.call, ('mapinfo', self, 'create'))
+		
+	def __repr__(self):
+		return `id(self)`
+
+	def add_text(self, text_style, line_style, x, y, text):
+		self.interp.call('mapinfo', self, 'add', 'text', text_style,
+						 line_style, x, y, text)
+
+	def add_line(self, line_style, width, x1, y1, x2, y2):
+		self.interp.call('mapinfo', self, 'add', 'line', line_style,
+						 width, x1, y1, x2, y2)
+
+	def add_arc(self, line_style, width, cx, cy, radius, start, extent):
+		self.interp.call('mapinfo', self, 'add', 'arc', line_style,
+						 width, cx, cy, radius, start, extent)
+
+	def scale(self, factor):
+		self.interp.call('mapinfo', self, 'scale', factor)
+		
+	def translate(self, xAmount, yAmount):
+		self.interp.call('mapinfo', self, 'translate', xAmount, yAmount)
+		
+class Videomap (Mapinfo):
+	def __init__(self, tk, *args):
+		self.tk=tk.tk
+		args=args + (self,)
+		self.tk.call('videomap', 'load', *args )
+
+# ---- self-test ----------------------------------------------------------
+if __name__ == '__main__':
+	from Tkinter import *
+	tk = Tk()
+	zincversion = havetkzinc(tk) 
+	if zincversion :
+		print "Zinc version [%s] seems ok." % zincversion
+
+# Zinc.py ends here
