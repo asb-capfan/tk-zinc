@@ -4,12 +4,12 @@
 #
 #        Author : Daniel Etienne <etienne@cena.fr>
 #
-# $Id: Debug.pm,v 1.50 2004/10/07 15:27:43 etienne Exp $
+# $Id: Debug.pm,v 1.58 2005/05/12 15:51:12 etienne Exp $
 #---------------------------------------------------------------------------
 package Tk::Zinc::Debug;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.50 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.58 $ =~ /(\d+)\.(\d+)/);
 
 use strict 'vars';
 use vars qw(@ISA @EXPORT @EXPORT_OK $WARNING $endoptions);
@@ -53,6 +53,7 @@ my %on_command;
 my %off_command;
 my @znpackinfo;
 my $screenwidth;
+my $balloonhelp;
 #---------------------------------------------------------------------------
 #
 # Initialisation functions for plugin usage
@@ -152,7 +153,7 @@ sub init {
     for (values(%button)) {
 	$_->configure(-selectcolor => $bg);
     }
-    my $balloonhelp = &balloonhelp();
+    $balloonhelp = &balloonhelp();
     $button{balloon}->toggle;
     $control_tl->withdraw();
     $button{zn}->configure(-command => \&focuscommand);
@@ -1112,72 +1113,149 @@ sub showtransfoparams {
 
     my ($label, $zinc, $item) = @_;
     my @m = $zinc->tget($item);
-    my ($xt, $yt, $xsc, $ysc, $a, $xsk) = $zinc->tget($item, 'all');
+    my ($m00, $m01, $m10, $m11, $m20, $m21) = @m;
+    my ($xt, $yt, $xsc, $ysc, $a, $xsk, $ysk) = $zinc->tget($item, 'all');
+    # bug zinc 
+    $ysk = 0 unless defined $ysk;
+    for ($m00, $m01, $m10, $m11, $m20, $m21, $xt, $yt, $xsc, $ysc, $a, $xsk, $ysk) {
+	$_ = sprintf("%.2f", $_) if /^-?\d+\.\d/;
+    }
     $transfo_tl{$item}->destroy if Tk::Exists($transfo_tl{$item});
     $transfo_tl{$item} = $control_tl->Toplevel();
     $transfo_tl{$item}->transient($result_tl{$label})
 	if Tk::Exists($result_tl{$label});
     my $title = "Transformations of item $item";
     $transfo_tl{$item}->title($title);
-    my $r = 0;
-    my $c = 0;
+    my $bgcolor = 'ivory';
     my $fm1 = $transfo_tl{$item}->Frame()->pack(-side => 'top',
 						-padx => 20,
-						-pady => 20,
+						-pady => 10,
+						-expand => 1,
+						-fill => 'x',
 						);
-    my $fm2 = $transfo_tl{$item}->Frame()->pack(-side => 'top',
-						-padx => 20,
-						-pady => 20,
-						);
-    # translate params
-    $fm1->Label(-text => 'translate', -relief => 'ridge')
-	->grid(-row => $r, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $fm1->Label(-text => $xt, -relief => 'ridge')
-	->grid(-row => $r, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $fm1->Label(-text => $yt, -relief => 'ridge')
-	->grid(-row => $r++, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $c = 0;
-    # rotate params
-    $fm1->Label(-text => 'rotate', -relief => 'ridge')
-	->grid(-row => $r, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $fm1->Label(-text => $a, -relief => 'ridge')
-	->grid(-row => $r++, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $c = 0;
-    # scale params
-    $fm1->Label(-text => 'scale', -relief => 'ridge')
-	->grid(-row => $r, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $fm1->Label(-text => $xsc, -relief => 'ridge')
-	->grid(-row => $r, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $fm1->Label(-text => $ysc, -relief => 'ridge')
-	->grid(-row => $r++, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $c = 0;
-    # skew params
-    $fm1->Label(-text => 'skew', -relief => 'ridge')
-	->grid(-row => $r, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-    $fm1->Label(-text => $xsk, -relief => 'ridge')
-	->grid(-row => $r++, -column => $c++,
-	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
-
-   
-    my $btn = $fm2->Button(-text => 'treset',
-		)->pack(-side => 'left', -padx => 40, -pady => 10);
+    # set transformation to ident
+    my $btn = $fm1->Button(-text => "Show item with transformation\nset to identity",
+			   -bg => $bgcolor,
+			   )->pack(-side => 'top', -padx => 5, -pady => 10);
+    $balloonhelp->attach($btn,-balloonmsg =>
+			 "Click and maintain to show the transformation  \n".
+			 "animation. Use btn1, btn2 or btn3 to select the\n".
+			 "best background color for a good visibility.   ");
     $btn->bind('<1>', [\&showtransfo, $zinc, $item, 0]);
     $btn->bind('<2>', [\&showtransfo, $zinc, $item, 1]);
     $btn->bind('<3>', [\&showtransfo, $zinc, $item, 2]);
+    
+    my $fm11 = $fm1->Frame()->pack(-side => 'left',
+				   -padx => 20,
+				   );
+
+    my ($set_cb, $reset_cb, $upd_cb);
+    
+    # matrix
+    my $r = 0;
+    my $c = 0;
+    $fm11->Label(-text => 'matrix', -relief => 'ridge', -bg => $bgcolor)
+	->grid(-row => $r++, -columnspan => 2,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    $fm11->Label(-textvariable => \$m00, -relief => 'ridge')
+	->grid(-row => $r, -column => $c,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    $fm11->Label(-textvariable => \$m01, -relief => 'ridge')
+	->grid(-row => $r++, -column => $c+1,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    $fm11->Label(-textvariable => \$m10, -relief => 'ridge')
+	->grid(-row => $r, -column => $c,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    $fm11->Label(-textvariable => \$m11, -relief => 'ridge')
+	->grid(-row => $r++, -column => $c+1,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    $fm11->Label(-textvariable => \$m20, -relief => 'ridge')
+	->grid(-row => $r, -column => $c,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    $fm11->Label(-textvariable => \$m21, -relief => 'ridge')
+	->grid(-row => $r++, -column => $c+1,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    
+
+
+    my $fm12 = $fm1->Frame()->pack(-side => 'left',
+				   -padx => 20,
+				   );
+    my ($e_xt, $e_yt, $e_xsc, $e_ysc, $e_a, $e_xsk, $e_ysk);
+
+    $set_cb = sub {
+	$zinc->treset($item);
+	$zinc->translate($item, $e_xt, $e_yt);
+	$zinc->rotate($item, $e_a);
+	$zinc->scale($item, $e_xsc, $e_ysc);
+	$zinc->skew($item, $e_xsk, $e_ysk);
+	($m00, $m01, $m10, $m11, $m20, $m21) = $zinc->tget($item);
+	for ($m00, $m01, $m10, $m11, $m20, $m21) {
+	    $_ = sprintf("%.2f", $_) if /^-?\d+\.\d/;
+	}
+    };
+
+    # translate params
+    $r = 0;
+    $c = 0;    
+    $fm12->Label(-text => 'translate', -relief => 'ridge', -bg => $bgcolor)
+	->grid(-row => $r, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+
+    &entrytransfo($fm12, $item, $zinc, 'xt', $xt, \$e_xt, 4, $set_cb)
+    	->grid(-row => $r, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    
+    &entrytransfo($fm12, $item, $zinc, 'yt', $yt, \$e_yt, 4, $set_cb)
+	->grid(-row => $r++, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    
+    # rotate params
+    $c = 0;
+    $fm12->Label(-text => 'rotate', -relief => 'ridge', -bg => $bgcolor)
+	->grid(-row => $r, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+
+    &entrytransfo($fm12, $item, $zinc, 'a', $a, \$e_a, 4, $set_cb)
+	->grid(-row => $r++, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+
+    # scale params
+    $c = 0;
+    $fm12->Label(-text => 'scale', -relief => 'ridge', -bg => $bgcolor)
+	->grid(-row => $r, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+
+    &entrytransfo($fm12, $item, $zinc, 'xsc', $xsc, \$e_xsc, 4, $set_cb)
+	->grid(-row => $r, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    &entrytransfo($fm12, $item, $zinc, 'ysc', $ysc, \$e_ysc, 4, $set_cb)
+	->grid(-row => $r++, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    
+    # skew params
+    $c = 0;
+    $fm12->Label(-text => 'skew', -relief => 'ridge', -bg => $bgcolor)
+	->grid(-row => $r, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    
+    &entrytransfo($fm12, $item, $zinc, 'xsk', $xsk, \$e_xsk, 4, $set_cb)
+	->grid(-row => $r, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+    &entrytransfo($fm12, $item, $zinc, 'ysk', $ysk, \$e_ysk, 4, $set_cb)
+	->grid(-row => $r++, -column => $c++,
+	       -ipady => 5, -ipadx => 5, -sticky => 'nswe');
+
+
+    my $fm2 = $transfo_tl{$item}->Frame()->pack(-side => 'top',
+						-padx => 20,
+						-pady => 0,
+						);
     $fm2->Button(-text => 'Close',
 		-command => sub {
 		    $transfo_tl{$item}->destroy;
 		    delete $transfo_tl{$item};
-		})->pack(-side => 'left', -padx => 40, -pady => 10);
+		})->pack(-side => 'top', -padx => 40, -pady => 20);
     
     
     
@@ -1205,9 +1283,6 @@ sub showresult {
     $control_tl->raise;
     my $fm = $result_tl{$label}->Frame()->pack(-side => 'bottom',
 				       );
-    $fm->Button(-text => 'Help',
-		-command => [\&showHelpAboutAttributes, $zinc]
-		)->pack(-side => 'left', -padx => 40, -pady => 10);
     $fm->Button(-text => 'Close',
 		-command => sub {
 		    $result_tl{$label}->destroy;
@@ -1221,6 +1296,7 @@ sub showresult {
 					      -height => 200,
 					      -width => 1024,
 					      );
+    &wheelmousebindings($result_fm);
     my $fm2 = $result_fm->Frame->pack;
     # attributes display
     &showattributes($zinc, $fm2, $label, \@items);
@@ -1477,25 +1553,35 @@ sub showattributes {
 	$idbtn->bind('<1>', [\&highlightitem, $zinc, $item, 0]);
 	$idbtn->bind('<2>', [\&highlightitem, $zinc, $item, 1]);
 	$idbtn->bind('<3>', [\&highlightitem, $zinc, $item, 2]);
+	$balloonhelp->attach($idbtn,-balloonmsg =>
+			     "Click and maintain to show the item.     \n".
+			     "Use btn1, btn2 or btn3 to select the best\n".
+			     "background color for a good visibility.  ");
 	# type
 	if ($type eq 'group') {
-	    $fm->Button(-text => $type,
-			-command => sub {
-			    my @items = $zinc->find('withtag', $item.".");
-			    &showresult("Content of group $item", $zinc, @items);
-			})
-		->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
+	    my $gbtn =
+		$fm->Button(-text => $type,
+			    -command => sub {
+				my @items = $zinc->find('withtag', $item.".");
+				&showresult("Content of group $item", $zinc, @items);
+			    });
+	    $gbtn->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
+	    $balloonhelp->attach($gbtn,-balloonmsg =>
+				 "Click to display the group's content.");
 	} else {
 	    $fm->Label(-text => $type, -relief => 'ridge')
 		->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
 	}
-	# group
+	# parent group
 	my $group = $zinc->group($item);
-	$fm->Button(-text => $group,
-		    -command => [\&showresult,
-				 "Attributes of group $group (parent of $item)",
-				 $zinc, $group])
-	    ->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
+	my $pgbtn =
+	    $fm->Button(-text => $group,
+			-command => [\&showresult,
+				     "Attributes of group $group (parent of $item)",
+				     $zinc, $group]);
+	$pgbtn->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
+	$balloonhelp->attach($pgbtn,-balloonmsg =>
+			     "Click to display the parent group's attributes.");
 	# priority
 	&entryoption($fm, $item, $zinc, -priority)
 	    ->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 2);
@@ -1514,10 +1600,15 @@ sub showattributes {
 	my ($xt, $yt, $xsc, $ysc, $a, $xsk) = $zinc->tget($item, 'all');
 	$tlabel = 'no' if ($xt == 0 and $yt == 0 and $xsc == 1 and $ysc == 1 and
 			   $a == 0 and $xsk == 0);
-	$fm->Button(-text => $tlabel, 
-		    -command => [\&showtransfoparams, $label, $zinc, $item],
-		    )
-	    ->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
+	my $tbtn =
+	    $fm->Button(-text => $tlabel, 
+			-command => [\&showtransfoparams, $label, $zinc, $item],
+			);
+	$tbtn->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
+	$balloonhelp->attach($tbtn,-balloonmsg =>
+			     "Click to display transformation parameters.\n".
+			     "Some of them can be updated.               ");
+	
 	# coords
 	my @coords = $zinc->coords($item);
 	my $coords;
@@ -1540,9 +1631,11 @@ sub showattributes {
 	    }
 	}
 	if (@coords > 2) {
-	    $fm->Button(-text => $coords,
-			-command => [\&showcoords, $label, $zinc, $item])
-		->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 2);
+	    my $cbtn = $fm->Button(-text => $coords,
+				   -command => [\&showcoords, $label, $zinc, $item]);
+	    $cbtn->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 2);
+	    $balloonhelp->attach($cbtn,-balloonmsg =>
+				 "Click to show all coordinates.");
 	} else {
 	    $fm->Label(-text => $coords, -relief => 'ridge')
 		->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
@@ -1568,9 +1661,12 @@ sub showattributes {
 	    }
 	}
 	if (@coords > 2) {
-	    $fm->Button(-text => $coords,
-			-command => [\&showdevicecoords, $label, $zinc, $item])
-		->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 2);
+	    my $dcbtn =
+		$fm->Button(-text => $coords,
+			    -command => [\&showdevicecoords, $label, $zinc, $item]);
+	    $dcbtn->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 2);
+	    $balloonhelp->attach($dcbtn,-balloonmsg =>
+				 "Click to show all device coordinates.");
 	} else {
 	    $fm->Label(-text => $coords, -relief => 'ridge')
 		->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
@@ -1587,6 +1683,8 @@ sub showattributes {
 		->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
 	    $btn->bind('<1>', [\&showbbox, $zinc, $item]);
 	    $btn->bind('<ButtonRelease-1>', [\&hidebbox, $zinc]) ;
+	    $balloonhelp->attach($btn,-balloonmsg =>
+				 "Click to show the bounding box.");
 	} else {
 	    $fm->Label(-text => "--", , -relief => 'ridge')
 		->grid(-row => $i, -column => $c++, -sticky => 'nswe', -ipadx => 5);
@@ -2196,58 +2294,6 @@ sub showHelpAboutTree {
 } # end showHelpAboutTree
 
 
-sub showHelpAboutAttributes {
-    
-    my $zinc = shift;
-    $helptree_tl->destroy if $helptree_tl and Tk::Exists($helptree_tl);
-    $helptree_tl = $zinc->Toplevel;
-    $helptree_tl->title("Help about attributes");
-
-    my $text = $helptree_tl->Scrolled('Text',
-				      -font => scalar $zinc->cget(-font),
-				      -wrap => 'word',
-				      -height => 30,
-				      -foreground => 'gray10',
-				      -scrollbars => 'oe',
-				      );
-    &wheelmousebindings($text);
-    $text->tagConfigure('keyword', -foreground => 'darkblue');
-    $text->tagConfigure('title', -foreground => 'ivory',
-			-background => 'gray60',
-			-spacing1 => 3,
-			-spacing3 => 3);
-
-    
-    $text->insert('end', " To highlight a specific item\n", 'title');
-    $text->insert('end',
-		  "\nThe column labeled 'Id' contains items identifiers buttons you ".
-		  "can press to highlight corresponding items in the application.\n");
-    &infoAboutHighlighting($text);
-    $text->insert('end', "\n\nThe column labeled 'Group' contains groups identifiers ".
-		  "buttons you can press to display groups content and attributes.\n\n");
-    $text->insert('end', " To display the bounding box of an item\n", 'title');
-    $text->insert('end', "\nUse the buttons of the column labeled ".
-		  "'Bounding Box'.\n\n");
-    $text->insert('end', " To change the value of attributes\n", 'title');
-    $text->insert('end', "\nMost of information fields are editable. A simple ".
-		  "colored feedback shows which attributes have changed. Use <");
-    $text->insert('end', "Control-z", "keyword");
-    $text->insert('end', "> sequence to restore the initial value\n\n");
-    $text->insert('end', " To visualize item's transformations\n", 'title');
-    $text->insert('end', "\nClick on the ");
-    $text->insert('end', "treset", "keyword");
-    $text->insert('end', " button in the first column. This action restores the item's transformation to its initial state. Transition is displayed with a fade-in/fade-out animation (needs OpenGL rendering)\n");
-
-    $text->configure(-state => 'disabled');
-    
-    $helptree_tl->Button(-command => sub {$helptree_tl->destroy},
-			 -text => 'Close')->pack(-side => 'bottom',
-						 -pady => 10);
-    $text->pack->pack(-side => 'top', -pady => 10, -padx => 10);
-
-} # end showHelpAboutAttributes
-
-
 sub showHelpAboutCoords {
     
     my $zinc = shift;
@@ -2322,6 +2368,18 @@ sub infoAboutHighlighting {
 } # end infoAboutHighlighting
 
 
+sub entryballoonhelp {
+
+    my $e = shift;
+    my $msg = shift;
+    $msg .= "Editable field. To restore the inital value\n".
+	    "after edition, enter <Control-z> sequence. ";
+    $balloonhelp->attach($e, -balloonposition => 'mouse',
+			 -balloonmsg => $msg);
+    
+} # end entryballoonhelp
+
+
 sub balloonhelp {
     
     my $b = $control_tl->Balloon(-balloonposition => 'widget',
@@ -2343,9 +2401,12 @@ sub balloonhelp {
 	       "is selected, draw rectangle using \n".
 	       "left mouse button.                ");
     $b->attach($button{tree}, -balloonmsg =>
-	       "Display the items hierarchy. Can\n".
-	       "build perl code corresponding to\n".
-	       "a specific branch.              ");
+	       #"Display the items hierarchy. Can\n".
+	       #"build perl code corresponding to\n".
+	       #"a specific branch.              ");
+	       "Display the items hierarchy. Provide\n".
+	       "some related functions, like building\n".
+	       "perl code corresponding to a branch.");
     $b->attach($button{item}, -balloonmsg =>
 	       "Locate an item in the items tree.  \n".
 	       "When this mode is on, select in   \n".
@@ -2356,6 +2417,9 @@ sub balloonhelp {
 	       "enter an item's id you want to inspect.");
     $b->attach($button{snapshot}, -balloonmsg =>
 	       "Snapshot the application window.");
+    $b->attach($button{cursorxy}, -balloonmsg =>
+	       "Display the device coordinates\n".
+	       "of the X cursor.              ");
     $b->attach($button{zoomminus}, -balloonmsg =>
 	       "Shrink the top group.");
     $b->attach($button{zoomplus}, -balloonmsg =>
@@ -2599,12 +2663,9 @@ EOF
 sub getsize {
     
     my $zinc = shift;
-    unless (defined $wwidth{$zinc} and $wwidth{$zinc} > 1) {
-        $zinc->update;
-	my $geom = $zinc->geometry =~ /(\d+)x(\d+)+/=~ /(\d+)x(\d+)+/;
-	($wwidth{$zinc}, $wheight{$zinc}) = ($1, $2);
-    }
-    
+    $wwidth{$zinc} = $zinc->cget(-width);
+    $wheight{$zinc} = $zinc->cget(-height);
+        
 } # end getsize
 
 
@@ -2612,7 +2673,7 @@ sub entryoption {
     
     my ($fm, $item, $zinc, $option, $def, $widthmax, $widthmin, $height) = @_;
     my $arrayflag;
-    unless ($def) {
+    unless (defined $def) {
 	my @def = $zinc->itemcget($item, $option);
 	if (@def > 1) {
 	    $arrayflag = 1;
@@ -2632,6 +2693,7 @@ sub entryoption {
 	$e = $fm->Entry();
 	$i0 = 0;
     }
+    &entryballoonhelp($e);
     my $width = length($def);
     $width = $widthmax if defined($widthmax) and $width > $widthmax;
     $width = $widthmin if defined($widthmin) and $width < $widthmin;
@@ -2643,7 +2705,7 @@ sub entryoption {
     
     $e->insert($i0, $def);
     $e->bind('<Control-z>', sub {
-	return unless $defaultoptions{$item}->{$option};
+	return unless defined $defaultoptions{$item}->{$option};
 	my $bg = $e->cget(-background);
 	$zinc->itemconfigure($item, $option => $defaultoptions{$item}->{$option});
 	$e->delete($i0, 'end');
@@ -2674,6 +2736,41 @@ sub entryoption {
     return $e;
 
 } # end entryoption
+
+
+sub entrytransfo {
+    
+    my ($fm, $item, $zinc, $attr, $def, $var, $width, $set_cb) = @_;
+    my $i0;
+    my $e;
+    $e = $fm->Entry(-textvariable => $var);
+    &entryballoonhelp($e);
+    $i0 = 0;
+    $width = length($def) unless $width;
+    $e->configure(-width => $width);   
+    $e->insert($i0, $def);
+    $e->bind('<Control-z>', sub {
+	my $bg = $e->cget(-background);
+	$e->delete($i0, 'end');
+	$e->insert($i0, $def);
+	$e->configure(-background => 'ivory');
+	$e->after(80, sub {$e->configure(-background => $bg, -foreground => 'black')});
+	&$set_cb;
+    });
+    $e->bind('<Key-Return>',
+	     sub {my $val = $e->get;
+		  my $bg = $e->cget(-background);
+		  $e->configure(-background => 'ivory');
+		  my $fg = ($val ne $def) ? 'blue' : 'black';
+		  $e->after(80, sub {
+		      $e->configure(-background => $bg, -foreground => $fg);
+		  });
+		  &$set_cb;
+	      });
+
+    return $e;
+
+} # end entrytransfo
 
 
 sub instances {
@@ -2793,7 +2890,8 @@ sub iconify {
 sub wheelmousebindings {
     my $w = shift;
     my $count = shift;
-    my $count = 3 unless $count > 0;
+    $count = 3 unless $count > 0;
+
     $w->bind('<Control-ButtonPress-4>', sub {$w->yview('scroll', -1, 'page')});
     $w->bind('<Shift-ButtonPress-4>', sub {$w->yview('scroll', -1, 'unit')});
     $w->bind('<ButtonPress-4>', sub {$w->yview('scroll', -$count, 'unit')});
@@ -2848,6 +2946,8 @@ You can find a particular item's position in the tree and you can highlight item
 
 In order to illustrate a graphical bug for example.
     
+=item B<o> display coordinates of the X cursor.
+    
 =item B<o> zoom/translate the top group
     
 =back
@@ -2898,7 +2998,7 @@ Daniel Etienne <etienne@cena.fr>
     
 =head1 HISTORY
 
-Oct 5 2004 : transformations are correctly managed in built code.
+Oct 5 2004 : transformations are correctly managed in built code. Transfo parameters can be displayed and set. new mode to display coordinateds of X cursor.
 
 Oct 14 2003 : add a control bar, and zoom/translate new functionalities. finditems(), tree(), snapshot() functions become deprecated, initialisation is done using the new init() function.
 

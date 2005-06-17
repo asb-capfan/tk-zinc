@@ -1,28 +1,17 @@
 /*
  * Color.c -- Color management module.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Thu Dec 16 15:41:53 1999
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Thu Dec 16 15:41:53 1999
  *
- * $Id: Color.c,v 1.30 2004/09/09 07:55:31 lecoanet Exp $
+ * $Id: Color.c,v 1.35 2005/06/03 09:03:34 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1999 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -62,8 +51,8 @@
  */
 static Tcl_HashTable gradient_table;
 
-static int initialized = 0;	/* 0 means static structures haven't been
-				 * initialized yet. */
+static int initialized = 0;     /* 0 means static structures haven't been
+                                 * initialized yet. */
 
 
 /*
@@ -71,13 +60,13 @@ static int initialized = 0;	/* 0 means static structures haven't been
  *
  * ColorInit --
  *
- *	Initialize the structure used for color management.
+ *      Initialize the structure used for color management.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	Read the code.
+ *      Read the code.
  *
  *----------------------------------------------------------------------
  */
@@ -98,11 +87,11 @@ ColorInit()
  *----------------------------------------------------------------------
  */
 XColor *
-ZnGetGradientColor(ZnGradient	*grad,
-		   ZnReal	position,
-		   unsigned short *alpha)
+ZnGetGradientColor(ZnGradient   *grad,
+                   ZnReal       position,
+                   unsigned short *alpha)
 {
-  int	 index, min, max;
+  int    index, min, max;
   XColor *shade=NULL;
   
   if ((grad->num_actual_colors == 1) || (position <= 0.0)) {
@@ -124,10 +113,10 @@ ZnGetGradientColor(ZnGradient	*grad,
     while (max - min != 1) {
       /*printf("color index %d, min: %d, max: %d\n", index, min, max);*/
       if (grad->actual_colors[index].position < position) {
-	min = index;
+        min = index;
       }
       else {
-	max = index;
+        max = index;
       }
       index = (max + min) / 2;
     }
@@ -142,9 +131,9 @@ ZnGetGradientColor(ZnGradient	*grad,
 
 void
 ZnInterpGradientColor(ZnGradient     *grad,
-		      ZnReal	     position,
-		      XColor	     *color,
-		      unsigned short *alpha)
+                      ZnReal         position,
+                      XColor         *color,
+                      unsigned short *alpha)
 {
   int index, min, max;
   ZnGradientColor *gc1, *gc2;
@@ -165,10 +154,10 @@ ZnInterpGradientColor(ZnGradient     *grad,
     while (max - min != 1) {
       /*printf("color index %d, min: %d, max: %d\n", index, min, max);*/
       if (grad->actual_colors[index].position < position) {
-	min = index;
+        min = index;
       }
       else {
-	max = index;
+        max = index;
       }
       index = (max + min) / 2;
     }
@@ -179,24 +168,24 @@ ZnInterpGradientColor(ZnGradient     *grad,
     if (rel_pos > gc1->control) {
       rel_pos = (rel_pos - gc1->control) * 100.0 / (100.0 - gc1->control);
       color->red = gc1->mid_rgb->red + 
-	(unsigned short) ((gc2->rgb->red - gc1->mid_rgb->red) * rel_pos / 100.0);
+        (unsigned short) ((gc2->rgb->red - gc1->mid_rgb->red) * rel_pos / 100.0);
       color->green = gc1->mid_rgb->green + 
-	(unsigned short) ((gc2->rgb->green - gc1->mid_rgb->green) * rel_pos / 100.0);
+        (unsigned short) ((gc2->rgb->green - gc1->mid_rgb->green) * rel_pos / 100.0);
       color->blue = gc1->mid_rgb->blue +
-	(unsigned short) ((gc2->rgb->blue - gc1->mid_rgb->blue) * rel_pos / 100.0);
+        (unsigned short) ((gc2->rgb->blue - gc1->mid_rgb->blue) * rel_pos / 100.0);
       *alpha = gc1->mid_alpha +
-	(unsigned short) ((gc2->alpha - gc1->mid_alpha) * rel_pos / 100.0);
+        (unsigned short) ((gc2->alpha - gc1->mid_alpha) * rel_pos / 100.0);
     }
     else {
       rel_pos = rel_pos * 100.0 / gc1->control;
       color->red = gc1->rgb->red +
-	(unsigned short) ((gc1->mid_rgb->red - gc1->rgb->red) * rel_pos / 100.0);
+        (unsigned short) ((gc1->mid_rgb->red - gc1->rgb->red) * rel_pos / 100.0);
       color->green = gc1->rgb->green +
-	(unsigned short) ((gc1->mid_rgb->green - gc1->rgb->green) * rel_pos / 100.0);
+        (unsigned short) ((gc1->mid_rgb->green - gc1->rgb->green) * rel_pos / 100.0);
       color->blue = gc1->rgb->blue +
-	(unsigned short) ((gc1->mid_rgb->blue - gc1->rgb->blue) * rel_pos / 100.0);
+        (unsigned short) ((gc1->mid_rgb->blue - gc1->rgb->blue) * rel_pos / 100.0);
       *alpha = gc1->alpha +
-	(unsigned short) ((gc1->mid_alpha - gc1->alpha) * rel_pos / 100.0);
+        (unsigned short) ((gc1->mid_alpha - gc1->alpha) * rel_pos / 100.0);
     }
   }
 }
@@ -207,13 +196,13 @@ ZnInterpGradientColor(ZnGradient     *grad,
  *
  * ZnGradientFlat --
  *
- *	Returns true if the gradient is defined by a single
- *	color.
+ *      Returns true if the gradient is defined by a single
+ *      color.
  *
  *--------------------------------------------------------------
  */
 ZnBool
-ZnGradientFlat(ZnGradient	*grad)
+ZnGradientFlat(ZnGradient       *grad)
 {
   return (grad->num_actual_colors == 1);
 }
@@ -224,38 +213,38 @@ ZnGradientFlat(ZnGradient	*grad)
  *
  * ZnGetReliefGradient --
  *
- *	Create a data structure containing a range of colors
- *	used to display a 3D border. Name contains the base
- *	color for the border. This is a slight variation on
- *	the syntax of a gradient that make life easier in this
- *	simple case.
+ *      Create a data structure containing a range of colors
+ *      used to display a 3D border. Name contains the base
+ *      color for the border. This is a slight variation on
+ *      the syntax of a gradient that make life easier in this
+ *      simple case.
  *
  * Results:
- *	The return value is a token for a data structure
- *	describing a gradient.  This token may be passed
- *	to the drawing routines.
- *	If an error prevented the gradient from being created
- *	then NULL is returned and an error message will be
- *	left in interp.
+ *      The return value is a token for a data structure
+ *      describing a gradient.  This token may be passed
+ *      to the drawing routines.
+ *      If an error prevented the gradient from being created
+ *      then NULL is returned and an error message will be
+ *      left in interp.
  *
  * Side effects:
- *	Data structures, etc. are allocated.
- *	It is the caller's responsibility to eventually call
- *	ZnFreeGradient to release the resources.
+ *      Data structures, etc. are allocated.
+ *      It is the caller's responsibility to eventually call
+ *      ZnFreeGradient to release the resources.
  *
  *--------------------------------------------------------------
  */
 ZnGradient *
-ZnGetReliefGradient(Tcl_Interp	*interp,
-		    Tk_Window	tkwin,
-		    Tk_Uid	name,
-		    unsigned short alpha)
+ZnGetReliefGradient(Tcl_Interp  *interp,
+                    Tk_Window   tkwin,
+                    Tk_Uid      name,
+                    unsigned short alpha)
 {
   XColor *base, light_color, dark_color, color;
-  char	 color_name[COLOR_NAME_SIZE];
-  char	 buffer[COLOR_NAME_SIZE*(3+2*ZN_RELIEF_STEPS)];
-  int	 j, tmp1, tmp2;
-  int	 red_range, green_range, blue_range;
+  char   color_name[COLOR_NAME_SIZE];
+  char   buffer[COLOR_NAME_SIZE*(3+2*ZN_RELIEF_STEPS)];
+  int    j, tmp1, tmp2;
+  int    red_range, green_range, blue_range;
   
   base = Tk_GetColor(interp, tkwin, name);
   /*
@@ -309,7 +298,7 @@ ZnGetReliefGradient(Tcl_Interp	*interp,
 
   buffer[0] = 0;
   sprintf(color_name, "#%02x%02x%02x;%d|",
- 	  dark_color.red/256, dark_color.green/256, dark_color.blue/256, alpha);
+          dark_color.red/256, dark_color.green/256, dark_color.blue/256, alpha);
   red_range = (int) base->red - (int) dark_color.red;
   green_range = (int) base->green - (int) dark_color.green;
   blue_range = (int) base->blue - (int) dark_color.blue;
@@ -319,11 +308,11 @@ ZnGetReliefGradient(Tcl_Interp	*interp,
     color.green = (int) dark_color.green + green_range * j/ZN_RELIEF_STEPS;
     color.blue = (int) dark_color.blue + blue_range * j/ZN_RELIEF_STEPS;
     sprintf(color_name, "#%02x%02x%02x;%d %d|",
-	    color.red/256, color.green/256, color.blue/256, alpha, 50/ZN_RELIEF_STEPS*j);
+            color.red/256, color.green/256, color.blue/256, alpha, 50/ZN_RELIEF_STEPS*j);
     strcat(buffer, color_name);
   }
   sprintf(color_name, "#%02x%02x%02x;%d 50|",
-	  base->red/256, base->green/256, base->blue/256, alpha);
+          base->red/256, base->green/256, base->blue/256, alpha);
   strcat(buffer, color_name);
   red_range = (int) light_color.red - (int) base->red;
   green_range = (int) light_color.green - (int) base->green;
@@ -333,11 +322,11 @@ ZnGetReliefGradient(Tcl_Interp	*interp,
     color.green = (int) base->green + green_range * j/ZN_RELIEF_STEPS;
     color.blue = (int) base->blue + blue_range * j/ZN_RELIEF_STEPS;
     sprintf(color_name, "#%02x%02x%02x;%d %d|",
-	    color.red/256, color.green/256, color.blue/256, alpha, 50+50/ZN_RELIEF_STEPS*j);
+            color.red/256, color.green/256, color.blue/256, alpha, 50+50/ZN_RELIEF_STEPS*j);
     strcat(buffer, color_name);
   }
   sprintf(color_name, "#%02x%02x%02x;%d",
-	  light_color.red/256, light_color.green/256, light_color.blue/256, alpha);
+          light_color.red/256, light_color.green/256, light_color.blue/256, alpha);
   strcat(buffer, color_name);
 
   /*printf("gradient relief: %s \n", buffer);*/
@@ -351,22 +340,22 @@ ZnGetReliefGradient(Tcl_Interp	*interp,
  * ZnNameGradient
  * ZnDeleteGradientName --
  *
- *	Save a gradient under a name or suppress the gradient
- *	name binding. The save function returns false if the
- *	name is already in use.
+ *      Save a gradient under a name or suppress the gradient
+ *      name binding. The save function returns false if the
+ *      name is already in use.
  *
  *--------------------------------------------------------------
  */
 ZnBool
-ZnNameGradient(Tcl_Interp	*interp,
-	       Tk_Window	tkwin,
-	       char		*grad_descr,
-	       char		*name)
+ZnNameGradient(Tcl_Interp       *interp,
+               Tk_Window        tkwin,
+               char             *grad_descr,
+               char             *name)
 {
-  Tcl_HashEntry	*hash;
-  int		new;
-  ZnGradient	*grad;
-  XColor	color;
+  Tcl_HashEntry *hash;
+  int           new;
+  ZnGradient    *grad;
+  XColor        color;
 
   /*
    * First try to find if the name interfere with a color name,
@@ -376,20 +365,20 @@ ZnNameGradient(Tcl_Interp	*interp,
    */
   if (XParseColor(Tk_Display(tkwin), Tk_Colormap(tkwin), name, &color)) {
     Tcl_AppendResult(interp, "gradient name \"", name,
-		     "\", is a color name", NULL);
+                     "\", is a color name", NULL);
     return False;
   }
   grad = ZnGetGradient(interp, tkwin, grad_descr);
   if (!grad) {
     Tcl_AppendResult(interp, "gradient specification \"", grad_descr,
-		     "\", is invalid", NULL);
+                     "\", is invalid", NULL);
     return False;
   }
   hash = Tcl_CreateHashEntry(&gradient_table, Tk_GetUid(name), &new);
   if (!new) {
     ZnFreeGradient(grad);
     Tcl_AppendResult(interp, "gradient name \"", name,
-		     "\", is already in use", NULL);
+                     "\", is already in use", NULL);
     return False;
   }
   else {
@@ -400,7 +389,7 @@ ZnNameGradient(Tcl_Interp	*interp,
 }
 
 ZnBool
-ZnGradientNameExists(char	*name)
+ZnGradientNameExists(char       *name)
 {
   if (!initialized) {
     return False;
@@ -409,9 +398,9 @@ ZnGradientNameExists(char	*name)
 }
 
 void
-ZnDeleteGradientName(char	*name)
+ZnDeleteGradientName(char       *name)
 {
-  Tcl_HashEntry	*hash;
+  Tcl_HashEntry *hash;
 
   if (!initialized) {
     return;
@@ -425,41 +414,42 @@ ZnDeleteGradientName(char	*name)
 }
 
 static void
-InterpolateGradientColor(Tk_Window	tkwin,
-			 ZnGradientColor *gc1,	    /* First color */ 
-			 ZnGradientColor *gc2,	    /* Next color */
-			 ZnGradientColor *gc_interp,/* New interpolated color */
-			 ZnGradientColor *gc_adjust,/* Adjusted first color.
-						     * Needed if interested in
-						     * the range color1 interp
-						     * color. */
-			 int		 interp_pos,
-			 int		 min_pos,
-			 int		 span)
+InterpolateGradientColor(Tk_Window      tkwin,
+                         ZnGradientColor *gc1,      /* First color */ 
+                         ZnGradientColor *gc2,      /* Next color */
+                         ZnGradientColor *gc_interp,/* New interpolated color */
+                         ZnGradientColor *gc_adjust,/* Adjusted first color.
+                                                     * Needed if interested in
+                                                     * the range color1 interp
+                                                     * color. */
+                         int             interp_pos,
+                         int             min_pos,
+                         int             span)
 {
   ZnReal pos1, pos2, ipos, interp_rel_pos, tmp;
   XColor rgb;
 
-  /*printf("interp_pos: %d, min_pos: %d, span: %d\n ", interp_pos, min_pos, span);*/
+  //printf("interp_pos: %d, min_pos: %d, span: %d\n ", interp_pos, min_pos, span);
   pos1 = ((ZnReal)gc1->position-(ZnReal)min_pos)/(ZnReal)span;
   pos2 = ((ZnReal)gc2->position-(ZnReal)min_pos)/(ZnReal)span;
   ipos = ((ZnReal)interp_pos-(ZnReal)min_pos)/(ZnReal)span;
   interp_rel_pos = (ipos-pos1)*100/(pos2-pos1);
 
-  /*printf("pos1: %g, pos2: %g, interp_rel_pos: %g\n", pos1, pos2, interp_rel_pos);*/
+  //printf("pos1: %g, pos2: %g, interp_rel_pos: %g\n", pos1, pos2, interp_rel_pos);
   if (interp_rel_pos < gc1->control) {
-    tmp = interp_rel_pos * 100 / gc1->control;
-    rgb.red = gc1->rgb->red + (gc1->mid_rgb->red - gc1->rgb->red) * tmp / 100;
-    rgb.green = gc1->rgb->green + (gc1->mid_rgb->green - gc1->rgb->green) * tmp / 100;
-    rgb.blue = gc1->rgb->blue + (gc1->mid_rgb->blue - gc1->rgb->blue) * tmp / 100;
-    gc_interp->alpha = gc1->alpha + (gc1->mid_alpha - gc1->alpha) * tmp / 100;
+    tmp = interp_rel_pos * 100.0 / gc1->control;
+  //printf("rgb : %d, mid rgb : %d\n\n", gc1->rgb, gc1->mid_rgb);
+    rgb.red = (unsigned short) (gc1->rgb->red + (gc1->mid_rgb->red - gc1->rgb->red) * tmp / 100.0);
+    rgb.green = (unsigned short) (gc1->rgb->green + (gc1->mid_rgb->green - gc1->rgb->green) * tmp / 100.0);
+    rgb.blue = (unsigned short) (gc1->rgb->blue + (gc1->mid_rgb->blue - gc1->rgb->blue) * tmp / 100.0);
+    gc_interp->alpha = (unsigned char) (gc1->alpha + (gc1->mid_alpha - gc1->alpha) * tmp / 100.0);
   }
   else if (interp_rel_pos > gc1->control) {
-    tmp = (interp_rel_pos - gc1->control) * 100 / (100 - gc1->control);
-    rgb.red = gc1->mid_rgb->red + (gc2->rgb->red - gc1->mid_rgb->red)*tmp/100;
-    rgb.green = gc1->mid_rgb->green + (gc2->rgb->green - gc1->mid_rgb->green)*tmp/100;
-    rgb.blue = gc1->mid_rgb->blue + (gc2->rgb->blue - gc1->mid_rgb->blue)*tmp/100;
-    gc_interp->alpha = gc1->mid_alpha + (gc2->alpha - gc1->mid_alpha)*tmp/100;
+    tmp = (interp_rel_pos - gc1->control) * 100.0 / (100.0 - gc1->control);
+    rgb.red = (unsigned short) (gc1->mid_rgb->red + (gc2->rgb->red - gc1->mid_rgb->red)*tmp / 100.0);
+    rgb.green = (unsigned short) (gc1->mid_rgb->green + (gc2->rgb->green - gc1->mid_rgb->green)*tmp / 100.0);
+    rgb.blue = (unsigned short) (gc1->mid_rgb->blue + (gc2->rgb->blue - gc1->mid_rgb->blue)*tmp / 100.0);
+    gc_interp->alpha = (unsigned char) (gc1->mid_alpha + (gc2->alpha - gc1->mid_alpha)*tmp / 100.0);
   }
   else {
     rgb = *gc1->mid_rgb;
@@ -474,7 +464,7 @@ InterpolateGradientColor(Tk_Window	tkwin,
      */
     gc_interp->position = 0;
     if (interp_rel_pos < gc1->control) {
-      gc_interp->control = gc1->control-interp_rel_pos;
+      gc_interp->control = gc1->control - (int) interp_rel_pos;
       gc_interp->mid_rgb = Tk_GetColorByValue(tkwin, gc1->mid_rgb);
       gc_interp->mid_alpha = gc1->mid_alpha;
     }
@@ -505,21 +495,23 @@ InterpolateGradientColor(Tk_Window	tkwin,
       gc_adjust->control = 50;
     }
   }
+  //printf("out of InterpolateGradientColor\n");
 }
 
 
 static void
-ReduceGradient(Tk_Window	tkwin,
-	       ZnGradient	*grad)
+ReduceGradient(Tk_Window        tkwin,
+               ZnGradient       *grad)
 {
   ZnReal     dx, dy, len, angle;
   ZnTransfo  t;
   ZnPoint    pbbox[4], pgrad[4];
   ZnReal     maxx, minx, span, start_in_new, end_in_new;
-  int	     minx100, maxx100, span100;
-  int	     i, j, first_color, last_color;
+  int        minx100, maxx100, span100;
+  int        i, j, first_color, last_color;
   ZnBool     interpolate_first, interpolate_last;
 
+  //printf("In ReduceGradient\n");
   dx = grad->e.x - grad->p.x;
   dy = grad->e.y - grad->p.y;
   len = sqrt(dx*dx+dy*dy);
@@ -569,8 +561,8 @@ ReduceGradient(Tk_Window	tkwin,
     end_in_new = (1-minx)*100/span;
   }
 
-  /*printf("minx: %g, maxx: %g, start%%: %g, end%%: %g\n",
-    minx, maxx, start_in_new, end_in_new);*/
+  //printf("minx: %g, maxx: %g, start%%: %g, end%%: %g\n",
+    //     minx, maxx, start_in_new, end_in_new);
   
   /*
    * Gradient is unchanged
@@ -579,19 +571,21 @@ ReduceGradient(Tk_Window	tkwin,
       (ABS(end_in_new-100.0) < PRECISION_LIMIT)) {
     goto unchanged;
   }
+  //printf("start_in_new: %g, end_in_new: %g\n", start_in_new, end_in_new);
   if ((start_in_new > 100.0) || (end_in_new < 0.0)) {
     grad->num_actual_colors = 1;
     grad->actual_colors = ZnMalloc(sizeof(ZnGradientColor));
+    grad->actual_colors[0].position = 0;
+    grad->actual_colors[0].mid_rgb = NULL;
     if (end_in_new < 0.0) {
-      grad->actual_colors[0].alpha = grad->colors_in[0].alpha;
-      grad->actual_colors[0].rgb = Tk_GetColorByValue(tkwin,
-						      grad->colors_in[0].rgb);
+      grad->actual_colors[0].alpha = grad->colors_in[grad->num_colors_in-1].alpha;
+      grad->actual_colors[0].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[grad->num_colors_in-1].rgb);
     }
     else {
-      grad->actual_colors[0].alpha = grad->colors_in[grad->num_colors_in].alpha;
-      grad->actual_colors[0].rgb = Tk_GetColorByValue(tkwin,
-						      grad->colors_in[grad->num_colors_in].rgb);
+      grad->actual_colors[0].alpha = grad->colors_in[0].alpha;
+      grad->actual_colors[0].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[0].rgb);
     }
+    return;
   }
 
   grad->num_actual_colors = grad->num_colors_in;
@@ -609,7 +603,7 @@ ReduceGradient(Tk_Window	tkwin,
      */
     first_color = 1;
     while ((first_color < (int) grad->num_colors_in) &&
-	   (grad->colors_in[first_color].position < minx100)) {
+           (grad->colors_in[first_color].position < minx100)) {
       first_color++;
       grad->num_actual_colors--;
     }
@@ -637,7 +631,7 @@ ReduceGradient(Tk_Window	tkwin,
      */
     last_color = grad->num_colors_in-2;
     while ((last_color >= 0) &&
-	   (grad->colors_in[last_color].position > maxx100)) {
+           (grad->colors_in[last_color].position > maxx100)) {
       last_color--;
       grad->num_actual_colors--;
     }
@@ -657,12 +651,13 @@ ReduceGradient(Tk_Window	tkwin,
   grad->actual_colors = ZnMalloc(grad->num_actual_colors*sizeof(ZnGradientColor));
   j = 0;
   if (interpolate_first) {
+    //printf("Interpolate first color, index: %d\n", first_color);
     InterpolateGradientColor(tkwin,
-			     &grad->colors_in[first_color-1],
-			     &grad->colors_in[first_color],
-			     &grad->actual_colors[j],
-			     NULL,
-			     minx100, minx100, span100);
+                             &grad->colors_in[first_color-1],
+                             &grad->colors_in[first_color],
+                             &grad->actual_colors[j],
+                             NULL,
+                             minx100, minx100, span100);
     j++;
   }
   else if ((first_color == 0) && (grad->type != ZN_RADIAL_GRADIENT)) {
@@ -692,12 +687,13 @@ ReduceGradient(Tk_Window	tkwin,
   }
 
   if (interpolate_last) {
+    //printf("Interpolate last color\n");
     InterpolateGradientColor(tkwin,
-			     &grad->colors_in[last_color],
-			     &grad->colors_in[last_color+1],
-			     &grad->actual_colors[j],
-			     &grad->actual_colors[j-1],
-			     maxx100, minx100, span100);
+                             &grad->colors_in[last_color],
+                             &grad->colors_in[last_color+1],
+                             &grad->actual_colors[j],
+                             &grad->actual_colors[j-1],
+                             maxx100, minx100, span100);
   }
   else if (last_color == ((int) grad->num_colors_in)-1) {
     i = grad->num_colors_in-1;
@@ -709,7 +705,8 @@ ReduceGradient(Tk_Window	tkwin,
     /*printf("adding a color at end\n");*/
   }
   grad->actual_colors[j].position = 100;
-  /*  for (i=0; i<grad->num_actual_colors; i++) printf("control %d: %d\n", i, grad->actual_colors[i].control);*/
+  //for (i=0; i<grad->num_actual_colors; i++) printf("control %d: %d\n", i, grad->actual_colors[i].control);
+  //printf("Out of ReduceGradient\n");
 }
 
 
@@ -718,65 +715,65 @@ ReduceGradient(Tk_Window	tkwin,
  *
  * ZnGetGradient --
  *
- *	Create a data structure containing a range of colors
- *	used to display a gradient. 
+ *      Create a data structure containing a range of colors
+ *      used to display a gradient. 
  *
- *	The gradient should have the following syntax:
+ *      The gradient should have the following syntax:
  *
- *	gradient := [graddesc|]color[|....|color]
- *	  where the | are real characters not meta-syntax.
+ *      gradient := [graddesc|]color[|....|color]
+ *        where the | are real characters not meta-syntax.
  *
- *	graddesc := =type args
- *	  where type := axial | radial | path
+ *      graddesc := =type args
+ *        where type := axial | radial | path
  *
- *	  If type = axial
- *		args := angle (0..360) | xs ys xe ye (reals)
+ *        If type = axial
+ *              args := angle (0..360) | xs ys xe ye (reals)
  *
  *        The first form define the axial gradiant by its slope.
  *        With this syntax the gradient fits the whole shape.
- *	  This is a backward compatible syntax.
- *	  The second form specifies a vector which will be used
- *	  to draw the gradient. The vector defines both the angle
- *	  and the gradient area. Parts of the shape that lie before
- *	  the vector origin are filled with the first color and
- *	  parts that lie after the vector end are filled with the
- *	  last color.
+ *        This is a backward compatible syntax.
+ *        The second form specifies a vector which will be used
+ *        to draw the gradient. The vector defines both the angle
+ *        and the gradient area. Parts of the shape that lie before
+ *        the vector origin are filled with the first color and
+ *        parts that lie after the vector end are filled with the
+ *        last color.
  *
- *	  If type = radial or path
- *		args := xs ys [xe ye] (reals)
+ *        If type = radial or path
+ *              args := xs ys [xe ye] (reals)
  *
- *	  The vector specified by the 4 coordinates defines the
- *	  gradient area.  Parts of the shape that lie before
- *	  the vector origin are filled with the first color and
- *	  parts that lie after the vector end are filled with the
- *	  last color. The vector end may be omitted, in such case
- *	  the gradient fits exactly the whole shape to be filled,
- *	  this is backward compatible with older gradients.
- *	  
- *	color := colorvalue | colorvalue position |
- *		 colorvalue control position
- *	  where position and control are in (0..100)
+ *        The vector specified by the 4 coordinates defines the
+ *        gradient area.  Parts of the shape that lie before
+ *        the vector origin are filled with the first color and
+ *        parts that lie after the vector end are filled with the
+ *        last color. The vector end may be omitted, in such case
+ *        the gradient fits exactly the whole shape to be filled,
+ *        this is backward compatible with older gradients.
+ *        
+ *      color := colorvalue | colorvalue position |
+ *               colorvalue control position
+ *        where position and control are in (0..100)
  *
- *	colorvalue := (colorname | #rgb | cievalue)[;alpha]
- *	  where alpha is in (0..100)
+ *      colorvalue := (colorname | #rgb | cievalue)[;alpha]
+ *        where alpha is in (0..100)
  *
  * Results:
- *	The return value is a token for a data structure
- *	describing a gradient. This token may be passed
- *	to the drawing routines.
- *	If an error prevented the gradient from being created
- *	then NULL is returned and an error message will be
- *	left in interp.
+ *      The return value is a token for a data structure
+ *      describing a gradient. This token may be passed
+ *      to the drawing routines.
+ *      If an error prevented the gradient from being created
+ *      then NULL is returned and an error message will be
+ *      left in interp.
  *
  * Side effects:
- *	Data structures, etc. are allocated.
- *	It is the caller's responsibility to eventually call
- *	ZnFreeGradient to release the resources.
+ *      Data structures, etc. are allocated.
+ *      It is the caller's responsibility to eventually call
+ *      ZnFreeGradient to release the resources.
  *
  *--------------------------------------------------------------
  */
 ZnGradient *
-ZnGetGradientByValue(ZnGradient	*grad)
+ZnGetGradientByValue(ZnGradient *grad)
 {
   grad->ref_count++;
   return grad;
@@ -785,12 +782,12 @@ ZnGetGradientByValue(ZnGradient	*grad)
 
 static int
 ParseRealList(const char *str,
-	      const char *stop,
-	      ZnReal	 *list,
-	      int	 max)
+              const char *stop,
+              ZnReal     *list,
+              int        max)
 {
-  int	 num;
-  char	 *end;
+  int    num;
+  char   *end;
 
   num = 0;
   while ((num < max) && (str != stop)) {
@@ -808,26 +805,26 @@ ParseRealList(const char *str,
 }
 
 ZnGradient *
-ZnGetGradient(Tcl_Interp	*interp,
-	      Tk_Window		tkwin,
-	      Tk_Uid		desc)
+ZnGetGradient(Tcl_Interp        *interp,
+              Tk_Window         tkwin,
+              Tk_Uid            desc)
 {
   #define SEGMENT_SIZE 64
-  Tcl_HashEntry	*hash;
-  ZnGradient	*grad;
-  unsigned int	i, j, nspace, num_colors;
-  unsigned int	size, num_coords=0;
-  char		type;
-  char const	*scan_ptr, *next_ptr, *str_ptr;
-  ZnReal	angle, position, control;
-  ZnReal	coords[4];
-  char		*color_ptr, *end, segment[SEGMENT_SIZE];
+  Tcl_HashEntry *hash;
+  ZnGradient    *grad;
+  unsigned int  i, j, nspace, num_colors;
+  unsigned int  size, num_coords=0;
+  char          type;
+  char const    *scan_ptr, *next_ptr, *str_ptr;
+  ZnReal        angle, position, control;
+  ZnReal        coords[4];
+  char          *color_ptr, *end, segment[SEGMENT_SIZE];
   ZnGradientColor *first, *last;
-  XColor	color;
-  int		new, red_range, green_range, blue_range;
-  ZnBool	simple;
+  XColor        color;
+  int           new, red_range, green_range, blue_range;
+  ZnBool        simple;
 
-  /*  printf("ZnGetGradient : %s\n", desc);*/
+  //printf("ZnGetGradient : %s\n", desc);
   if (!desc || !*desc) {
     return NULL;
   }
@@ -876,7 +873,7 @@ ZnGetGradient(Tcl_Interp	*interp,
   }
   if (num_colors == 0) {
     Tcl_AppendResult(interp, "gradient should have at least one color \"",
-		     desc, "\",", NULL);
+                     desc, "\",", NULL);
   grad_err1:
     Tcl_DeleteHashEntry(hash);
     /*printf("ZnGetGradient error : %s\n", desc);*/
@@ -899,9 +896,9 @@ ZnGetGradient(Tcl_Interp	*interp,
       num_coords = ParseRealList(scan_ptr, next_ptr, coords, 4);
       if ((num_coords != 1) && (num_coords != 4)) {
       grad_err3:
-	Tcl_AppendResult(interp, "invalid gradient parameter \"",
-			 desc, "\",", NULL);
-	goto grad_err1;
+        Tcl_AppendResult(interp, "invalid gradient parameter \"",
+                         desc, "\",", NULL);
+        goto grad_err1;
       }
       angle = (int) coords[0];
     }
@@ -910,38 +907,39 @@ ZnGetGradient(Tcl_Interp	*interp,
       type = ZN_CONICAL_GRADIENT;
       num_coords = ParseRealList(scan_ptr, next_ptr, coords, 4);
       if ((num_coords < 1) && (num_coords > 4)) {
-	goto grad_err3;
+        goto grad_err3;
       }
       angle = (int) coords[0];
     }
     else if (((*scan_ptr == 'r') && (strncmp(scan_ptr, "radial", 6) == 0)) ||
-	     ((*scan_ptr == 'p') && (strncmp(scan_ptr, "path", 4) == 0))) {
+             ((*scan_ptr == 'p') && (strncmp(scan_ptr, "path", 4) == 0))) {
       if (*scan_ptr == 'r') {
-	type = ZN_RADIAL_GRADIENT;
-	scan_ptr += 6;
+        type = ZN_RADIAL_GRADIENT;
+        scan_ptr += 6;
       }
       else {
-	type = ZN_PATH_GRADIENT;
-	scan_ptr += 4;
+        type = ZN_PATH_GRADIENT;
+        scan_ptr += 4;
       }
       num_coords = ParseRealList(scan_ptr, next_ptr, coords, 4);
       if ((num_coords != 2) && (num_coords != 4)) {
-	goto grad_err3;
+        goto grad_err3;
       }
     }
     else {
       Tcl_AppendResult(interp, "invalid gradient type \"",
-		       desc, "\",", NULL);
+                       desc, "\"", NULL);
       goto grad_err1;
     }
     scan_ptr = next_ptr + 1;
     next_ptr = strchr(scan_ptr, '|');
   }
+  
   /*
    * Create the gradient structure.
    */
   grad = (ZnGradient *) ZnMalloc(sizeof(ZnGradient) +
-				 sizeof(ZnGradientColor)*(num_colors-1));
+                                 sizeof(ZnGradientColor)*(num_colors-1));
   grad->ref_count = 1;
   simple = True;
   grad->num_colors_in = num_colors;
@@ -952,7 +950,7 @@ ZnGetGradient(Tcl_Interp	*interp,
   switch (type) {
   case ZN_AXIAL_GRADIENT:
     if ((num_coords == 4) &&
-	((coords[0] != coords[2]) || (coords[1] != coords[3]))) {
+        ((coords[0] != coords[2]) || (coords[1] != coords[3]))) {
       grad->p.x = coords[0];
       grad->p.y = coords[1];
       simple = False;
@@ -965,7 +963,7 @@ ZnGetGradient(Tcl_Interp	*interp,
     break;
   case ZN_CONICAL_GRADIENT:
     if ((num_coords == 4) &&
-	((coords[0] != coords[2]) || (coords[1] != coords[3]))) {
+        ((coords[0] != coords[2]) || (coords[1] != coords[3]))) {
       grad->p.x = coords[0];
       grad->p.y = coords[1];
       simple = False;
@@ -989,7 +987,7 @@ ZnGetGradient(Tcl_Interp	*interp,
     grad->p.x = coords[0];
     grad->p.y = coords[1];
     if ((num_coords == 4) &&
-	((coords[0] != coords[2]) || (coords[1] != coords[3])))  {
+        ((coords[0] != coords[2]) || (coords[1] != coords[3])))  {
       simple = False;
       grad->e.x = coords[2];
       grad->e.y = coords[3];
@@ -1008,7 +1006,7 @@ ZnGetGradient(Tcl_Interp	*interp,
     /*
      * Try to parse the color name.
      */
-    nspace = strspn(scan_ptr, " \t");	
+    nspace = strspn(scan_ptr, " \t");   
     scan_ptr += nspace;
     str_ptr = strpbrk(scan_ptr, " \t|");
     if (str_ptr) {
@@ -1019,10 +1017,10 @@ ZnGetGradient(Tcl_Interp	*interp,
     }
     if (size > (SEGMENT_SIZE-1)) {
       Tcl_AppendResult(interp, "color name too long in gradient \"",
-		       desc, "\",", NULL);
+                       desc, "\",", NULL);
     grad_err2:
       for (j = 0; j < i; j++) {
-	Tk_FreeColor(grad->colors_in[j].rgb);
+        Tk_FreeColor(grad->colors_in[j].rgb);
       }
       ZnFree(grad);
       goto grad_err1;
@@ -1044,14 +1042,14 @@ ZnGetGradient(Tcl_Interp	*interp,
        */
       control = strtod(scan_ptr, &end);
       if (end != scan_ptr) {
-	grad->colors_in[i].control = (int) control;
-	scan_ptr = end;
+        grad->colors_in[i].control = (int) control;
+        scan_ptr = end;
       }
     }
     nspace = strspn(scan_ptr, " \t");
     if ((scan_ptr[nspace] != 0) && (scan_ptr+nspace != next_ptr)) {
       Tcl_AppendResult(interp, "incorrect color description in gradient \"",
-		       desc, "\",", NULL);
+                       desc, "\",", NULL);
       goto grad_err2;
     }
     
@@ -1062,7 +1060,7 @@ ZnGetGradient(Tcl_Interp	*interp,
     grad->colors_in[i].rgb = Tk_GetColor(interp, tkwin, Tk_GetUid(segment));
     if (grad->colors_in[i].rgb == NULL) {
       Tcl_AppendResult(interp, "incorrect color value in gradient \"",
-		       desc, "\",", NULL);
+                       desc, "\",", NULL);
       goto grad_err2;
     }
     if (color_ptr) {
@@ -1076,10 +1074,10 @@ ZnGetGradient(Tcl_Interp	*interp,
       grad->colors_in[i].position = 100;
     }
     if ((i > 0) &&
-	((grad->colors_in[i].position > 100) ||
-	 (grad->colors_in[i].position < grad->colors_in[i-1].position))) {
+        ((grad->colors_in[i].position > 100) ||
+         (grad->colors_in[i].position < grad->colors_in[i-1].position))) {
       Tcl_AppendResult(interp, "incorrect color position in gradient \"",
-		       desc, "\",", NULL);
+                       desc, "\",", NULL);
       goto grad_err2;
     }
     if (grad->colors_in[i].control > 100) {
@@ -1128,8 +1126,8 @@ ZnGetGradient(Tcl_Interp	*interp,
     ReduceGradient(tkwin, grad);
   }
 
-  /*printf("num in: %d, num actual: %d\n", grad->num_colors_in,grad->num_actual_colors);*/
-  /*printf("ZnGetGradient end : %s\n", desc);*/
+  //printf("num in: %d, num actual: %d\n", grad->num_colors_in,grad->num_actual_colors);
+  //printf("ZnGetGradient end : %s\n", desc);
   return grad;
 }
 
@@ -1139,20 +1137,20 @@ ZnGetGradient(Tcl_Interp	*interp,
  *
  * ZnNameOfGradient --
  *
- *	Given a gradient, return a textual string identifying
- *	the gradient.
+ *      Given a gradient, return a textual string identifying
+ *      the gradient.
  *
  * Results:
- *	The return value is the string that was used to create
- *	the gradient.
+ *      The return value is the string that was used to create
+ *      the gradient.
  *
  * Side effects:
- *	None.
+ *      None.
  *
  *--------------------------------------------------------------
  */
 char *
-ZnNameOfGradient(ZnGradient	*grad)
+ZnNameOfGradient(ZnGradient     *grad)
 {
   return (char *) grad->hash->key.words;
 }
@@ -1163,23 +1161,23 @@ ZnNameOfGradient(ZnGradient	*grad)
  *
  * ZnFreeGradient --
  *
- *	This procedure is called when a gradient is no longer
- *	needed.  It frees the resources associated with the
- *	gradient.  After this call, the caller should never
- *	again use the gradient.
+ *      This procedure is called when a gradient is no longer
+ *      needed.  It frees the resources associated with the
+ *      gradient.  After this call, the caller should never
+ *      again use the gradient.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	Resources are freed.
+ *      Resources are freed.
  *
  *--------------------------------------------------------------
  */
 void
-ZnFreeGradient(ZnGradient	*grad)
+ZnFreeGradient(ZnGradient       *grad)
 {
-  unsigned int	i;
+  unsigned int  i;
   
   grad->ref_count--;
   if (grad->ref_count == 0) {
@@ -1187,15 +1185,15 @@ ZnFreeGradient(ZnGradient	*grad)
     for (i = 0; i < grad->num_colors_in; i++) {
       Tk_FreeColor(grad->colors_in[i].rgb);
       if (grad->colors_in[i].mid_rgb) {
-	Tk_FreeColor(grad->colors_in[i].mid_rgb);
+        Tk_FreeColor(grad->colors_in[i].mid_rgb);
       }
     }
     if (grad->actual_colors != grad->colors_in) {
       for (i = 0; i < grad->num_actual_colors; i++) {
-	Tk_FreeColor(grad->actual_colors[i].rgb);
-	if (grad->actual_colors[i].mid_rgb) {
-	  Tk_FreeColor(grad->actual_colors[i].mid_rgb);
-	}
+        Tk_FreeColor(grad->actual_colors[i].rgb);
+        if (grad->actual_colors[i].mid_rgb) {
+          Tk_FreeColor(grad->actual_colors[i].mid_rgb);
+        }
       }
       ZnFree(grad->actual_colors);
     }
@@ -1209,14 +1207,14 @@ ZnFreeGradient(ZnGradient	*grad)
  *
  * ZnComposeAlpha --
  *
- *	This procedure takes two alpha values in percent and
- *	returns the composite value between 0 and 65535.
+ *      This procedure takes two alpha values in percent and
+ *      returns the composite value between 0 and 65535.
  *
  *--------------------------------------------------------------
  */
 int
-ZnComposeAlpha(unsigned short	alpha1,
-	       unsigned short	alpha2)
+ZnComposeAlpha(unsigned short   alpha1,
+               unsigned short   alpha2)
 {
   return (alpha1*alpha2/100)*65535/100;
 }

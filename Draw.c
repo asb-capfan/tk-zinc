@@ -1,28 +1,17 @@
 /*
  * Draw.c -- Implementation of common drawing routines.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Sat Dec 10 12:51:30 1994
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Sat Dec 10 12:51:30 1994
  *
- * $Id: Draw.c,v 1.58 2004/05/07 09:35:54 lecoanet Exp $
+ * $Id: Draw.c,v 1.63 2005/05/25 08:22:38 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -48,28 +37,28 @@
 #include <stdarg.h>
 
 
-#define	POLYGON_RELIEF_DRAW	0
-#define	POLYGON_RELIEF_RENDER	1
-#define	POLYGON_RELIEF_DIST	2
-#define	POLYGON_RELIEF_BBOX	3
-#define	POLYGON_RELIEF_IN_BBOX	4
+#define POLYGON_RELIEF_DRAW     0
+#define POLYGON_RELIEF_RENDER   1
+#define POLYGON_RELIEF_DIST     2
+#define POLYGON_RELIEF_BBOX     3
+#define POLYGON_RELIEF_IN_BBOX  4
 
-#define	TOP_CONTRAST		13
-#define BOTTOM_CONTRAST		6
-#define MAX_INTENSITY		65535
+#define TOP_CONTRAST            13
+#define BOTTOM_CONTRAST         6
+#define MAX_INTENSITY           65535
 
-#define ARROW_SHAPE_B		10.0
-#define ARROW_SHAPE_C		5.0
-#define OPEN_ARROW_SHAPE_A	4.0
-#define CLOSED_ARROW_SHAPE_A	ARROW_SHAPE_B
+#define ARROW_SHAPE_B           10.0
+#define ARROW_SHAPE_C           5.0
+#define OPEN_ARROW_SHAPE_A      4.0
+#define CLOSED_ARROW_SHAPE_A    ARROW_SHAPE_B
 
-#define LIGHTNING_SHAPE_A_RATIO	10.0
-#define LIGHTNING_SHAPE_B_RATIO	8.0
+#define LIGHTNING_SHAPE_A_RATIO 10.0
+#define LIGHTNING_SHAPE_B_RATIO 8.0
 
-#define LIGHTNING_POINTS	4
-#define CORNER_POINTS		3
-#define DOUBLE_CORNER_POINTS	4
-#define STRAIGHT_POINTS		2
+#define LIGHTNING_POINTS        4
+#define CORNER_POINTS           3
+#define DOUBLE_CORNER_POINTS    4
+#define STRAIGHT_POINTS         2
 
 
 /*
@@ -80,8 +69,8 @@
  **********************************************************************************
  */
 void
-ZnSetLineStyle(ZnWInfo	   *wi,
-	       ZnLineStyle line_style)
+ZnSetLineStyle(ZnWInfo     *wi,
+               ZnLineStyle line_style)
 {
   if (wi->render) {
 #ifdef GL
@@ -104,10 +93,10 @@ ZnSetLineStyle(ZnWInfo	   *wi,
 #endif
   }
   else {
-    XGCValues		values;
-    static const char	dashed[] = { 8 };
-    static const char	dotted[] = { 2, 5 };
-    static const char	mixed[]  = { 8, 5, 2, 5 };
+    XGCValues           values;
+    static const char   dashed[] = { 8 };
+    static const char   dotted[] = { 2, 5 };
+    static const char   mixed[]  = { 8, 5, 2, 5 };
     
     values.line_style = LineOnOffDash;
     switch (line_style) {
@@ -133,8 +122,8 @@ ZnSetLineStyle(ZnWInfo	   *wi,
  **********************************************************************************
  *
  * ZnLineShapePoints --
- *	Compute the points describing the given line shape between point p1 and p2.
- *	If bbox is non null, it is filled with the bounding box of the shape.
+ *      Compute the points describing the given line shape between point p1 and p2.
+ *      If bbox is non null, it is filled with the bounding box of the shape.
  *
  * For the time being this procedure handles straight lines, right and left
  * lightnings, right and left corners, right and left double corners..
@@ -167,26 +156,26 @@ ZnSetLineStyle(ZnWInfo	   *wi,
  **********************************************************************************
  */
 void
-ZnLineShapePoints(ZnPoint	*p1,
-		  ZnPoint	*p2,
-		  ZnDim		line_width,
-		  ZnLineShape	shape,
-		  ZnBBox	*bbox,
-		  ZnList	to_points)
+ZnLineShapePoints(ZnPoint       *p1,
+                  ZnPoint       *p2,
+                  ZnDim         line_width,
+                  ZnLineShape   shape,
+                  ZnBBox        *bbox,
+                  ZnList        to_points)
 {
-  ZnPoint	*points;
-  unsigned int	num_points, i;
+  ZnPoint       *points;
+  unsigned int  num_points, i;
 
   /*
    * Compute all line points according to shape.
    */
   if ((shape == ZN_LINE_LEFT_LIGHTNING) ||
       (shape == ZN_LINE_RIGHT_LIGHTNING)) {
-    double	alpha, theta;
-    double	length, length2;
-    double	shape_a, shape_b;
-    double	dx, dy;
-    double	temp;
+    double      alpha, theta;
+    double      length, length2;
+    double      shape_a, shape_b;
+    double      dx, dy;
+    double      temp;
 
     num_points = LIGHTNING_POINTS;
     ZnListAssertSize(to_points, num_points);
@@ -218,7 +207,7 @@ ZnLineShapePoints(ZnPoint	*p1,
     points[2].y = dy + temp;
   }
   else if (shape == ZN_LINE_LEFT_CORNER ||
-	   shape == ZN_LINE_RIGHT_CORNER) {
+           shape == ZN_LINE_RIGHT_CORNER) {
     num_points = CORNER_POINTS;
     ZnListAssertSize(to_points, num_points);
     points = (ZnPoint *) ZnListArray(to_points);
@@ -236,8 +225,8 @@ ZnLineShapePoints(ZnPoint	*p1,
     }
   }
   else if (shape == ZN_LINE_DOUBLE_LEFT_CORNER ||
-	   shape == ZN_LINE_DOUBLE_RIGHT_CORNER) {
-    int	dx, dy;
+           shape == ZN_LINE_DOUBLE_RIGHT_CORNER) {
+    int dx, dy;
 
     num_points = DOUBLE_CORNER_POINTS;
     ZnListAssertSize(to_points, num_points);
@@ -294,26 +283,26 @@ ZnLineShapePoints(ZnPoint	*p1,
  **********************************************************************************
  *
  * ZnDrawLineShape --
- *	Draw a line given the points describing its path. It is designed to work
- *	with GetLineShape albeit it does fairly trivial things. In the future some
- *	shapes might need cooperation between the two and the clients will be ready
- *	for that.
+ *      Draw a line given the points describing its path. It is designed to work
+ *      with GetLineShape albeit it does fairly trivial things. In the future some
+ *      shapes might need cooperation between the two and the clients will be ready
+ *      for that.
  *
  *
  **********************************************************************************
  */
 void
-ZnDrawLineShape(ZnWInfo		*wi,
-		ZnPoint		*p,
-		unsigned int	num_p,
-		ZnLineStyle	line_style,
-		int		foreground_pixel,
-		ZnDim		line_width,
-		ZnLineShape	shape __unused)
+ZnDrawLineShape(ZnWInfo         *wi,
+                ZnPoint         *p,
+                unsigned int    num_p,
+                ZnLineStyle     line_style,
+                int             foreground_pixel,
+                ZnDim           line_width,
+                ZnLineShape     shape)
 {
-  XPoint	*xpoints;
-  unsigned int	i;
-  XGCValues	values;
+  XPoint        *xpoints;
+  unsigned int  i;
+  XGCValues     values;
 
   /*
    * Setup GC.
@@ -325,7 +314,7 @@ ZnDrawLineShape(ZnWInfo		*wi,
   values.join_style = JoinRound;
   values.cap_style = CapRound;
   XChangeGC(wi->dpy, wi->gc,
-	    GCFillStyle|GCLineWidth|GCJoinStyle|GCCapStyle|GCForeground, &values);
+            GCFillStyle|GCLineWidth|GCJoinStyle|GCCapStyle|GCForeground, &values);
   ZnListAssertSize(ZnWorkXPoints, num_p);
   xpoints = (XPoint *) ZnListArray(ZnWorkXPoints);
   for (i = 0; i < num_p; i++) {
@@ -340,9 +329,9 @@ ZnDrawLineShape(ZnWInfo		*wi,
  **********************************************************************************
  *
  * ZnGetLineEnd --
- *	Compute the points describing the given line end style at point p1 for
- *	the line p1,p2. Point p1 is adjusted to fit the line end.
- *	If bbox is non null, it is filled with the bounding box of the end.
+ *      Compute the points describing the given line end style at point p1 for
+ *      the line p1,p2. Point p1 is adjusted to fit the line end.
+ *      If bbox is non null, it is filled with the bounding box of the end.
  *
  * For the time being this procedure handles open/filled arrows.
  *
@@ -365,17 +354,17 @@ ZnDrawLineShape(ZnWInfo		*wi,
  **********************************************************************************
  */
 void
-ZnGetLineEnd(ZnPoint	*p1,
-	     ZnPoint	*p2,
-	     ZnDim	line_width,
-	     int	cap_style,
-	     ZnLineEnd	end_style,
-	     ZnPoint	*points)
+ZnGetLineEnd(ZnPoint    *p1,
+             ZnPoint    *p2,
+             ZnDim      line_width,
+             int        cap_style,
+             ZnLineEnd  end_style,
+             ZnPoint    *points)
 {
-  ZnReal	dx, dy, length, temp, backup;
-  ZnReal	frac_height, sin_theta, cos_theta;
-  ZnReal	vert_x, vert_y;
-  ZnReal	shape_a, shape_b, shape_c;
+  ZnReal        dx, dy, length, temp, backup;
+  ZnReal        frac_height, sin_theta, cos_theta;
+  ZnReal        vert_x, vert_y;
+  ZnReal        shape_a, shape_b, shape_c;
   
   if (end_style != NULL) {
     shape_a = end_style->shape_a + 0.001;
@@ -420,15 +409,15 @@ ZnGetLineEnd(ZnPoint	*p1,
 }
 
 static ZnReal
-SegmentPosInRelief(ZnReal		x1,
-		     ZnReal		y1,
-		     ZnReal		x2,
-		     ZnReal		y2,
-		     ZnReliefStyle	relief,
-		     int		light_angle)
+SegmentPosInRelief(ZnReal               x1,
+                     ZnReal             y1,
+                     ZnReal             x2,
+                     ZnReal             y2,
+                     ZnReliefStyle      relief,
+                     int                light_angle)
 {
-  ZnReal	angle, angle_step, origin, position;
-  int		num_colors, color_index;
+  ZnReal        angle, angle_step, origin, position;
+  int           num_colors, color_index;
   
   num_colors = ZN_RELIEF_STEPS*2+1;
   angle_step = M_PI / (num_colors-1);
@@ -443,7 +432,7 @@ SegmentPosInRelief(ZnReal		x1,
   }
   while (angle > 2*M_PI) {
     angle -= 2*M_PI;
-  }	
+  }     
 
   color_index = (int) (angle/angle_step);
   if (color_index > num_colors-1) {
@@ -460,10 +449,10 @@ SegmentPosInRelief(ZnReal		x1,
   }
   position = 100*color_index/num_colors;
   /*printf("position %g, angle %g(%g), origin %g\n",
-	 position,
-	 RadianToDegrees(angle),
-	 angle,
-	 RadianToDegrees(origin));*/
+         position,
+         RadianToDegrees(angle),
+         angle,
+         RadianToDegrees(origin));*/
   return position;
 }
 
@@ -472,30 +461,30 @@ SegmentPosInRelief(ZnReal		x1,
  * ReliefPixelOfSegment --
  */
 static XColor *
-ReliefColorOfSegment(ZnReal		x1,
-		     ZnReal		y1,
-		     ZnReal		x2,
-		     ZnReal		y2,
-		     ZnReliefStyle	relief,
-		     ZnGradient		*gradient,
-		     int		light_angle)
+ReliefColorOfSegment(ZnReal             x1,
+                     ZnReal             y1,
+                     ZnReal             x2,
+                     ZnReal             y2,
+                     ZnReliefStyle      relief,
+                     ZnGradient         *gradient,
+                     int                light_angle)
 {
   return ZnGetGradientColor(gradient,
-			    SegmentPosInRelief(x1, y1, x2, y2, relief, light_angle),
-			    NULL);
+                            SegmentPosInRelief(x1, y1, x2, y2, relief, light_angle),
+                            NULL);
 }
 
 static int
-ReliefPixelOfSegment(ZnReal		x1,
-		     ZnReal		y1,
-		     ZnReal		x2,
-		     ZnReal		y2,
-		     ZnReliefStyle	relief,
-		     ZnGradient		*gradient,
-		     int		light_angle)
+ReliefPixelOfSegment(ZnReal             x1,
+                     ZnReal             y1,
+                     ZnReal             x2,
+                     ZnReal             y2,
+                     ZnReliefStyle      relief,
+                     ZnGradient         *gradient,
+                     int                light_angle)
 {
   return ZnGetGradientPixel(gradient,
-			    SegmentPosInRelief(x1, y1, x2, y2, relief, light_angle));
+                            SegmentPosInRelief(x1, y1, x2, y2, relief, light_angle));
 }
 
 
@@ -503,18 +492,18 @@ ReliefPixelOfSegment(ZnReal		x1,
  **********************************************************************************
  *
  * ZnDrawRectangleRelief --
- *	Draw the bevels inside bbox.
+ *      Draw the bevels inside bbox.
  *
  **********************************************************************************
  */
 void
-ZnDrawRectangleRelief(ZnWInfo		*wi,
-		      ZnReliefStyle	relief,
-		      ZnGradient	*gradient,
-		      XRectangle	*bbox,
-		      ZnDim		line_width)
+ZnDrawRectangleRelief(ZnWInfo           *wi,
+                      ZnReliefStyle     relief,
+                      ZnGradient        *gradient,
+                      XRectangle        *bbox,
+                      ZnDim             line_width)
 {
-  XPoint	bevel[4];
+  XPoint        bevel[4];
   
   /*
    * If we haven't enough space to draw, exit.
@@ -528,23 +517,23 @@ ZnDrawRectangleRelief(ZnWInfo		*wi,
    * half the width of the original one.
    */
   if ((relief == ZN_RELIEF_RIDGE) || (relief == ZN_RELIEF_GROOVE)) {
-    ZnDim	 new_line_width;
+    ZnDim        new_line_width;
     unsigned int offset;
-    XRectangle	 internal_bbox;
+    XRectangle   internal_bbox;
     
     new_line_width = line_width/2.0;
     offset = (unsigned) (line_width - new_line_width);
     ZnDrawRectangleRelief(wi,
-			  (ZnReliefStyle) ((relief==ZN_RELIEF_GROOVE)?ZN_RELIEF_SUNKEN:ZN_RELIEF_RAISED),
-			  gradient, bbox, new_line_width);
+                          (ZnReliefStyle) ((relief==ZN_RELIEF_GROOVE)?ZN_RELIEF_SUNKEN:ZN_RELIEF_RAISED),
+                          gradient, bbox, new_line_width);
     internal_bbox = *bbox;
     internal_bbox.x += offset;
     internal_bbox.y += offset;
     internal_bbox.width -= offset*2;
     internal_bbox.height -= offset*2;
     ZnDrawRectangleRelief(wi,
-			  (ZnReliefStyle) ((relief==ZN_RELIEF_GROOVE)?ZN_RELIEF_RAISED:ZN_RELIEF_SUNKEN),
-			  gradient, &internal_bbox, new_line_width);
+                          (ZnReliefStyle) ((relief==ZN_RELIEF_GROOVE)?ZN_RELIEF_RAISED:ZN_RELIEF_SUNKEN),
+                          gradient, &internal_bbox, new_line_width);
     return;
   }
 
@@ -557,9 +546,9 @@ ZnDrawRectangleRelief(ZnWInfo		*wi,
   bevel[2].x = bevel[1].x - (short) line_width;
   bevel[3].x = bevel[0].x + (short) line_width;  
   XSetForeground(wi->dpy, wi->gc,
-		 ReliefPixelOfSegment((ZnReal) bevel[1].x, (ZnReal) bevel[1].y,
-				      (ZnReal) bevel[0].x, (ZnReal) bevel[0].y,
-				      relief, gradient, wi->light_angle));
+                 ReliefPixelOfSegment((ZnReal) bevel[1].x, (ZnReal) bevel[1].y,
+                                      (ZnReal) bevel[0].x, (ZnReal) bevel[0].y,
+                                      relief, gradient, wi->light_angle));
   XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, bevel, 4, Convex, CoordModeOrigin);
 
   bevel[0] = bevel[1];
@@ -567,9 +556,9 @@ ZnDrawRectangleRelief(ZnWInfo		*wi,
   bevel[1].y += bbox->height;
   bevel[2].y = bevel[1].y - (short) line_width;
   XSetForeground(wi->dpy, wi->gc,
-		 ReliefPixelOfSegment((ZnReal) bevel[1].x, (ZnReal) bevel[1].y,
-				      (ZnReal) bevel[0].x, (ZnReal) bevel[0].y,
-				      relief, gradient, wi->light_angle));
+                 ReliefPixelOfSegment((ZnReal) bevel[1].x, (ZnReal) bevel[1].y,
+                                      (ZnReal) bevel[0].x, (ZnReal) bevel[0].y,
+                                      relief, gradient, wi->light_angle));
   XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, bevel, 4, Convex, CoordModeOrigin);
 
   bevel[0] = bevel[1];
@@ -577,9 +566,9 @@ ZnDrawRectangleRelief(ZnWInfo		*wi,
   bevel[1].x -= bbox->width;
   bevel[2].x = bevel[1].x + (short) line_width;
   XSetForeground(wi->dpy, wi->gc,
-		 ReliefPixelOfSegment((ZnReal) bevel[1].x, (ZnReal) bevel[1].y,
-				      (ZnReal) bevel[0].x, (ZnReal) bevel[0].y,
-				      relief, gradient, wi->light_angle));
+                 ReliefPixelOfSegment((ZnReal) bevel[1].x, (ZnReal) bevel[1].y,
+                                      (ZnReal) bevel[0].x, (ZnReal) bevel[0].y,
+                                      relief, gradient, wi->light_angle));
   XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, bevel, 4, Convex, CoordModeOrigin);
 
   bevel[0] = bevel[1];
@@ -589,44 +578,44 @@ ZnDrawRectangleRelief(ZnWInfo		*wi,
   bevel[2].x = bevel[3].x;
   bevel[2].y = bbox->y + (short) line_width;
   XSetForeground(wi->dpy, wi->gc,
-		 ReliefPixelOfSegment((ZnReal) bevel[1].x, (ZnReal) bevel[1].y,
-				      (ZnReal) bevel[0].x, (ZnReal) bevel[0].y,
-				      relief, gradient, wi->light_angle));
+                 ReliefPixelOfSegment((ZnReal) bevel[1].x, (ZnReal) bevel[1].y,
+                                      (ZnReal) bevel[0].x, (ZnReal) bevel[0].y,
+                                      relief, gradient, wi->light_angle));
   XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, bevel, 4, Convex, CoordModeOrigin);
 }
 
 
 typedef struct {
-  ZnWInfo	*wi;
-  ZnPoint	*pp;
-  ZnPoint	*p0;
-  ZnPoint	*p1;
-  double	dist;
-  ZnBBox	*bbox;
-  ZnReliefStyle	relief;
-  ZnGradient	*gradient;
+  ZnWInfo       *wi;
+  ZnPoint       *pp;
+  ZnPoint       *p0;
+  ZnPoint       *p1;
+  double        dist;
+  ZnBBox        *bbox;
+  ZnReliefStyle relief;
+  ZnGradient    *gradient;
   unsigned short alpha;
-  ZnBool	smooth;
-  int		result;
-  int		count;
-  ZnBool	toggle;
+  ZnBool        smooth;
+  int           result;
+  int           count;
+  ZnBool        toggle;
 } PolygonData;
 
 static void
-DoPolygon(ZnPoint	*p,
-	  unsigned int	num_points,
-	  ZnDim		line_width,
-	  ZnBool	(*cb)(ZnPoint *bevels, PolygonData *pd),
-	  PolygonData	*pd)
+DoPolygon(ZnPoint       *p,
+          unsigned int  num_points,
+          ZnDim         line_width,
+          ZnBool        (*cb)(ZnPoint *bevels, PolygonData *pd),
+          PolygonData   *pd)
 {
-  int		i;
-  unsigned int	processed_points;
-  ZnPoint	*p1, *p11=NULL, *p2;
-  ZnPoint	pp1, pp2, new_pp1, new_pp2;
-  ZnPoint	perp, c, shift1, shift2;
-  ZnPoint	bevel_points[4];
-  ZnBool	folded, closed, colinear;
-  ZnReal	dx, dy;
+  int           i;
+  unsigned int  processed_points;
+  ZnPoint       *p1, *p11=NULL, *p2;
+  ZnPoint       pp1, pp2, new_pp1, new_pp2;
+  ZnPoint       perp, c, shift1, shift2;
+  ZnPoint       bevel_points[4];
+  ZnBool        folded, closed, colinear;
+  ZnReal        dx, dy;
 
   if (num_points < 2) {
     return;
@@ -653,7 +642,7 @@ DoPolygon(ZnPoint	*p,
    *
    *          bevel[1]     /
    *             *        /
-   *		 |       /
+   *             |       /
    *             |      /
    *         pp1 *    * p[i-1]
    *             |    | bevel[0]
@@ -741,7 +730,7 @@ DoPolygon(ZnPoint	*p,
       ZnIntersectLines(p1, &perp, &pp1, &pp2, &bevel_points[2]);      
     }
     else if (processed_points >= 1) {
-      ZnReal	dotp, dist, odx, ody;
+      ZnReal    dotp, dist, odx, ody;
       
       /*
        * The dot product of the two faces tell if the are
@@ -752,42 +741,42 @@ DoPolygon(ZnPoint	*p,
       dotp = odx*dx + ody*dy;
       dist = ZnLineToPointDist(p11, p2, p1, NULL);
       if ((dist < 4.0) && (dotp <= 0)) {
-	perp.x = p1->x + (p2->y - p1->y);
-	perp.y = p1->y - (p2->x - p1->x);
-	ZnIntersectLines(p1, &perp, &new_pp1, &new_pp2, &bevel_points[2]);
-	colinear = True;
+        perp.x = p1->x + (p2->y - p1->y);
+        perp.y = p1->y - (p2->x - p1->x);
+        ZnIntersectLines(p1, &perp, &new_pp1, &new_pp2, &bevel_points[2]);
+        colinear = True;
       }
       else {
-	folded = !ZnIntersectLines(&new_pp1, &new_pp2, &pp1, &pp2, &bevel_points[2]);
-	/*printf("new_pp1 %g@%g, new_pp2 %g@%g, pp1 %g@%g, pp2 %g@%g, inter %g@%g\n",
-	       new_pp1.x, new_pp1.y, new_pp2.x, new_pp2.y,
-	       pp1.x, pp1.y, pp2.x, pp2.y,
-	       bevel_points[2].x, bevel_points[2].y);*/
-	folded = folded && (dotp < 0);
-	if (folded) {
-	  /*printf("DoPolygonRelief: folded edges detected, %g@%g, %g@%g, %g@%g, %g@%g\n",
-		 pp1.x, pp1.y, pp2.x, pp2.y, new_pp1.x, new_pp1.y,
-		 new_pp2.x, new_pp2.y);*/
-	  perp.x = p1->x + (p2->y - p1->y);
-	  perp.y = p1->y - (p2->x - p1->x);
-	  ZnIntersectLines(p1, &perp, &pp1, &pp2, &bevel_points[2]);
-	  ZnIntersectLines(p1, &perp, &new_pp1, &new_pp2, &c);
-	  ZnShiftLine(p1, &perp, line_width, &shift1, &shift2);
-	  ZnIntersectLines(p1, p2, &shift1, &shift2, &bevel_points[3]);
-	}
+        folded = !ZnIntersectLines(&new_pp1, &new_pp2, &pp1, &pp2, &bevel_points[2]);
+        /*printf("new_pp1 %g@%g, new_pp2 %g@%g, pp1 %g@%g, pp2 %g@%g, inter %g@%g\n",
+               new_pp1.x, new_pp1.y, new_pp2.x, new_pp2.y,
+               pp1.x, pp1.y, pp2.x, pp2.y,
+               bevel_points[2].x, bevel_points[2].y);*/
+        folded = folded && (dotp < 0);
+        if (folded) {
+          /*printf("DoPolygonRelief: folded edges detected, %g@%g, %g@%g, %g@%g, %g@%g\n",
+                 pp1.x, pp1.y, pp2.x, pp2.y, new_pp1.x, new_pp1.y,
+                 new_pp2.x, new_pp2.y);*/
+          perp.x = p1->x + (p2->y - p1->y);
+          perp.y = p1->y - (p2->x - p1->x);
+          ZnIntersectLines(p1, &perp, &pp1, &pp2, &bevel_points[2]);
+          ZnIntersectLines(p1, &perp, &new_pp1, &new_pp2, &c);
+          ZnShiftLine(p1, &perp, line_width, &shift1, &shift2);
+          ZnIntersectLines(p1, p2, &shift1, &shift2, &bevel_points[3]);
+        }
       }
     }
 
     if ((processed_points >= 2) || (!closed && (processed_points == 1))) {
       if ((processed_points == num_points-1) && !closed) {
-	pd->p0 = pd->p1 = NULL;
+        pd->p0 = pd->p1 = NULL;
       }
       else {
-	pd->p0 = p1;
-	pd->p1 = p2;
+        pd->p0 = p1;
+        pd->p1 = p2;
       }
       if ((*cb)(bevel_points, pd)) {
-	return;
+        return;
       }
     }
     
@@ -812,15 +801,15 @@ DoPolygon(ZnPoint	*p,
  **********************************************************************************
  *
  * ZnGetPolygonReliefBBox --
- *	Returns the bevelled polygon bounding box.
+ *      Returns the bevelled polygon bounding box.
  *
  **********************************************************************************
  */
 static ZnBool
-PolygonBBoxCB(ZnPoint		*bevels,
-	      PolygonData	*pd)
+PolygonBBoxCB(ZnPoint           *bevels,
+              PolygonData       *pd)
 {
-  int	 i;
+  int    i;
 
   for (i = 0; i < 4; i++) {
     ZnAddPointToBBox(pd->bbox, bevels[i].x, bevels[i].y);
@@ -829,12 +818,12 @@ PolygonBBoxCB(ZnPoint		*bevels,
 }
 
 void
-ZnGetPolygonReliefBBox(ZnPoint		*points,
-		       unsigned int	num_points,
-		       ZnDim		line_width,
-		       ZnBBox		*bbox)
+ZnGetPolygonReliefBBox(ZnPoint          *points,
+                       unsigned int     num_points,
+                       ZnDim            line_width,
+                       ZnBBox           *bbox)
 {
-  PolygonData	pd;
+  PolygonData   pd;
 
   pd.bbox = bbox;
   ZnResetBBox(bbox);
@@ -846,14 +835,14 @@ ZnGetPolygonReliefBBox(ZnPoint		*points,
  **********************************************************************************
  *
  * ZnPolygonReliefInBBox --
- *	Returns (-1) if the relief is entirely outside the bbox, (1) if it is
- *	entirely inside or (0) if in between
+ *      Returns (-1) if the relief is entirely outside the bbox, (1) if it is
+ *      entirely inside or (0) if in between
  *
  **********************************************************************************
  */
 static ZnBool
-PolygonInBBoxCB(ZnPoint		*bevels,
-		PolygonData	*pd)
+PolygonInBBoxCB(ZnPoint         *bevels,
+                PolygonData     *pd)
 {
   if (pd->count == 0) {
     pd->count++;
@@ -872,12 +861,12 @@ PolygonInBBoxCB(ZnPoint		*bevels,
 }
 
 int
-ZnPolygonReliefInBBox(ZnPoint		*points,
-		      unsigned int	num_points,
-		      ZnDim		line_width,
-		      ZnBBox		*area)
+ZnPolygonReliefInBBox(ZnPoint           *points,
+                      unsigned int      num_points,
+                      ZnDim             line_width,
+                      ZnBBox            *area)
 {
-  PolygonData	pd;
+  PolygonData   pd;
 
   pd.bbox = area;
   pd.count = 0;
@@ -892,16 +881,16 @@ ZnPolygonReliefInBBox(ZnPoint		*points,
  **********************************************************************************
  *
  * ZnPolygonReliefToPointDist --
- *	Returns the distance between the given point and
- *	the bevelled polygon.
+ *      Returns the distance between the given point and
+ *      the bevelled polygon.
  *
  **********************************************************************************
  */
 static ZnBool
-PolygonDistCB(ZnPoint		*bevels,
-	      PolygonData	*pd)
+PolygonDistCB(ZnPoint           *bevels,
+              PolygonData       *pd)
 {
-  double	new_dist;
+  double        new_dist;
 
   new_dist = ZnPolygonToPointDist(bevels, 4, pd->pp);
   if (new_dist < 0.0) {
@@ -914,12 +903,12 @@ PolygonDistCB(ZnPoint		*bevels,
 }
 
 double
-ZnPolygonReliefToPointDist(ZnPoint	*points,
-			   unsigned int	num_points,
-			   ZnDim	line_width,
-			   ZnPoint	*pp)
+ZnPolygonReliefToPointDist(ZnPoint      *points,
+                           unsigned int num_points,
+                           ZnDim        line_width,
+                           ZnPoint      *pp)
 {
-  PolygonData	pd;
+  PolygonData   pd;
 
   pd.dist = 1.0e40;
   pd.pp = pp;
@@ -933,47 +922,47 @@ ZnPolygonReliefToPointDist(ZnPoint	*points,
  **********************************************************************************
  *
  * ZnDrawPolygonRelief --
- *	Draw the bevels around path.
+ *      Draw the bevels around path.
  *
  **********************************************************************************
  */
 static ZnBool
-PolygonDrawCB(ZnPoint		*bevels,
-	      PolygonData	*pd)
+PolygonDrawCB(ZnPoint           *bevels,
+              PolygonData       *pd)
 {
-  ZnWInfo	*wi = pd->wi;
-  XPoint	bevel_xpoints[5];
-  XGCValues	values;
-  int		j;
+  ZnWInfo       *wi = pd->wi;
+  XPoint        bevel_xpoints[5];
+  XGCValues     values;
+  int           j;
 
   values.foreground = ReliefPixelOfSegment(bevels[0].x, bevels[0].y,
-					   bevels[3].x, bevels[3].y,
-					   pd->relief, pd->gradient,
-					   pd->wi->light_angle);
+                                           bevels[3].x, bevels[3].y,
+                                           pd->relief, pd->gradient,
+                                           pd->wi->light_angle);
 
   values.fill_style = FillSolid;
   XChangeGC(wi->dpy, wi->gc, GCFillStyle|GCForeground, &values);
-	
+        
   for (j = 0; j < 4; j++) {
     bevel_xpoints[j].x = ZnNearestInt(bevels[j].x);
     bevel_xpoints[j].y = ZnNearestInt(bevels[j].y);
   }
 
   XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, bevel_xpoints, 4,
-	       Convex, CoordModeOrigin);
+               Convex, CoordModeOrigin);
 
   return 0;
 }
 
 void
-ZnDrawPolygonRelief(ZnWInfo		*wi,
-		    ZnReliefStyle	relief,
-		    ZnGradient		*gradient,
-		    ZnPoint		*points,
-		    unsigned int	num_points,
-		    ZnDim		line_width)
+ZnDrawPolygonRelief(ZnWInfo             *wi,
+                    ZnReliefStyle       relief,
+                    ZnGradient          *gradient,
+                    ZnPoint             *points,
+                    unsigned int        num_points,
+                    ZnDim               line_width)
 {
-  PolygonData	pd;
+  PolygonData   pd;
 
   pd.wi = wi;
   pd.gradient = gradient;
@@ -998,21 +987,21 @@ ZnDrawPolygonRelief(ZnWInfo		*wi,
  **********************************************************************************
  *
  * ZnRenderPolygonRelief --
- *	Draw the bevels around path using alpha enabled rendering.
+ *      Draw the bevels around path using alpha enabled rendering.
  *
  **********************************************************************************
  */
 #ifdef GL
 static ZnBool
-PolygonRenderCB(ZnPoint		*bevels,
-		PolygonData	*pd)
+PolygonRenderCB(ZnPoint         *bevels,
+                PolygonData     *pd)
 {
-  int		i;
-  ZnPoint	p[6];
-  XColor	*c[8];
-  XColor	*color = ZnGetGradientColor(pd->gradient, 51.0, NULL);
-  ZnReliefStyle	relief, int_relief;
-  ZnBool	two_faces, round, rule;
+  int           i;
+  ZnPoint       p[6];
+  XColor        *c[8];
+  XColor        *color = ZnGetGradientColor(pd->gradient, 51.0, NULL);
+  ZnReliefStyle relief, int_relief;
+  ZnBool        two_faces, round, rule;
 
   rule = pd->relief & ZN_RELIEF_RULE;
   round = pd->relief & ZN_RELIEF_ROUND;
@@ -1036,29 +1025,29 @@ PolygonRenderCB(ZnPoint		*bevels,
       int_relief = ZN_RELIEF_SUNKEN;
     }
     c[0]=c[1]=c[2]=c[3] = ReliefColorOfSegment(bevels[0].x, bevels[0].y,
-					       bevels[3].x, bevels[3].y,
-					       relief, pd->gradient,
-					       pd->wi->light_angle);
+                                               bevels[3].x, bevels[3].y,
+                                               relief, pd->gradient,
+                                               pd->wi->light_angle);
     c[4]=c[5]=c[6]=c[7] = ReliefColorOfSegment(bevels[0].x, bevels[0].y,
-					       bevels[3].x, bevels[3].y,
-					       int_relief, pd->gradient,
-					       pd->wi->light_angle);
+                                               bevels[3].x, bevels[3].y,
+                                               int_relief, pd->gradient,
+                                               pd->wi->light_angle);
     if (pd->smooth && pd->p0) {
       c[2]=c[3] = ReliefColorOfSegment(pd->p0->x, pd->p0->y,
-				       pd->p1->x, pd->p1->y,
-				       relief, pd->gradient,
-				       pd->wi->light_angle);
+                                       pd->p1->x, pd->p1->y,
+                                       relief, pd->gradient,
+                                       pd->wi->light_angle);
       c[6]=c[7] = ReliefColorOfSegment(pd->p0->x, pd->p0->y,
-				       pd->p1->x, pd->p1->y,
-				       int_relief, pd->gradient,
-				       pd->wi->light_angle);
+                                       pd->p1->x, pd->p1->y,
+                                       int_relief, pd->gradient,
+                                       pd->wi->light_angle);
     }
     if (round) {
       if (!rule) {
-	c[0]=c[3]=c[5]=c[6]=color;
+        c[0]=c[3]=c[5]=c[6]=color;
       }
       else {
-	c[1]=c[2]=c[4]=c[7]=color;
+        c[1]=c[2]=c[4]=c[7]=color;
       }
     }
     glBegin(GL_QUADS);
@@ -1089,14 +1078,14 @@ PolygonRenderCB(ZnPoint		*bevels,
   }
   else { /* Single face */
     c[0]=c[1]=c[2]=c[3] = ReliefColorOfSegment(bevels[0].x, bevels[0].y,
-					       bevels[3].x, bevels[3].y,
-					       relief, pd->gradient,
-					       pd->wi->light_angle);
+                                               bevels[3].x, bevels[3].y,
+                                               relief, pd->gradient,
+                                               pd->wi->light_angle);
     if (pd->smooth && pd->p0) {
       c[2]=c[3] = ReliefColorOfSegment(pd->p0->x, pd->p0->y,
-				       pd->p1->x, pd->p1->y,
-				       relief, pd->gradient,
-				       pd->wi->light_angle);
+                                       pd->p1->x, pd->p1->y,
+                                       relief, pd->gradient,
+                                       pd->wi->light_angle);
     }
     if (round) {
       c[1]=c[2] = color;
@@ -1117,22 +1106,22 @@ PolygonRenderCB(ZnPoint		*bevels,
 }
 
 void
-ZnRenderPolygonRelief(ZnWInfo		*wi,
-		      ZnReliefStyle	relief,
-		      ZnGradient	*gradient,
-		      ZnBool		smooth,
-		      ZnPoint		*points,
-		      unsigned int	num_points,
-		      ZnDim		line_width)
+ZnRenderPolygonRelief(ZnWInfo           *wi,
+                      ZnReliefStyle     relief,
+                      ZnGradient        *gradient,
+                      ZnBool            smooth,
+                      ZnPoint           *points,
+                      unsigned int      num_points,
+                      ZnDim             line_width)
 {
-  PolygonData	pd;
+  PolygonData   pd;
 
   pd.wi = wi;
   pd.gradient = gradient;
   ZnGetGradientColor(gradient, 0.0, &pd.alpha);
   pd.alpha = ZnComposeAlpha(pd.alpha, wi->alpha);
   pd.smooth = smooth;
-  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);	  
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);      
   pd.relief = relief;
   pd.count = 0;
 
@@ -1140,23 +1129,23 @@ ZnRenderPolygonRelief(ZnWInfo		*wi,
 }
 
 void
-ZnRenderPolyline(ZnWInfo	*wi,
-		 ZnPoint	*points,
-		 unsigned int	num_points,
-		 ZnDim		line_width,
-		 ZnLineStyle	line_style,
-		 int		cap_style,
-		 int		join_style __unused,
-		 ZnLineEnd	first_end,
-		 ZnLineEnd	last_end,
-		 ZnGradient	*gradient)
+ZnRenderPolyline(ZnWInfo        *wi,
+                 ZnPoint        *points,
+                 unsigned int   num_points,
+                 ZnDim          line_width,
+                 ZnLineStyle    line_style,
+                 int            cap_style,
+                 int            join_style,
+                 ZnLineEnd      first_end,
+                 ZnLineEnd      last_end,
+                 ZnGradient     *gradient)
 {
-  int		num_clips = ZnListSize(wi->clip_stack);
-  ZnPoint	end_points[ZN_LINE_END_POINTS];
-  ZnBool	need_rcaps, thin, closed, transparent;
-  int		pass, num_passes, i, k, m;
-  ZnPoint	c1, c2;    
-  XColor	*color;
+  int           num_clips = ZnListSize(wi->clip_stack);
+  ZnPoint       end_points[ZN_LINE_END_POINTS];
+  ZnBool        need_rcaps, thin, closed, transparent;
+  int           pass, num_passes, i, k, m;
+  ZnPoint       c1, c2;    
+  XColor        *color;
   unsigned short alpha;
   ZnGLContextEntry *ce = ZnGetGLContext(wi->dpy);
 
@@ -1169,7 +1158,7 @@ ZnRenderPolyline(ZnWInfo	*wi,
    * The caps can be either round or butt (but not projecting).
    */
   thin = ((line_width <= ce->max_line_width) &&
-	  (line_width <= ce->max_point_width));
+          (line_width <= ce->max_point_width));
   closed = (points->x == points[num_points-1].x) && (points->y == points[num_points-1].y);
   color = ZnGetGradientColor(gradient, 0.0, &alpha);
   alpha = ZnComposeAlpha(alpha, wi->alpha);
@@ -1210,46 +1199,46 @@ ZnRenderPolyline(ZnWInfo	*wi,
   for (pass = 0; pass < num_passes; pass++) {
     if (transparent) {
       if (pass == 0) {
-	ZnGlStartClip(num_clips, True);
+        ZnGlStartClip(num_clips, True);
       }
       else {
-	ZnGlRestoreStencil(num_clips, False);
+        ZnGlRestoreStencil(num_clips, False);
       }
     }
     if (first_end) {
       ZnGetLineEnd(&points[0], &points[1], line_width, cap_style,
-		   first_end, end_points);
+                   first_end, end_points);
       glBegin(GL_TRIANGLE_FAN);
       for (m = 0; m < ZN_LINE_END_POINTS; m++) {
-	glVertex2d(end_points[m].x, end_points[m].y);
+        glVertex2d(end_points[m].x, end_points[m].y);
       }
       glEnd();
     }
     if (last_end) {
       ZnGetLineEnd(&points[num_points-1], &points[num_points-2],
-		   line_width, cap_style, last_end, end_points);
+                   line_width, cap_style, last_end, end_points);
       glBegin(GL_TRIANGLE_FAN);
       for (m = 0; m < ZN_LINE_END_POINTS; m++) {
-	glVertex2d(end_points[m].x, end_points[m].y);
+        glVertex2d(end_points[m].x, end_points[m].y);
       }
       glEnd();
     }
     if (thin) {
       glBegin(GL_LINE_STRIP);
       for (i = 0; i < (int) num_points; i++) {
-	glVertex2d(points[i].x, points[i].y);
+        glVertex2d(points[i].x, points[i].y);
       }
       glEnd();
     }
     else {
       glBegin(GL_QUADS);
       for (i = 0; i < (int) num_points-1; i++) {
-	ZnGetButtPoints(&points[i+1], &points[i], line_width, False, &c1, &c2);
-	glVertex2d(c1.x, c1.y);
-	glVertex2d(c2.x, c2.y);
-	ZnGetButtPoints(&points[i], &points[i+1], line_width, False, &c1, &c2);
-	glVertex2d(c1.x, c1.y);
-	glVertex2d(c2.x, c2.y);
+        ZnGetButtPoints(&points[i+1], &points[i], line_width, False, &c1, &c2);
+        glVertex2d(c1.x, c1.y);
+        glVertex2d(c2.x, c2.y);
+        ZnGetButtPoints(&points[i], &points[i+1], line_width, False, &c1, &c2);
+        glVertex2d(c1.x, c1.y);
+        glVertex2d(c2.x, c2.y);
       }
       glEnd();
     }
@@ -1277,24 +1266,24 @@ ZnRenderPolyline(ZnWInfo	*wi,
     if (thin) {
       glBegin(GL_POINTS);
       for ( ; i < k; i++) {
-	glVertex2d(points[i].x, points[i].y);
+        glVertex2d(points[i].x, points[i].y);
       }
       glEnd();
     }
     else {
-      int	num_cpoints;
-      ZnReal	lw_2 = line_width / 2.0;
-      ZnPoint	*cpoints = ZnGetCirclePoints(3, ZN_CIRCLE_COARSE,
-					     0.0, 2*M_PI, &num_cpoints, NULL);
+      int       num_cpoints;
+      ZnReal    lw_2 = line_width / 2.0;
+      ZnPoint   *cpoints = ZnGetCirclePoints(3, ZN_CIRCLE_COARSE,
+                                             0.0, 2*M_PI, &num_cpoints, NULL);
       
       for ( ; i < k; i++) {
-	glBegin(GL_TRIANGLE_FAN);
-	glVertex2d(points[i].x, points[i].y);
-	for (m = 0; m < num_cpoints; m++) {
-	  glVertex2d(points[i].x + cpoints[m].x*lw_2,
-		     points[i].y + cpoints[m].y*lw_2);
-	}
-	glEnd();
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex2d(points[i].x, points[i].y);
+        for (m = 0; m < num_cpoints; m++) {
+          glVertex2d(points[i].x + cpoints[m].x*lw_2,
+                     points[i].y + cpoints[m].y*lw_2);
+        }
+        glEnd();
       }
     }
   }
@@ -1307,14 +1296,14 @@ ZnRenderPolyline(ZnWInfo	*wi,
 
 
 void
-ZnRenderIcon(ZnWInfo	*wi,
-	     ZnImage	image,
-	     ZnGradient	*gradient,
-	     ZnPoint	*origin,
-	     ZnBool	modulate)
+ZnRenderIcon(ZnWInfo    *wi,
+             ZnImage    image,
+             ZnGradient *gradient,
+             ZnPoint    *origin,
+             ZnBool     modulate)
 {
-  ZnPoint	p[4];
-  int		width, height;
+  ZnPoint       p[4];
+  int           width, height;
 
   ZnSizeOfImage(image, &width, &height);
   p[0] = *origin;
@@ -1329,16 +1318,16 @@ ZnRenderIcon(ZnWInfo	*wi,
 
 
 void
-ZnRenderImage(ZnWInfo	 *wi,
-	      ZnImage	 image,
-	      ZnGradient *gradient,
-	      ZnPoint	 *quad,
-	      ZnBool	 modulate)
+ZnRenderImage(ZnWInfo    *wi,
+              ZnImage    image,
+              ZnGradient *gradient,
+              ZnPoint    *quad,
+              ZnBool     modulate)
 {
-  XColor	*color;
+  XColor        *color;
   unsigned short alpha;
-  ZnReal	t, s;
-  GLuint	texobj;
+  ZnReal        t, s;
+  GLuint        texobj;
   
   color = ZnGetGradientColor(gradient, 0.0, &alpha);
   alpha = ZnComposeAlpha(alpha, wi->alpha);
@@ -1367,18 +1356,18 @@ ZnRenderImage(ZnWInfo	 *wi,
 }
 
 void
-ZnRenderTile(ZnWInfo	*wi,
-	     ZnImage	tile,
-	     ZnGradient	*gradient,
-	     void	(*cb)(void *),
-	     void	*closure,
-	     ZnPoint	*quad) /* Right now it's a ZnBBox */
+ZnRenderTile(ZnWInfo    *wi,
+             ZnImage    tile,
+             ZnGradient *gradient,
+             void       (*cb)(void *),
+             void       *closure,
+             ZnPoint    *quad) /* Right now it's a ZnBBox */
 {
-  ZnReal	x, y, nx, ny, lx, ly, s, t, tiles, tilet;
-  int		width, height, num_clips = ZnListSize(wi->clip_stack);
+  ZnReal        x, y, nx, ny, lx, ly, s, t, tiles, tilet;
+  int           width, height, num_clips = ZnListSize(wi->clip_stack);
   unsigned short alpha;
-  GLuint	texobj;
-  XColor	*color;
+  GLuint        texobj;
+  XColor        *color;
 
   if (gradient) {
     color = ZnGetGradientColor(gradient, 0.0, &alpha);
@@ -1433,8 +1422,8 @@ ZnRenderTile(ZnWInfo	*wi,
       s = 1.0;
       nx = x + width;
       if (nx > lx) {
-	nx = lx;
-	s = (lx - x) / (ZnReal) width;
+        nx = lx;
+        s = (lx - x) / (ZnReal) width;
       }
       s *= tiles;
       glTexCoord2d(0.0, 0.0);
@@ -1461,16 +1450,16 @@ ZnRenderTile(ZnWInfo	*wi,
 
 
 static void
-ComputeAxialGradient(ZnWInfo	*wi,
-		     ZnPoly	*shape,
-		     ZnReal	angle,
-		     ZnPoint	*grad_geo)
+ComputeAxialGradient(ZnWInfo    *wi,
+                     ZnPoly     *shape,
+                     ZnReal     angle,
+                     ZnPoint    *grad_geo)
 {
-  ZnTransfo	*transfo1, *transfo2;
-  ZnContour	*c;
-  ZnBBox	bbox;
-  ZnPoint	*points, p[4];
-  unsigned int	i;
+  ZnTransfo     *transfo1, *transfo2;
+  ZnContour     *c;
+  ZnBBox        bbox;
+  ZnPoint       *points, p[4];
+  unsigned int  i;
   
   transfo1 = ZnTransfoNew();
   transfo2 = ZnTransfoNew();
@@ -1502,20 +1491,20 @@ ComputeAxialGradient(ZnWInfo	*wi,
 }
 
 static void
-ComputeCircularGradient(ZnWInfo		*wi,
-			ZnPoly		*shape,
-			ZnBool		oval,
-			ZnPoint		*focal_pp, /* in percent of bbox */
-			ZnReal		angle,
-			ZnPoint		*grad_geo)
+ComputeCircularGradient(ZnWInfo         *wi,
+                        ZnPoly          *shape,
+                        ZnBool          oval,
+                        ZnPoint         *focal_pp, /* in percent of bbox */
+                        ZnReal          angle,
+                        ZnPoint         *grad_geo)
 {
-  ZnReal	dist, new, x, y, ff;
-  ZnBBox	bbox;
-  ZnContour	*c;
-  ZnPoint	offset, radius, focal_point;
-  ZnPoint	*points;
-  ZnTransfo	t1;
-  unsigned int	i, j;
+  ZnReal        dist, new, x, y, ff;
+  ZnBBox        bbox;
+  ZnContour     *c;
+  ZnPoint       offset, radius, focal_point;
+  ZnPoint       *points;
+  ZnTransfo     t1;
+  unsigned int  i, j;
 
   /*
    * Compute the shape bbox (which should be in the item space).
@@ -1579,12 +1568,12 @@ ComputeCircularGradient(ZnWInfo		*wi,
     c = shape->contours;
     for (j = 0; j < shape->num_contours; j++, c++) {
       for (i = 0, points = c->points; i < c->num_points; i++, points++) {
-	x = points->x - focal_point.x;
-	y = points->y - focal_point.y;
-	new = x*x+y*y;
-	if (new > dist) {
-	  dist = new;
-	}
+        x = points->x - focal_point.x;
+        y = points->y - focal_point.y;
+        new = x*x+y*y;
+        if (new > dist) {
+          dist = new;
+        }
       }
     }
   }
@@ -1609,15 +1598,15 @@ ComputeCircularGradient(ZnWInfo		*wi,
 }
 
 static void
-ComputePathGradient(ZnWInfo	*wi,
-		    ZnPoly	*shape,
-		    ZnPoint	*focal_pp, /* in percent of the bbox */
-		    ZnPoint	*grad_geo)
+ComputePathGradient(ZnWInfo     *wi,
+                    ZnPoly      *shape,
+                    ZnPoint     *focal_pp, /* in percent of the bbox */
+                    ZnPoint     *grad_geo)
 {
-  ZnBBox	bbox;
-  ZnContour	*c;
-  ZnPoint	focal_point;
-  unsigned int	j;
+  ZnBBox        bbox;
+  ZnContour     *c;
+  ZnPoint       focal_point;
+  unsigned int  j;
 
   /*
    * Compute the shape bbox (which should be in the item space).
@@ -1640,10 +1629,10 @@ ComputePathGradient(ZnWInfo	*wi,
 }
 
 void
-ZnComputeGradient(ZnGradient	*grad,
-		  ZnWInfo	*wi,
-		  ZnPoly	*shape,
-		  ZnPoint	*grad_geo)
+ZnComputeGradient(ZnGradient    *grad,
+                  ZnWInfo       *wi,
+                  ZnPoly        *shape,
+                  ZnPoint       *grad_geo)
 {
   switch (grad->type) {
   case ZN_AXIAL_GRADIENT:
@@ -1660,30 +1649,30 @@ ZnComputeGradient(ZnGradient	*grad,
 }
 
 void
-ZnRenderGradient(ZnWInfo	*wi,
-		 ZnGradient	*gradient,	/* The gradient to be drawn (static
-						 * parameters). */
-		 void		(*cb)(void *),	/* A callback called to clip the shape
-						 * containing the gradient. */
-		 void		*closure,	/* The callback parameter. */
-		 ZnPoint	*quad,		/* The gradient geometric parameters
-						 * (dynamic). */
-		 ZnPoly		*poly		/* Used only by ZN_PATH_GRADIENT */
-		 )
+ZnRenderGradient(ZnWInfo        *wi,
+                 ZnGradient     *gradient,      /* The gradient to be drawn (static
+                                                 * parameters). */
+                 void           (*cb)(void *),  /* A callback called to clip the shape
+                                                 * containing the gradient. */
+                 void           *closure,       /* The callback parameter. */
+                 ZnPoint        *quad,          /* The gradient geometric parameters
+                                                 * (dynamic). */
+                 ZnPoly         *poly           /* Used only by ZN_PATH_GRADIENT */
+                 )
 {
   unsigned short alpha, alpha2;
-  int		angle;
-  unsigned int	i, j;
-  int		type = gradient->type;
-  XColor	*color;
-  ZnPoint	dposa, dposb, dposc, dposd;
-  ZnPoint	p, dcontrol;
-  ZnReal	npos, pos, control;
-  unsigned int	num_clips = ZnListSize(wi->clip_stack);
-  ZnPoint	iquad[4];
+  int           angle;
+  unsigned int  i, j;
+  int           type = gradient->type;
+  XColor        *color;
+  ZnPoint       dposa, dposb, dposc, dposd;
+  ZnPoint       p, dcontrol;
+  ZnReal        npos, pos, control;
+  unsigned int  num_clips = ZnListSize(wi->clip_stack);
+  ZnPoint       iquad[4];
   
   if (!cb && (type == ZN_AXIAL_GRADIENT)) { /* Render an aligned
-					     * axial gradient in the quad */
+                                             * axial gradient in the quad */
     angle = gradient->angle;
     /*
      * Adjust the quad for 90 180 and 270 degrees axial
@@ -1751,36 +1740,36 @@ ZnRenderGradient(ZnWInfo	*wi,
       glVertex2d(p.x, p.y);
       
       if ((control != 50.0) && (i != gradient->num_actual_colors-1)) {
-	color = gradient->actual_colors[i].mid_rgb;
-	alpha = ZnComposeAlpha(gradient->actual_colors[i].mid_alpha, wi->alpha);
-	glColor4us(color->red, color->green, color->blue, alpha);
-	
-	npos = gradient->actual_colors[i+1].position;
-	dposc.x = (quad[1].x - quad[0].x)*npos/100.0;
-	dposc.y = (quad[1].y - quad[0].y)*npos/100.0;
-	dcontrol.x = (dposc.x - dposa.x)*control/100.0;
-	dcontrol.y = (dposc.y - dposa.y)*control/100.0;
-	p.x = quad[0].x + dposa.x + dcontrol.x;
-	p.y = quad[0].y + dposa.y + dcontrol.y;
-	glVertex2d(p.x, p.y);
-	
-	dposd.x = (quad[2].x - quad[3].x)*npos/100.0;
-	dposd.y = (quad[2].y - quad[3].y)*npos/100.0;
-	dcontrol.x = (dposd.x - dposb.x)*control/100.0;
-	dcontrol.y = (dposd.y - dposb.y)*control/100.0;      
-	p.x = quad[3].x + dposb.x + dcontrol.x;
-	p.y = quad[3].y + dposb.y + dcontrol.y;
-	glVertex2d(p.x, p.y);
+        color = gradient->actual_colors[i].mid_rgb;
+        alpha = ZnComposeAlpha(gradient->actual_colors[i].mid_alpha, wi->alpha);
+        glColor4us(color->red, color->green, color->blue, alpha);
+        
+        npos = gradient->actual_colors[i+1].position;
+        dposc.x = (quad[1].x - quad[0].x)*npos/100.0;
+        dposc.y = (quad[1].y - quad[0].y)*npos/100.0;
+        dcontrol.x = (dposc.x - dposa.x)*control/100.0;
+        dcontrol.y = (dposc.y - dposa.y)*control/100.0;
+        p.x = quad[0].x + dposa.x + dcontrol.x;
+        p.y = quad[0].y + dposa.y + dcontrol.y;
+        glVertex2d(p.x, p.y);
+        
+        dposd.x = (quad[2].x - quad[3].x)*npos/100.0;
+        dposd.y = (quad[2].y - quad[3].y)*npos/100.0;
+        dcontrol.x = (dposd.x - dposb.x)*control/100.0;
+        dcontrol.y = (dposd.y - dposb.y)*control/100.0;      
+        p.x = quad[3].x + dposb.x + dcontrol.x;
+        p.y = quad[3].y + dposb.y + dcontrol.y;
+        glVertex2d(p.x, p.y);
       }
       
     }
     glEnd();
   }
   else if (type == ZN_RADIAL_GRADIENT) {
-    ZnReal	 x, y, position, position2, position3;
+    ZnReal       x, y, position, position2, position3;
     unsigned int num_p;
-    ZnPoint	 *genarc, *tarc, p, focalp;
-    XColor	 *color2;
+    ZnPoint      *genarc, *tarc, p, focalp;
+    XColor       *color2;
 
     genarc = ZnGetCirclePoints(3, ZN_CIRCLE_FINE, 0.0, 2*M_PI, &num_p, NULL);
     ZnListAssertSize(ZnWorkPoints, num_p);
@@ -1796,37 +1785,37 @@ ZnRenderGradient(ZnWInfo	*wi,
     for (j = 1; j < gradient->num_actual_colors; j++) {
       position2 = gradient->actual_colors[j].position/100.0;
       if ((control != 50) && (j != gradient->num_actual_colors-1)) {
-	glBegin(GL_QUAD_STRIP);
-	color2 = gradient->actual_colors[j-1].mid_rgb;
-	alpha2 = ZnComposeAlpha(gradient->actual_colors[j-1].mid_alpha, wi->alpha);
-	position3 = position + (position2-position)*control/100.0;
-	for (i = 0; i < num_p; i++) {
-	  x = focalp.x + (tarc[i].x-focalp.x) * position;
-	  y = focalp.y + (tarc[i].y-focalp.y) * position;
-	  glColor4us(color->red, color->green, color->blue, alpha);
-	  glVertex2d(x, y);
-	  x = focalp.x + (tarc[i].x-focalp.x) * position3;
-	  y = focalp.y + (tarc[i].y-focalp.y) * position3;
-	  glColor4us(color2->red, color2->green, color2->blue, alpha);
-	  glVertex2d(x, y);
-	}
-	position = position3;
-	color = color2;
-	alpha = alpha2;
-	glEnd();
+        glBegin(GL_QUAD_STRIP);
+        color2 = gradient->actual_colors[j-1].mid_rgb;
+        alpha2 = ZnComposeAlpha(gradient->actual_colors[j-1].mid_alpha, wi->alpha);
+        position3 = position + (position2-position)*control/100.0;
+        for (i = 0; i < num_p; i++) {
+          x = focalp.x + (tarc[i].x-focalp.x) * position;
+          y = focalp.y + (tarc[i].y-focalp.y) * position;
+          glColor4us(color->red, color->green, color->blue, alpha);
+          glVertex2d(x, y);
+          x = focalp.x + (tarc[i].x-focalp.x) * position3;
+          y = focalp.y + (tarc[i].y-focalp.y) * position3;
+          glColor4us(color2->red, color2->green, color2->blue, alpha);
+          glVertex2d(x, y);
+        }
+        position = position3;
+        color = color2;
+        alpha = alpha2;
+        glEnd();
       }
       glBegin(GL_QUAD_STRIP);
       color2 = gradient->actual_colors[j].rgb;
       alpha2 = ZnComposeAlpha(gradient->actual_colors[j].alpha, wi->alpha);
       for (i = 0; i < num_p; i++) {
-	x = focalp.x + (tarc[i].x-focalp.x) * position;
-	y = focalp.y + (tarc[i].y-focalp.y) * position;
-	glColor4us(color->red, color->green, color->blue, alpha);
-	glVertex2d(x, y);
-	x = focalp.x + (tarc[i].x-focalp.x) * position2;
-	y = focalp.y + (tarc[i].y-focalp.y) * position2;
-	glColor4us(color2->red, color2->green, color2->blue, alpha2);
-	glVertex2d(x, y);
+        x = focalp.x + (tarc[i].x-focalp.x) * position;
+        y = focalp.y + (tarc[i].y-focalp.y) * position;
+        glColor4us(color->red, color->green, color->blue, alpha);
+        glVertex2d(x, y);
+        x = focalp.x + (tarc[i].x-focalp.x) * position2;
+        y = focalp.y + (tarc[i].y-focalp.y) * position2;
+        glColor4us(color2->red, color2->green, color2->blue, alpha2);
+        glVertex2d(x, y);
       }
       glEnd();
       position = position2;
@@ -1836,70 +1825,70 @@ ZnRenderGradient(ZnWInfo	*wi,
     }
   }
   else if (type == ZN_PATH_GRADIENT) {
-    ZnPoint	 p, pp, p2, pp2, p3, pp3;
+    ZnPoint      p, pp, p2, pp2, p3, pp3;
     unsigned int num_p, k, ii;
-    ZnPoint	 *points;
-    ZnReal	 position;
+    ZnPoint      *points;
+    ZnReal       position;
     
     for (k = 0; k < poly->num_contours; k++) {
       /*if (poly->contours[k].cw) {
-	continue;
-	}*/
+        continue;
+        }*/
       points = poly->contours[k].points;
       num_p = poly->contours[k].num_points;
       
       for (i = 0; i < num_p; i++) {
-	if (i == num_p-1) {
-	  ii = 0;
-	}
-	else {
-	  ii = i+1;
-	}
-	
-	glBegin(GL_QUAD_STRIP);
-	p.x = p.y = pp.x = pp.y = 0;
-	control = gradient->actual_colors[0].control;
-	position = gradient->actual_colors[0].position;
-	alpha = ZnComposeAlpha(gradient->actual_colors[0].alpha, wi->alpha);
-	color = gradient->actual_colors[0].rgb;
-	glColor4us(color->red, color->green, color->blue, alpha);
-	glVertex2d(quad[0].x+p.x, quad[0].y+p.y);
-	glVertex2d(quad[0].x+pp.x, quad[0].y+pp.y);
-	for (j = 0; j < gradient->num_actual_colors-1; j++) {
-	  position = gradient->actual_colors[j+1].position;
-	  p2.x = (points[i].x-quad[0].x)*position/100.0;
-	  p2.y = (points[i].y-quad[0].y)*position/100.0;
-	  pp2.x = (points[ii].x-quad[0].x)*position/100.0;
-	  pp2.y = (points[ii].y-quad[0].y)*position/100.0;
-	  if (control != 50) {
-	    color = gradient->actual_colors[j].mid_rgb;
-	    alpha = ZnComposeAlpha(gradient->actual_colors[j].mid_alpha, wi->alpha);
-	    p3.x = p.x+(p2.x-p.x)*control/100.0;
-	    p3.y = p.y+(p2.y-p.y)*control/100.0;
-	    pp3.x = pp.x+(pp2.x-pp.x)*control/100.0;
-	    pp3.y = pp.y+(pp2.y-pp.y)*control/100.0;
-	    glColor4us(color->red, color->green, color->blue, alpha);
-	    glVertex2d(quad[0].x+p3.x, quad[0].y+p3.y);
-	    glVertex2d(quad[0].x+pp3.x, quad[0].y+pp3.y);
-	  }
-	  control = gradient->actual_colors[j+1].control;
-	  alpha = ZnComposeAlpha(gradient->actual_colors[j+1].alpha, wi->alpha);
-	  color = gradient->actual_colors[j+1].rgb;
-	  p = p2;
-	  pp = pp2;
-	  glColor4us(color->red, color->green, color->blue, alpha);
-	  glVertex2d(quad[0].x+p.x, quad[0].y+p.y);
-	  glVertex2d(quad[0].x+pp.x, quad[0].y+pp.y);
-	}
-	glEnd();
+        if (i == num_p-1) {
+          ii = 0;
+        }
+        else {
+          ii = i+1;
+        }
+        
+        glBegin(GL_QUAD_STRIP);
+        p.x = p.y = pp.x = pp.y = 0;
+        control = gradient->actual_colors[0].control;
+        position = gradient->actual_colors[0].position;
+        alpha = ZnComposeAlpha(gradient->actual_colors[0].alpha, wi->alpha);
+        color = gradient->actual_colors[0].rgb;
+        glColor4us(color->red, color->green, color->blue, alpha);
+        glVertex2d(quad[0].x+p.x, quad[0].y+p.y);
+        glVertex2d(quad[0].x+pp.x, quad[0].y+pp.y);
+        for (j = 0; j < gradient->num_actual_colors-1; j++) {
+          position = gradient->actual_colors[j+1].position;
+          p2.x = (points[i].x-quad[0].x)*position/100.0;
+          p2.y = (points[i].y-quad[0].y)*position/100.0;
+          pp2.x = (points[ii].x-quad[0].x)*position/100.0;
+          pp2.y = (points[ii].y-quad[0].y)*position/100.0;
+          if (control != 50) {
+            color = gradient->actual_colors[j].mid_rgb;
+            alpha = ZnComposeAlpha(gradient->actual_colors[j].mid_alpha, wi->alpha);
+            p3.x = p.x+(p2.x-p.x)*control/100.0;
+            p3.y = p.y+(p2.y-p.y)*control/100.0;
+            pp3.x = pp.x+(pp2.x-pp.x)*control/100.0;
+            pp3.y = pp.y+(pp2.y-pp.y)*control/100.0;
+            glColor4us(color->red, color->green, color->blue, alpha);
+            glVertex2d(quad[0].x+p3.x, quad[0].y+p3.y);
+            glVertex2d(quad[0].x+pp3.x, quad[0].y+pp3.y);
+          }
+          control = gradient->actual_colors[j+1].control;
+          alpha = ZnComposeAlpha(gradient->actual_colors[j+1].alpha, wi->alpha);
+          color = gradient->actual_colors[j+1].rgb;
+          p = p2;
+          pp = pp2;
+          glColor4us(color->red, color->green, color->blue, alpha);
+          glVertex2d(quad[0].x+p.x, quad[0].y+p.y);
+          glVertex2d(quad[0].x+pp.x, quad[0].y+pp.y);
+        }
+        glEnd();
       }
     }
   }
   else if (type == ZN_CONICAL_GRADIENT) {
-    ZnReal	 position;
+    ZnReal       position;
     unsigned int num_p;
-    ZnPoint	 *genarc, *tarc, p, focalp;
-    XColor	 col;
+    ZnPoint      *genarc, *tarc, p, focalp;
+    XColor       col;
 
     genarc = ZnGetCirclePoints(3, ZN_CIRCLE_FINEST, 0.0, 2*M_PI, &num_p, NULL);
     ZnListAssertSize(ZnWorkPoints, num_p);
@@ -1915,7 +1904,7 @@ ZnRenderGradient(ZnWInfo	*wi,
       alpha = ZnComposeAlpha(alpha, wi->alpha);
 
       /*printf("position: %g --> color: %d %d %d, alpha: %d\n",
-	position, col.red, col.green, col.blue, alpha);*/
+        position, col.red, col.green, col.blue, alpha);*/
 
       glColor4us(col.red, col.green, col.blue, alpha);
       glVertex2d(tarc[i].x, tarc[i].y);
@@ -1934,11 +1923,11 @@ ZnRenderGradient(ZnWInfo	*wi,
 
 
 void
-ZnRenderHollowDot(ZnWInfo	*wi,
-		  ZnPoint	*p,
-		  ZnReal	size)
+ZnRenderHollowDot(ZnWInfo       *wi,
+                  ZnPoint       *p,
+                  ZnReal        size)
 {
-  int	num_clips = ZnListSize(wi->clip_stack);
+  int   num_clips = ZnListSize(wi->clip_stack);
   
   ZnGlStartClip(num_clips, False);
   
@@ -1967,8 +1956,8 @@ ZnRenderHollowDot(ZnWInfo	*wi,
 
 #ifdef GL
 void
-ZnRenderGlyph(ZnTexFontInfo	*tfi,
-	      int		c)
+ZnRenderGlyph(ZnTexFontInfo     *tfi,
+              int               c)
 {
   ZnTexGVI *tgvi;
 
@@ -1976,10 +1965,10 @@ ZnRenderGlyph(ZnTexFontInfo	*tfi,
   if (!tgvi) {
     return;
   }
-  /*printf("%c --> x0,y0: %d %d, tx0,ty0: %g %g, x1,y1: %d %d, tx1,ty1: %g %g, advance: %g\n",
-	 c, tgvi->v0x, tgvi->v0y, tgvi->t0x, tgvi->t0y,
-	 tgvi->v1x, tgvi->v1y, tgvi->t1x, tgvi->t1y,
-	 tgvi->advance);*/
+  //printf("%c --> x0,y0: %d %d, tx0,ty0: %g %g, x1,y1: %d %d, tx1,ty1: %g %g, advance: %g\n",
+    //     c, tgvi->v0x, tgvi->v0y, tgvi->t0x, tgvi->t0y,
+    //     tgvi->v1x, tgvi->v1y, tgvi->t1x, tgvi->t1y,
+    //     tgvi->advance);
   glBegin(GL_QUADS);
   glTexCoord2f(tgvi->t0x, tgvi->t0y); glVertex2s(tgvi->v0x, tgvi->v0y);
   glTexCoord2f(tgvi->t0x, tgvi->t1y); glVertex2s(tgvi->v0x, tgvi->v1y);
@@ -1991,9 +1980,9 @@ ZnRenderGlyph(ZnTexFontInfo	*tfi,
 
 #ifdef PTK_800
 void
-ZnRenderString(ZnTexFontInfo	*tfi,
-	       unsigned char	*string,
-	       unsigned int	len)
+ZnRenderString(ZnTexFontInfo    *tfi,
+               unsigned char    *string,
+               unsigned int     len)
 {
   while (len) {
     ZnRenderGlyph(tfi, *string);
@@ -2003,12 +1992,12 @@ ZnRenderString(ZnTexFontInfo	*tfi,
 }
 #else
 void
-ZnRenderString(ZnTexFontInfo	*tfi,
-	       unsigned char	*string,
-	       unsigned int	len)
+ZnRenderString(ZnTexFontInfo    *tfi,
+               unsigned char    *string,
+               unsigned int     len)
 {
-  unsigned int	clen;
-  Tcl_UniChar	c;
+  unsigned int  clen;
+  Tcl_UniChar   c;
 
   while (len) {
     clen = Tcl_UtfToUniChar(string, &c);
@@ -2026,37 +2015,37 @@ ZnRenderString(ZnTexFontInfo	*tfi,
  **********************************************************************************
  *
  * RenderTriangle --
- *	This routine maps an image onto a triangle.
- *	Image coordinates are chosen for  each vertex of the triangle.
- *	A simple affine tex mapping is used as in Zinc there is no way
- *	to specify perspective deformation. No filtering is attempted
- *	on the output pixels. 
+ *      This routine maps an image onto a triangle.
+ *      Image coordinates are chosen for  each vertex of the triangle.
+ *      A simple affine tex mapping is used as in Zinc there is no way
+ *      to specify perspective deformation. No filtering is attempted
+ *      on the output pixels. 
  *
- *	In the comments below u and v are image coordinates and x and
- *	y are triangle coordinates.
- *	RenderAffineScanline is an helper function that draws a whole
- *	scan line to the image with linear interpolation.
+ *      In the comments below u and v are image coordinates and x and
+ *      y are triangle coordinates.
+ *      RenderAffineScanline is an helper function that draws a whole
+ *      scan line to the image with linear interpolation.
  *
  **********************************************************************************
  */
 static void
-RenderAffineScanline(XImage	*image,
-		     XImage	*mapped_image,
-		     ZnReal	x1,
-		     ZnReal	x2,
-		     ZnReal	u1,
-		     ZnReal	u2,
-		     ZnReal	v1,
-		     ZnReal	v2,
-		     int	y)
+RenderAffineScanline(XImage     *image,
+                     XImage     *mapped_image,
+                     ZnReal     x1,
+                     ZnReal     x2,
+                     ZnReal     u1,
+                     ZnReal     u2,
+                     ZnReal     v1,
+                     ZnReal     v2,
+                     int        y)
 {
-  ZnReal	du, dv, width;
-  int		intx1, intx2, intu, intv;
-  int		i;
+  ZnReal        du, dv, width;
+  int           intx1, intx2, intu, intv;
+  int           i;
   
   /* Revert span ends if needed */
   if (x2 < x1) {
-    ZnReal	tmp;
+    ZnReal      tmp;
     tmp = x1; x1 = x2; x2 = tmp;
     tmp = u1; u1 = u2; u2 = tmp;
     tmp = v1; v1 = v2; v2 = tmp;
@@ -2085,22 +2074,22 @@ RenderAffineScanline(XImage	*image,
 }
 
 static void
-RenderTriangle(XImage	*image,
-	       XImage	*mapped_image,
-	       ZnPoint	*tri,
-	       ZnPoint	*im_coords)
+RenderTriangle(XImage   *image,
+               XImage   *mapped_image,
+               ZnPoint  *tri,
+               ZnPoint  *im_coords)
 {
-  ZnReal	dx_A, dx_B;	/* Interpolation factor in x / y */
-  ZnReal	du_A, du_B;	/* in u / y */
-  ZnReal	dv_A, dv_B;	/* in v / y */
-  ZnReal	x1, x2;		/* Span in x */
-  ZnReal	u1, u2;		/* Span in u */
-  ZnReal	v1, v2;		/* Span in v */
-  int		height_A;	/* Scan line # from top top vertex A */
-  int		height_B;	/* Scan line # from top top vertex B */
-  int		y;		/* Current scan line */
-  int		top, a, b;	/* Top triangle vertex and other two */
-  int		i;
+  ZnReal        dx_A, dx_B;     /* Interpolation factor in x / y */
+  ZnReal        du_A, du_B;     /* in u / y */
+  ZnReal        dv_A, dv_B;     /* in v / y */
+  ZnReal        x1, x2;         /* Span in x */
+  ZnReal        u1, u2;         /* Span in u */
+  ZnReal        v1, v2;         /* Span in v */
+  int           height_A;       /* Scan line # from top top vertex A */
+  int           height_B;       /* Scan line # from top top vertex B */
+  int           y;              /* Current scan line */
+  int           top, a, b;      /* Top triangle vertex and other two */
+  int           i;
 
   /* Find top vertex and deduce the others. */
   top = 0;
@@ -2160,16 +2149,16 @@ RenderTriangle(XImage	*image,
      * encountered a vertex (A or B) and we are starting conversion
      * along a new edge. Update the parameters before proceeding. */
     if (!height_A) {
-      int	na = (a+1)%3;
+      int       na = (a+1)%3;
       
       height_A = ZnNearestInt(tri[na].y - tri[a].y);
       if (height_A) {
-	dx_A = (tri[na].x - tri[a].x) / height_A;
-	du_A = (im_coords[na].x - im_coords[a].x) / height_A;
-	dv_A = (im_coords[na].y - im_coords[a].y) / height_A;
+        dx_A = (tri[na].x - tri[a].x) / height_A;
+        du_A = (im_coords[na].x - im_coords[a].x) / height_A;
+        dv_A = (im_coords[na].y - im_coords[a].y) / height_A;
       }
       else {
-	dx_A = du_A = dv_A = 0;
+        dx_A = du_A = dv_A = 0;
       }
       x1 = tri[a].x;
       u1 = im_coords[a].x;
@@ -2180,18 +2169,18 @@ RenderTriangle(XImage	*image,
     }
     
     if (!height_B) {
-      int	nb = b - 1;
+      int       nb = b - 1;
       
       if (nb < 0)
-	nb = 2;
+        nb = 2;
       height_B = ZnNearestInt(tri[nb].y - tri[b].y);
       if (height_B) {
-	dx_B = (tri[nb].x - tri[b].x) / height_B;
-	du_B = (im_coords[nb].x - im_coords[b].x) / height_B;
-	dv_B = (im_coords[nb].y - im_coords[b].y) / height_B;
+        dx_B = (tri[nb].x - tri[b].x) / height_B;
+        du_B = (im_coords[nb].x - im_coords[b].x) / height_B;
+        dv_B = (im_coords[nb].y - im_coords[b].y) / height_B;
       }
       else {
-	dx_B = du_B = dv_B = 0;
+        dx_B = du_B = dv_B = 0;
       }
       x2 = tri[b].x;
       u2 = im_coords[b].x;
@@ -2208,29 +2197,29 @@ RenderTriangle(XImage	*image,
  **********************************************************************************
  *
  * MapImage --
- *	This procedure maps an image on a parallelogram given in poly.
- *	The given parallelogram should fit in the destination image.
- *	The parallelogram vertices must be ordered as for a triangle
- *	 strip: 
+ *      This procedure maps an image on a parallelogram given in poly.
+ *      The given parallelogram should fit in the destination image.
+ *      The parallelogram vertices must be ordered as for a triangle
+ *       strip: 
  *
  *    v0 ------------ v2
  *       |          |
  *       |          |
  *    v1 ------------ v3
  *
- *	The mapping is done by a simple affine mapping of the image on the
- *	two triangles obtained by cutting the parallelogram along the diogonal
- *	from the second vertex to the third vertex.
+ *      The mapping is done by a simple affine mapping of the image on the
+ *      two triangles obtained by cutting the parallelogram along the diogonal
+ *      from the second vertex to the third vertex.
  *
  **********************************************************************************
  */
 void
-ZnMapImage(XImage	*image,
-	   XImage	*mapped_image,
-	   ZnPoint	*poly)
+ZnMapImage(XImage       *image,
+           XImage       *mapped_image,
+           ZnPoint      *poly)
 {
-  ZnPoint	triangle[3];
-  ZnPoint	im_coords[3];
+  ZnPoint       triangle[3];
+  ZnPoint       im_coords[3];
   
   triangle[0] = poly[0];
   triangle[1] = poly[1];

@@ -1,5 +1,5 @@
-# $Id: Zinc.pm.in,v 1.1 2004/09/24 12:22:38 lecoanet Exp $
-# $Name: cpan_3_30 $
+# $Id: Zinc.pm,v 1.30 2005/05/16 12:27:51 lecoanet Exp $
+# $Name: cpan_3_302 $
 
 package Tk::Zinc;
 
@@ -13,8 +13,8 @@ Construct Tk::Widget 'Zinc';
 
 use vars qw($VERSION $REVISION);
 
-$REVISION = q$Revision: 1.1 $ ;  # this line is automagically modified by CVS
-$VERSION = '3.30';
+$REVISION = q$Revision: 1.30 $ ;  # this line is automagically modified by CVS
+$VERSION = 3.302;
 
 
 bootstrap Tk::Zinc $Tk::VERSION;
@@ -155,3 +155,4 @@ API for Texture Mapped Text' and is copyrighted by Mark Kilgard under an open so
 L<Tk(1)>, L<zinc-demos(1)>.
 
 =cut
+

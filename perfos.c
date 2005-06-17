@@ -1,28 +1,17 @@
 /*
  * perfos.c -- Perfos modules.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: 
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : 
  *
- * $Id: perfos.c,v 1.9 2003/04/16 09:49:22 lecoanet Exp $
+ * $Id: perfos.c,v 1.13 2005/04/27 07:32:03 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 2000 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -35,11 +24,11 @@
 #include <X11/Xutil.h>
 
 
-static const char rcsid[] = "$Id: perfos.c,v 1.9 2003/04/16 09:49:22 lecoanet Exp $";
+static const char rcsid[] = "$Id: perfos.c,v 1.13 2005/04/27 07:32:03 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
-static ZnList	Chronos = NULL;
+static ZnList   Chronos = NULL;
 
 
 /*
@@ -50,8 +39,8 @@ static ZnList	Chronos = NULL;
  **********************************************************************************
  */
 static void
-HardwareSynchronize(Display	*test_display __unused,
-		    Drawable	test_window __unused)
+HardwareSynchronize(Display     *test_display,
+                    Drawable    test_window)
 {
   /*XImage   *image;*/
 
@@ -68,14 +57,14 @@ HardwareSynchronize(Display	*test_display __unused,
  **********************************************************************************
  *
  * GetUCTime - Return machine time. This is the sum of user and system
- *	times for the process so far.
+ *      times for the process so far.
  *
  **********************************************************************************
  */
 static long
 GetUCTime(void)
 {
-  struct tms	time;
+  struct tms    time;
 
   times(&time);
   return time.tms_utime + time.tms_stime;
@@ -119,7 +108,7 @@ XGetCurrentTime(Display *display, Drawable window)
  *
  * XCorrectionValue - Evaluate the correction value to apply
  *                    to counter the client-server round trip
- *		      time.
+ *                    time.
  *
  **********************************************************************************
  */
@@ -238,8 +227,8 @@ ZnStopUCChrono(ZnChrono chrono)
 void
 ZnPrintChronos(void)
 {
-  int		i, cnt;
-  ZnChrono	*chrs;
+  int           i, cnt;
+  ZnChrono      *chrs;
   
   cnt = ZnListSize(Chronos);
   chrs = (ZnChrono *) ZnListArray(Chronos);
@@ -262,9 +251,9 @@ ZnPrintChronos(void)
  **********************************************************************************
  */
 void
-ZnGetChrono(ZnChrono	chrono,
-	    long	*time,
-	    int		*actions)
+ZnGetChrono(ZnChrono    chrono,
+            long        *time,
+            int         *actions)
 {
   if (time) {
     *time = chrono->total_delay*10;
@@ -283,10 +272,10 @@ ZnGetChrono(ZnChrono	chrono,
  **********************************************************************************
  */
 void
-ZnResetChronos(ZnChrono	chrono)
+ZnResetChronos(ZnChrono chrono)
 {
-  int		i, cnt;
-  ZnChrono	*chrs;
+  int           i, cnt;
+  ZnChrono      *chrs;
 
   if (chrono) {
     chrono->actions = 0;
@@ -314,7 +303,7 @@ ZnResetChronos(ZnChrono	chrono)
 ZnChrono
 ZnNewChrono(char *message)
 {
-  ZnChrono	new;
+  ZnChrono      new;
 
   if (!Chronos) {
     Chronos = ZnListNew(8, sizeof(ZnChrono));
@@ -338,9 +327,9 @@ ZnNewChrono(char *message)
  **********************************************************************************
  */
 void
-ZnFreeChrono(ZnChrono	chrono)
+ZnFreeChrono(ZnChrono   chrono)
 {
-  int	   i;
+  int      i;
   ZnChrono *chrs = ZnListArray(Chronos);
   
   ZnFree(chrono);

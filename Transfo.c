@@ -1,28 +1,17 @@
 /*
  * Transfo.c -- Implementation of transformation routines.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: 
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : 
  *
- * $Id: Transfo.c,v 1.14 2004/04/30 14:33:17 lecoanet Exp $
+ * $Id: Transfo.c,v 1.16 2005/04/27 07:32:03 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -61,9 +50,9 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  * The transformation primitives are based on affines matrices retricted
  * to the following pattern:
  *
- *	x x 0
- *	x x 0
- *	x x 1
+ *      x x 0
+ *      x x 0
+ *      x x 1
  *
  * It is necessary to feed only those matrices to the Transfo primitives
  * as they do optimizations based on the properties of affine matrices.
@@ -78,15 +67,15 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  *************************************************************************
  *
  * ZnTransfoNew --
- *	Create a new transformation and return it initialized to
- *	identity.
+ *      Create a new transformation and return it initialized to
+ *      identity.
  * 
  *************************************************************************
  */
 ZnTransfo *
 ZnTransfoNew()
 {
-  ZnTransfo	*t;
+  ZnTransfo     *t;
 
   t = (ZnTransfo *) ZnMalloc(sizeof(ZnTransfo));
   ZnTransfoSetIdentity(t);
@@ -99,14 +88,14 @@ ZnTransfoNew()
  *************************************************************************
  *
  * ZnTransfoDuplicate --
- *	Create a new transformation identical to the model t.
+ *      Create a new transformation identical to the model t.
  * 
  *************************************************************************
  */
 ZnTransfo *
 ZnTransfoDuplicate(ZnTransfo *t)
 {
-  ZnTransfo	*nt;
+  ZnTransfo     *nt;
 
   nt = (ZnTransfo *) ZnMalloc(sizeof(ZnTransfo));
   if (t) {
@@ -124,12 +113,12 @@ ZnTransfoDuplicate(ZnTransfo *t)
  *************************************************************************
  *
  * ZnTransfoFree --
- *	Delete a transformation and free its memory.
+ *      Delete a transformation and free its memory.
  * 
  *************************************************************************
  */
 void
-ZnTransfoFree(ZnTransfo	*t)
+ZnTransfoFree(ZnTransfo *t)
 {
   ZnFree(t);
 }
@@ -139,27 +128,27 @@ ZnTransfoFree(ZnTransfo	*t)
  *************************************************************************
  *
  * ZnPrintTransfo --
- *	Print the transfo matrix on stdout.
+ *      Print the transfo matrix on stdout.
  * 
  *************************************************************************
  */
 void
-ZnPrintTransfo(ZnTransfo	*t)
+ZnPrintTransfo(ZnTransfo        *t)
 {
   /*
-   * sx 0	cos(rot)  sin(rot)	1          tan(skewy)	1  0
-   * 0  sy	-sin(rot) cos(rot)	tan(skewx) 1	        0  1
-   * 0  0	0         0		0          0	        tx ty
+   * sx 0       cos(rot)  sin(rot)      1          tan(skewy)   1  0
+   * 0  sy      -sin(rot) cos(rot)      tan(skewx) 1            0  1
+   * 0  0       0         0             0          0            tx ty
    */
   if (t) {
     printf("(%5g %5g\n %5g %5g\n %5g %5g)\n",
-	   t->_[0][0], t->_[0][1],
-	   t->_[1][0], t->_[1][1],
-	   t->_[2][0], t->_[2][1]);
+           t->_[0][0], t->_[0][1],
+           t->_[1][0], t->_[1][1],
+           t->_[2][0], t->_[2][1]);
   }
   else {
     printf("(%5g %5g\n %5g %5g\n %5g %5g)\n",
-	   1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+           1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   }
 }
 
@@ -168,15 +157,15 @@ ZnPrintTransfo(ZnTransfo	*t)
  *************************************************************************
  *
  * ZnTransfoIsIdentity --
- *	Tell if the given transfo is (close to) identity.
+ *      Tell if the given transfo is (close to) identity.
  * 
  *************************************************************************
  */
 ZnBool
-ZnTransfoIsIdentity(ZnTransfo	*t)
+ZnTransfoIsIdentity(ZnTransfo   *t)
 {
-  ZnReal	tmp;
-  ZnBool	res = False;
+  ZnReal        tmp;
+  ZnBool        res = False;
 
   tmp = t->_[0][0] - 1.0;
   res = res & ((tmp < PRECISION_LIMIT) && (tmp > -PRECISION_LIMIT));
@@ -198,12 +187,12 @@ ZnTransfoIsIdentity(ZnTransfo	*t)
  *************************************************************************
  *
  * ZnTransfoSetIdentity --
- *	Initialize the given transfo to identity.
+ *      Initialize the given transfo to identity.
  * 
  *************************************************************************
  */
 void
-ZnTransfoSetIdentity(ZnTransfo	*t)
+ZnTransfoSetIdentity(ZnTransfo  *t)
 {
   t->_[0][0] = 1;
   t->_[0][1] = 0;
@@ -218,22 +207,22 @@ ZnTransfoSetIdentity(ZnTransfo	*t)
  *************************************************************************
  *
  * ZnTransfoCompose --
- *	Combine two transformations t1 and t2 by post-concatenation.
- *	Returns the resulting transformation.
- *	t2 can be NULL, meaning identity transform. This is used in
- *	the toolkit to optimize some cases.
+ *      Combine two transformations t1 and t2 by post-concatenation.
+ *      Returns the resulting transformation.
+ *      t2 can be NULL, meaning identity transform. This is used in
+ *      the toolkit to optimize some cases.
  *
- *	All the parameters must be distincts transforms.
+ *      All the parameters must be distincts transforms.
  *
  *************************************************************************
  */
 ZnTransfo *
-ZnTransfoCompose(ZnTransfo	*res,
-		 ZnTransfo	*t1,
-		 ZnTransfo	*t2)
+ZnTransfoCompose(ZnTransfo      *res,
+                 ZnTransfo      *t1,
+                 ZnTransfo      *t2)
 {
   if ((t1 != NULL) && (t2 != NULL)) {
-    register float	tmp;
+    register float      tmp;
 
     tmp = t1->_[0][0];
     res->_[0][0] = tmp*t2->_[0][0] + t1->_[0][1]*t2->_[1][0];
@@ -267,20 +256,20 @@ ZnTransfoCompose(ZnTransfo	*res,
  *************************************************************************
  *
  * ZnTransfoInvert --
- *	Compute the inverse of the given matrix and return it. This
- *	function makes the assumption that the matrix is affine to
- *	optimize the job. Do not give it a general matrix, this will
- *	fail. This code is from Graphics Gems II. Anyway an affine
- *	matrix is always invertible for affine matrices form a sub
- *	group of the non-singular matrices.
+ *      Compute the inverse of the given matrix and return it. This
+ *      function makes the assumption that the matrix is affine to
+ *      optimize the job. Do not give it a general matrix, this will
+ *      fail. This code is from Graphics Gems II. Anyway an affine
+ *      matrix is always invertible for affine matrices form a sub
+ *      group of the non-singular matrices.
  *
  *************************************************************************
  */
 ZnTransfo *
-ZnTransfoInvert(ZnTransfo	*t,
-		ZnTransfo	*inv)
+ZnTransfoInvert(ZnTransfo       *t,
+                ZnTransfo       *inv)
 {
-  float	pos, neg, temp, det_l;
+  float pos, neg, temp, det_l;
 
   if (t == NULL) {
     ZnTransfoSetIdentity(inv);
@@ -337,24 +326,24 @@ ZnTransfoInvert(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnTransfoDecompose --
- *	Decompose an affine matrix into translation, scale, skew and
- *	rotation. The different values are stored in the locations
- *	pointed to by the pointer parameters. If some values are not
- *	needed a NULL pointer can be given instead. The resulting skew
- *	shews x coordinate when y change.
- *	This code is taken from Graphics Gems II.
+ *      Decompose an affine matrix into translation, scale, skew and
+ *      rotation. The different values are stored in the locations
+ *      pointed to by the pointer parameters. If some values are not
+ *      needed a NULL pointer can be given instead. The resulting skew
+ *      shews x coordinate when y change.
+ *      This code is taken from Graphics Gems II.
  *
  *************************************************************************
  */
 void
-ZnTransfoDecompose(ZnTransfo	*t,
-		   ZnPoint	*scale,
-		   ZnPoint	*trans,
-		   ZnReal	*rotation,
-		   ZnReal	*skewxy)
+ZnTransfoDecompose(ZnTransfo    *t,
+                   ZnPoint      *scale,
+                   ZnPoint      *trans,
+                   ZnReal       *rotation,
+                   ZnReal       *skewxy)
 {
-  ZnTransfo	local;
-  float		skew, len, rot, det;
+  ZnTransfo     local;
+  float         skew, len, rot, det;
   
   if (t == NULL) {
     /* Identity transform */
@@ -395,14 +384,14 @@ ZnTransfoDecompose(ZnTransfo	*t,
 
   /* Get scale and skew */
   len = (float) sqrt(local._[0][0]*local._[0][0] +
-		     local._[0][1]*local._[0][1]); /* Get x scale from 1st row */
+                     local._[0][1]*local._[0][1]); /* Get x scale from 1st row */
   if (scale) {
     scale->x = len < PRECISION_LIMIT ? 0.0 : len;
   }
-  local._[0][0] /= len;			 /* Normalize 1st row */
+  local._[0][0] /= len;                  /* Normalize 1st row */
   local._[0][1] /= len;
   skew = (local._[0][0]*local._[1][0] +
-	  local._[0][1]*local._[1][1]); /* Skew is dot product of 1st row & 2nd row */
+          local._[0][1]*local._[1][1]); /* Skew is dot product of 1st row & 2nd row */
   /* Make the 2nd row orthogonal to the 1st row
    * by linear combinaison:
    * row1.x = row1.x + row0.x*-skew &
@@ -411,7 +400,7 @@ ZnTransfoDecompose(ZnTransfo	*t,
   local._[1][0] -= local._[0][0]*skew;
   local._[1][1] -= local._[0][1]*skew;
   len = (float) sqrt(local._[1][0]*local._[1][0] +
-		     local._[1][1]*local._[1][1]); /* Get y scale from 2nd row */
+                     local._[1][1]*local._[1][1]); /* Get y scale from 2nd row */
   if (scale) {
     scale->y = len < PRECISION_LIMIT ? 0.0 : len;
   }
@@ -420,7 +409,7 @@ ZnTransfoDecompose(ZnTransfo	*t,
     return;
   }
 
-  local._[1][0] /= len;			 /* Normalize 2nd row */
+  local._[1][0] /= len;                  /* Normalize 2nd row */
   local._[1][1] /= len;
   skew /= len;
   if (skewxy) {
@@ -473,30 +462,30 @@ ZnTransfoDecompose(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnTransfoEqual --
- *	Return True if t1 and t2 are equal (i.e they have the same
- *	rotation, skew scales and translations). If include_translation
- *	is True the translations are considered in the test.
+ *      Return True if t1 and t2 are equal (i.e they have the same
+ *      rotation, skew scales and translations). If include_translation
+ *      is True the translations are considered in the test.
  *
  *************************************************************************
  */
 ZnBool
-ZnTransfoEqual(ZnTransfo	*t1,
-	       ZnTransfo	*t2,
-	       ZnBool		include_translation)
+ZnTransfoEqual(ZnTransfo        *t1,
+               ZnTransfo        *t2,
+               ZnBool           include_translation)
 {
   if (include_translation) {
     return (t1->_[0][0] == t2->_[0][0] &&
-	    t1->_[0][1] == t2->_[0][1] &&
-	    t1->_[1][0] == t2->_[1][0] &&
-	    t1->_[1][1] == t2->_[1][1] &&
-	    t1->_[2][0] == t2->_[2][0] &&
-	    t1->_[2][1] == t2->_[2][1]);
+            t1->_[0][1] == t2->_[0][1] &&
+            t1->_[1][0] == t2->_[1][0] &&
+            t1->_[1][1] == t2->_[1][1] &&
+            t1->_[2][0] == t2->_[2][0] &&
+            t1->_[2][1] == t2->_[2][1]);
   }
   else {
     return (t1->_[0][0] == t2->_[0][0] &&
-	    t1->_[0][1] == t2->_[0][1] &&
-	    t1->_[1][0] == t2->_[1][0] &&
-	    t1->_[1][1] == t2->_[1][1]);
+            t1->_[0][1] == t2->_[0][1] &&
+            t1->_[1][0] == t2->_[1][0] &&
+            t1->_[1][1] == t2->_[1][1]);
   }
 }
 
@@ -505,13 +494,13 @@ ZnTransfoEqual(ZnTransfo	*t1,
  *************************************************************************
  *
  * ZnTransfoHasSkew --
- *	Return True if t has a skew factor in x or y or describe a
- *	rotation or both.
+ *      Return True if t has a skew factor in x or y or describe a
+ *      rotation or both.
  *
  *************************************************************************
  */
 ZnBool
-ZnTransfoHasSkew(ZnTransfo	*t)
+ZnTransfoHasSkew(ZnTransfo      *t)
 {
   return t->_[0][1] != 0.0 || t->_[1][0] != 0.0;
 }
@@ -521,20 +510,20 @@ ZnTransfoHasSkew(ZnTransfo	*t)
  *************************************************************************
  *
  * ZnTransfoIsTranslation --
- *	Return True if t is a pure translation.
+ *      Return True if t is a pure translation.
  *
  *************************************************************************
  */
 ZnBool
-ZnTransfoIsTranslation(ZnTransfo	*t)
+ZnTransfoIsTranslation(ZnTransfo        *t)
 {
   if (!t) {
     return True;
   }
   return (t->_[0][0] == 1.0 &&
-	  t->_[0][1] == 0.0 &&
-	  t->_[1][0] == 0.0 &&
-	  t->_[1][1] == 1.0);
+          t->_[0][1] == 0.0 &&
+          t->_[1][0] == 0.0 &&
+          t->_[1][1] == 1.0);
 }
 
 
@@ -542,19 +531,19 @@ ZnTransfoIsTranslation(ZnTransfo	*t)
  *************************************************************************
  *
  * ZnTransformPoint --
- *	Apply the transformation to the point. The point is
- *	modified and returned as the value of the function.
- *	It is safe for p and xp to be the same point (structure).
- *	A NULL transformation means identity. This is only used
- *	in the toolkit to optimize some cases. It should never
- *	happen in user code.
+ *      Apply the transformation to the point. The point is
+ *      modified and returned as the value of the function.
+ *      It is safe for p and xp to be the same point (structure).
+ *      A NULL transformation means identity. This is only used
+ *      in the toolkit to optimize some cases. It should never
+ *      happen in user code.
  *
  *************************************************************************
  */
 ZnPoint *
-ZnTransformPoint(ZnTransfo		*t,
-		 register ZnPoint	*p,
-		 ZnPoint		*xp)
+ZnTransformPoint(ZnTransfo              *t,
+                 register ZnPoint       *p,
+                 ZnPoint                *xp)
 {
   if (t == NULL) {
     xp->x = p->x;
@@ -574,20 +563,20 @@ ZnTransformPoint(ZnTransfo		*t,
  *************************************************************************
  *
  * ZnTransformPoints --
- *	Apply the transformation to the points in p returning points in xp.
- *	It is safe for p and xp to be the same array of ponits.
- *	The number of points is in num.
- *	A NULL transformation means identity. This is only used
- *	in the toolkit to optimize some cases. It should never
- *	happen in user code.
+ *      Apply the transformation to the points in p returning points in xp.
+ *      It is safe for p and xp to be the same array of ponits.
+ *      The number of points is in num.
+ *      A NULL transformation means identity. This is only used
+ *      in the toolkit to optimize some cases. It should never
+ *      happen in user code.
  *
  *************************************************************************
  */
 void
-ZnTransformPoints(ZnTransfo	*t,
-		  ZnPoint	*p,
-		  ZnPoint	*xp,
-		  unsigned int	num)
+ZnTransformPoints(ZnTransfo     *t,
+                  ZnPoint       *p,
+                  ZnPoint       *xp,
+                  unsigned int  num)
 {
   if (t == NULL) {
     memcpy(xp, p, sizeof(ZnPoint)*num);
@@ -609,17 +598,17 @@ ZnTransformPoints(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnTranslate --
- *	Translate the given transformation by delta_x, delta_y. Returns
- *	the resulting transformation. If abs is true, delta_x and
- *	delta_y are used to set the translation instead of adding deltas.
+ *      Translate the given transformation by delta_x, delta_y. Returns
+ *      the resulting transformation. If abs is true, delta_x and
+ *      delta_y are used to set the translation instead of adding deltas.
  *
  *************************************************************************
  */
 ZnTransfo *
-ZnTranslate(ZnTransfo	*t,
-	    ZnReal	delta_x,
-	    ZnReal	delta_y,
-	    ZnBool	abs)
+ZnTranslate(ZnTransfo   *t,
+            ZnReal      delta_x,
+            ZnReal      delta_y,
+            ZnBool      abs)
 {
   if (abs) {
     t->_[2][0] = (float) delta_x;
@@ -637,15 +626,15 @@ ZnTranslate(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnScale --
- *	Scale the given transformation by scale_x, scale_y. Returns the
- *	resulting transformation.
+ *      Scale the given transformation by scale_x, scale_y. Returns the
+ *      resulting transformation.
  *
  *************************************************************************
  */
 ZnTransfo *
-ZnScale(ZnTransfo	*t,
-	ZnReal		scale_x,
-	ZnReal		scale_y)
+ZnScale(ZnTransfo       *t,
+        ZnReal          scale_x,
+        ZnReal          scale_y)
 {
   t->_[0][0] = t->_[0][0] * (float) scale_x;
   t->_[0][1] = t->_[0][1] * (float) scale_y;
@@ -662,19 +651,19 @@ ZnScale(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnRotateRad --
- *	Rotate the given transformation by angle radians
- *	counter-clockwise around the origin. Returns the resulting
- *	transformation.
+ *      Rotate the given transformation by angle radians
+ *      counter-clockwise around the origin. Returns the resulting
+ *      transformation.
  *
  *************************************************************************
  */
 ZnTransfo *
-ZnRotateRad(ZnTransfo	*t,
-	    ZnReal	angle)
+ZnRotateRad(ZnTransfo   *t,
+            ZnReal      angle)
 {
-  float	c = (float) cos(angle);
-  float	s = (float) sin(angle);
-  float	tmp;
+  float c = (float) cos(angle);
+  float s = (float) sin(angle);
+  float tmp;
   
   tmp = t->_[0][0];
   t->_[0][0] = tmp*c - t->_[0][1]*s;
@@ -694,15 +683,15 @@ ZnRotateRad(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnRotateDeg --
- *	Rotate the given transformation by angle degrees
- *	counter-clockwise around the origin. Returns the resulting
- *	transformation.
+ *      Rotate the given transformation by angle degrees
+ *      counter-clockwise around the origin. Returns the resulting
+ *      transformation.
  *
  *************************************************************************
  */
 ZnTransfo *
-ZnRotateDeg(ZnTransfo	*t,
-	    ZnReal	angle)
+ZnRotateDeg(ZnTransfo   *t,
+            ZnReal      angle)
 {
   return ZnRotateRad(t, ZnDegRad(angle));
 }
@@ -712,20 +701,20 @@ ZnRotateDeg(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnSkewRad --
- *	Skew the given transformation by x_angle and y_angle radians
- *	counter-clockwise around the origin. Returns the resulting
- *	transformation.
+ *      Skew the given transformation by x_angle and y_angle radians
+ *      counter-clockwise around the origin. Returns the resulting
+ *      transformation.
  *
  *************************************************************************
  */
 ZnTransfo *
-ZnSkewRad(ZnTransfo	*t,
-	  ZnReal	skew_x,
-	  ZnReal	skew_y)
+ZnSkewRad(ZnTransfo     *t,
+          ZnReal        skew_x,
+          ZnReal        skew_y)
 {
-  float	sx = (float) tan(skew_x);
-  float	sy = (float) tan(skew_y);
-  float	tmp;
+  float sx = (float) tan(skew_x);
+  float sy = (float) tan(skew_y);
+  float tmp;
 
   tmp = t->_[0][0];
   t->_[0][0] = tmp + t->_[0][1]*sx;
@@ -745,16 +734,16 @@ ZnSkewRad(ZnTransfo	*t,
  *************************************************************************
  *
  * ZnSkewDeg --
- *	Skew the given transformation by x_angle and y_angle degrees
- *	counter-clockwise around the origin. Returns the resulting
- *	transformation.
+ *      Skew the given transformation by x_angle and y_angle degrees
+ *      counter-clockwise around the origin. Returns the resulting
+ *      transformation.
  *
  *************************************************************************
  */
 ZnTransfo *
-ZnSkewDeg(ZnTransfo	*t,
-	  ZnReal	skew_x,
-	  ZnReal	skew_y)
+ZnSkewDeg(ZnTransfo     *t,
+          ZnReal        skew_x,
+          ZnReal        skew_y)
 {
   return ZnSkewRad(t, ZnDegRad(skew_x), ZnDegRad(skew_y));
 }

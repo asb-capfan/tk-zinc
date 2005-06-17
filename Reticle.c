@@ -1,28 +1,17 @@
 /*
  * Reticle.c -- Implementation of Reticle item.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Mon Feb  1 12:13:24 1999
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Mon Feb  1 12:13:24 1999
  *
- * $Id: Reticle.c,v 1.40 2004/04/30 12:05:39 lecoanet Exp $
+ * $Id: Reticle.c,v 1.45 2005/05/10 07:59:48 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -36,20 +25,20 @@
 #include <math.h>
 
 
-static const char rcsid[] = "$Id: Reticle.c,v 1.40 2004/04/30 12:05:39 lecoanet Exp $";
+static const char rcsid[] = "$Id: Reticle.c,v 1.45 2005/05/10 07:59:48 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
 /*
  * Draw as many circles as visible.
  */
-#define ANY_CIRCLES	-1
+#define ANY_CIRCLES     -1
 
 /*
  * Some default values.
  */
-#define DEFAULT_RETICLE_STEP_SIZE	80
-#define DEFAULT_RETICLE_PERIOD		5
+#define DEFAULT_RETICLE_STEP_SIZE       80
+#define DEFAULT_RETICLE_PERIOD          5
 
 /*
  **********************************************************************************
@@ -60,27 +49,27 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  */
 
 typedef struct _ReticleItemStruct {
-  ZnItemStruct	header;
+  ZnItemStruct  header;
  
   /* Public data */
-  ZnPoint	pos;			/* Origin world coordinates	*/
-  ZnGradient	*line_color;		/* circle color		  */
-  ZnGradient	*bright_line_color;	/* intermediate circle color */
-  ZnDim		first_radius;		/* first world radius		  */
-  ZnDim		step_size;		/* step world size                */
-  int		period;			/* bright circle period           */
-  int		num_circles;		/* num cercles max		  */
-  ZnLineStyle	line_style;		/* circles lines styles		  */
-  ZnLineStyle	bright_line_style;
+  ZnPoint       pos;                    /* Origin world coordinates     */
+  ZnGradient    *line_color;            /* circle color           */
+  ZnGradient    *bright_line_color;     /* intermediate circle color */
+  ZnDim         first_radius;           /* first world radius             */
+  ZnDim         step_size;              /* step world size                */
+  int           period;                 /* bright circle period           */
+  int           num_circles;            /* num cercles max                */
+  ZnLineStyle   line_style;             /* circles lines styles           */
+  ZnLineStyle   bright_line_style;
 
   /* Private data */
-  ZnPoint	dev;			/* item device coordinate         */
-  ZnDim		first_radius_dev;	/* first device radius		  */
-  ZnDim		step_size_dev;		/* steps device size		  */
+  ZnPoint       dev;                    /* item device coordinate         */
+  ZnDim         first_radius_dev;       /* first device radius            */
+  ZnDim         step_size_dev;          /* steps device size              */
 } ReticleItemStruct, *ReticleItem;
 
 
-static ZnAttrConfig	reticle_attrs[] = {
+static ZnAttrConfig     reticle_attrs[] = {
   { ZN_CONFIG_GRADIENT, "-brightlinecolor", NULL,
     Tk_Offset(ReticleItemStruct, bright_line_color), 0, ZN_DRAW_FLAG, False },
   { ZN_CONFIG_LINE_STYLE, "-brightlinestyle", NULL,
@@ -136,12 +125,12 @@ static ZnAttrConfig	reticle_attrs[] = {
  **********************************************************************************
  */
 static int
-Init(ZnItem		item,
-     int		*argc __unused,
-     Tcl_Obj *CONST	*args[] __unused)     
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])     
 {
-  ReticleItem	reticle = (ReticleItem) item;
-  ZnWInfo	*wi = item->wi;
+  ReticleItem   reticle = (ReticleItem) item;
+  ZnWInfo       *wi = item->wi;
   
   SET(item->flags, ZN_VISIBLE_BIT);
   CLEAR(item->flags, ZN_SENSITIVE_BIT);
@@ -177,9 +166,9 @@ Init(ZnItem		item,
  **********************************************************************************
  */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  ReticleItem	reticle	= (ReticleItem) item;
+  ReticleItem   reticle = (ReticleItem) item;
   
   reticle->line_color = ZnGetGradientByValue(reticle->line_color);
   reticle->bright_line_color = ZnGetGradientByValue(reticle->bright_line_color);  
@@ -194,9 +183,9 @@ Clone(ZnItem	item)
  **********************************************************************************
  */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
-  ReticleItem	reticle	= (ReticleItem) item;
+  ReticleItem   reticle = (ReticleItem) item;
     
   ZnFreeGradient(reticle->line_color);
   ZnFreeGradient(reticle->bright_line_color);
@@ -211,13 +200,13 @@ Destroy(ZnItem	item)
  **********************************************************************************
  */
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
   if (ZnConfigureAttributes(item->wi, item, item, reticle_attrs,
-			    argc, argv, flags) == TCL_ERROR) {
+                            argc, argv, flags) == TCL_ERROR) {
     return TCL_ERROR;
   }
 
@@ -233,9 +222,9 @@ Configure(ZnItem	item,
  **********************************************************************************
  */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, reticle_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -253,13 +242,13 @@ Query(ZnItem		item,
  **********************************************************************************
  */
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force __unused)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  ZnWInfo	*wi = item->wi;
-  ReticleItem	reticle  = (ReticleItem) item;
-  ZnDim		half_width;
-  ZnPoint	p, xp;
+  ZnWInfo       *wi = item->wi;
+  ReticleItem   reticle  = (ReticleItem) item;
+  ZnDim         half_width;
+  ZnPoint       p, xp;
   
   /* Compute center device coordinates */
   p.x = p.y = 0;
@@ -299,14 +288,14 @@ ComputeCoordinates(ZnItem	item,
  **********************************************************************************
  *
  * ToArea --
- *	Tell if the object is entirely outside (-1),
- *	entirely inside (1) or in between (0).
+ *      Tell if the object is entirely outside (-1),
+ *      entirely inside (1) or in between (0).
  *
  **********************************************************************************
  */
 static int
-ToArea(ZnItem	item __unused,
-       ZnToArea	ta __unused)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
   return -1;
 }
@@ -320,31 +309,31 @@ ToArea(ZnItem	item __unused,
  **********************************************************************************
  */
 static void
-Draw(ZnItem	item)
+Draw(ZnItem     item)
 {
-  ZnWInfo	*wi = item->wi;
-  ReticleItem	reticle	= (ReticleItem) item;
-  ZnDim		radius	= reticle->first_radius_dev;
-  ZnDim		radius_max_dev;
-  XGCValues	values;
-  int		i;
-  ZnDim		l1, l2, l3, l4;
-/*  int		count = 0;*/
+  ZnWInfo       *wi = item->wi;
+  ReticleItem   reticle = (ReticleItem) item;
+  ZnDim         radius  = reticle->first_radius_dev;
+  ZnDim         radius_max_dev;
+  XGCValues     values;
+  int           i;
+  ZnDim         l1, l2, l3, l4;
+/*  int         count = 0;*/
 
   /* Compute radius max */
   l1 = (ZnDim) hypot(wi->damaged_area.orig.x - reticle->dev.x,
-		     wi->damaged_area.orig.y - reticle->dev.y);
+                     wi->damaged_area.orig.y - reticle->dev.y);
   l2 = (ZnDim) hypot(wi->damaged_area.corner.x - reticle->dev.x,
-		     wi->damaged_area.orig.y - reticle->dev.y);
+                     wi->damaged_area.orig.y - reticle->dev.y);
   l3 = (ZnDim) hypot(wi->damaged_area.orig.x - reticle->dev.x,
-		     wi->damaged_area.corner.y - reticle->dev.y);
+                     wi->damaged_area.corner.y - reticle->dev.y);
   l4 = (ZnDim) hypot(wi->damaged_area.corner.x - reticle->dev.x,
-		     wi->damaged_area.corner.y - reticle->dev.y);
+                     wi->damaged_area.corner.y - reticle->dev.y);
   radius_max_dev = MAX(MAX(l1,l2), MAX(l3, l4));
 
   if (reticle->num_circles > 0) {
     radius_max_dev = MIN(radius_max_dev, reticle->first_radius_dev +
-			 (reticle->num_circles - 1) * reticle->step_size_dev);
+                         (reticle->num_circles - 1) * reticle->step_size_dev);
   }
   
   while (radius <= radius_max_dev) {
@@ -355,35 +344,35 @@ Draw(ZnItem	item)
     XChangeGC(wi->dpy, wi->gc, GCForeground | GCLineWidth | GCFillStyle, &values);
     for (i = 1; ((radius <= radius_max_dev) && (i < reticle->period)); i++) {
       if ((reticle->dev.x >= wi->damaged_area.orig.x - radius) &&
-	  (reticle->dev.x <= wi->damaged_area.corner.x + radius) &&
-	  (reticle->dev.y >= wi->damaged_area.orig.y - radius) &&
-	  (reticle->dev.y <= wi->damaged_area.corner.y + radius)) {
-	XDrawArc(wi->dpy, wi->draw_buffer, wi->gc,
-		 (int) (reticle->dev.x - radius),
-		 (int) (reticle->dev.y - radius),
-		 (unsigned int) (radius * 2 - 1),
-		 (unsigned int) (radius * 2 - 1),
-		 0, 360 * 64);
-/*	count++;*/
+          (reticle->dev.x <= wi->damaged_area.corner.x + radius) &&
+          (reticle->dev.y >= wi->damaged_area.orig.y - radius) &&
+          (reticle->dev.y <= wi->damaged_area.corner.y + radius)) {
+        XDrawArc(wi->dpy, wi->draw_buffer, wi->gc,
+                 (int) (reticle->dev.x - radius),
+                 (int) (reticle->dev.y - radius),
+                 (unsigned int) (radius * 2 - 1),
+                 (unsigned int) (radius * 2 - 1),
+                 0, 360 * 64);
+/*      count++;*/
       }
       radius += (reticle->step_size_dev);
     }
     if ((radius <= radius_max_dev) &&
-	(reticle->dev.x >= wi->damaged_area.orig.x - radius) &&
-	(reticle->dev.x <= wi->damaged_area.corner.x + radius) &&
-	(reticle->dev.y >= wi->damaged_area.orig.y - radius) &&
-	(reticle->dev.y <= wi->damaged_area.corner.y + radius)) {
+        (reticle->dev.x >= wi->damaged_area.orig.x - radius) &&
+        (reticle->dev.x <= wi->damaged_area.corner.x + radius) &&
+        (reticle->dev.y >= wi->damaged_area.orig.y - radius) &&
+        (reticle->dev.y <= wi->damaged_area.corner.y + radius)) {
       ZnSetLineStyle(wi, reticle->bright_line_style);
       values.foreground = ZnGetGradientPixel(reticle->bright_line_color, 0.0);
       values.line_width = 0;
       values.fill_style = FillSolid;
       XChangeGC(wi->dpy, wi->gc, GCForeground | GCLineWidth | GCFillStyle, &values);
       XDrawArc(wi->dpy, wi->draw_buffer, wi->gc,
-	       (int) (reticle->dev.x - radius),
-	       (int) (reticle->dev.y - radius),
-	       (unsigned int) (radius * 2 - 1),
-	       (unsigned int) (radius * 2 - 1),
-	       0, 360 * 64);
+               (int) (reticle->dev.x - radius),
+               (int) (reticle->dev.y - radius),
+               (unsigned int) (radius * 2 - 1),
+               (unsigned int) (radius * 2 - 1),
+               0, 360 * 64);
       /*count++;*/
     }
     radius += (reticle->step_size_dev);
@@ -401,17 +390,17 @@ Draw(ZnItem	item)
  */
 #ifdef GL
 static void
-Render(ZnItem	item)
+Render(ZnItem   item)
 {
-  ZnWInfo	*wi = item->wi;
-  ReticleItem	reticle	= (ReticleItem) item;
-  ZnDim		radius	= reticle->first_radius_dev;
-  ZnDim		radius_max_dev, new, x, y, xo, yo;
-  int		i, j;
-  ZnPoint	*genarc;
-  int		num_p;
+  ZnWInfo       *wi = item->wi;
+  ReticleItem   reticle = (ReticleItem) item;
+  ZnDim         radius  = reticle->first_radius_dev;
+  ZnDim         radius_max_dev, new, x, y, xo, yo;
+  int           i, j;
+  ZnPoint       *genarc;
+  int           num_p;
   unsigned short alpha;
-  XColor	*color;
+  XColor        *color;
 
   xo = reticle->dev.x;
   yo = reticle->dev.y;
@@ -445,7 +434,7 @@ Render(ZnItem	item)
 
   if (reticle->num_circles > 0) {
     radius_max_dev = MIN(radius_max_dev, reticle->first_radius_dev +
-			 (reticle->num_circles - 1) * reticle->step_size_dev);
+                         (reticle->num_circles - 1) * reticle->step_size_dev);
   }
 
   genarc = ZnGetCirclePoints(3, ZN_CIRCLE_FINER, 0.0, 2*M_PI, &num_p, NULL);
@@ -457,33 +446,33 @@ Render(ZnItem	item)
     glColor4us(color->red, color->green, color->blue, alpha);
     for (i = 1; ((radius <= radius_max_dev) && (i < reticle->period)); i++) {
       if ((xo >= wi->damaged_area.orig.x - radius) &&
-	  (xo <= wi->damaged_area.corner.x + radius) &&
-	  (yo >= wi->damaged_area.orig.y - radius) &&
-	  (yo <= wi->damaged_area.corner.y + radius)) {
-	glBegin(GL_LINE_LOOP);
-	for (j = 0; j < num_p; j++) {
-	  x = xo + genarc[j].x * radius;
-	  y = yo + genarc[j].y * radius;
-	  glVertex2d(x, y);
-	}
-	glEnd();
+          (xo <= wi->damaged_area.corner.x + radius) &&
+          (yo >= wi->damaged_area.orig.y - radius) &&
+          (yo <= wi->damaged_area.corner.y + radius)) {
+        glBegin(GL_LINE_LOOP);
+        for (j = 0; j < num_p; j++) {
+          x = xo + genarc[j].x * radius;
+          y = yo + genarc[j].y * radius;
+          glVertex2d(x, y);
+        }
+        glEnd();
       }
       radius += (reticle->step_size_dev);
     }
     if ((radius <= radius_max_dev) &&
-	(xo >= wi->damaged_area.orig.x - radius) &&
-	(xo <= wi->damaged_area.corner.x + radius) &&
-	(yo >= wi->damaged_area.orig.y - radius) &&
-	(yo <= wi->damaged_area.corner.y + radius)) {
+        (xo >= wi->damaged_area.orig.x - radius) &&
+        (xo <= wi->damaged_area.corner.x + radius) &&
+        (yo >= wi->damaged_area.orig.y - radius) &&
+        (yo <= wi->damaged_area.corner.y + radius)) {
       ZnSetLineStyle(wi, reticle->bright_line_style);
       color = ZnGetGradientColor(reticle->bright_line_color, 0.0, &alpha);
       alpha = ZnComposeAlpha(alpha, wi->alpha);
       glColor4us(color->red, color->green, color->blue, alpha);
       glBegin(GL_LINE_LOOP);
       for (j = 0; j < num_p; j++) {
-	x = xo + genarc[j].x * radius;
-	y = yo + genarc[j].y * radius;
-	glVertex2d(x, y);
+        x = xo + genarc[j].x * radius;
+        y = yo + genarc[j].y * radius;
+        glVertex2d(x, y);
       }
       glEnd();
     }
@@ -493,7 +482,7 @@ Render(ZnItem	item)
 }
 #else
 static void
-Render(ZnItem	item __unused)
+Render(ZnItem   item)
 {
 }
 #endif
@@ -507,11 +496,11 @@ Render(ZnItem	item __unused)
  **********************************************************************************
  */
 static ZnBool
-IsSensitive(ZnItem	item,
-	    int		item_part __unused)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
   return (ISSET(item->flags, ZN_SENSITIVE_BIT) &&
-	  item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
+          item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
 }
 
 
@@ -519,13 +508,13 @@ IsSensitive(ZnItem	item,
  **********************************************************************************
  *
  * Pick --
- *	Nothing to pick, we are almost transparent.
+ *      Nothing to pick, we are almost transparent.
  *
  **********************************************************************************
  */
 static double
-Pick(ZnItem	item __unused,
-     ZnPick	ps __unused)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
   return 1e40;
 }
@@ -535,30 +524,30 @@ Pick(ZnItem	item __unused,
  **********************************************************************************
  *
  * Coords --
- *	Return or edit the item center.
+ *      Return or edit the item center.
  *
  **********************************************************************************
  */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index __unused,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
-  ReticleItem	reticle = (ReticleItem) item;
+  ReticleItem   reticle = (ReticleItem) item;
   
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp,
-		     " reticles can't add or remove vertices", NULL);
+                     " reticles can't add or remove vertices", NULL);
     return TCL_ERROR;
   }
   else if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
     if (*num_pts == 0) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need 1 point on reticles", NULL);
+                       " coords command need 1 point on reticles", NULL);
       return TCL_ERROR;
     }
     reticle->pos = (*pts)[0];
@@ -579,10 +568,12 @@ Coords(ZnItem		item,
  *
  **********************************************************************************
  */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
 {
+  return TCL_OK;
 }
 
 
@@ -597,33 +588,33 @@ static ZnItemClassStruct RETICLE_ITEM_CLASS = {
   "reticle",
   sizeof(ReticleItemStruct),
   reticle_attrs,
-  0,			/* num_parts */
-  ZN_CLASS_ONE_COORD,	/* flags */
+  0,                    /* num_parts */
+  ZN_CLASS_ONE_COORD,   /* flags */
   Tk_Offset(ReticleItemStruct, pos),
   Init,
   Clone,
   Destroy,
   Configure,
   Query,
-  NULL,			/* GetFieldSet */
-  NULL,			/* GetAnchor */
-  NULL,			/* GetClipVertices */
-  NULL,			/* GetContours */
+  NULL,                 /* GetFieldSet */
+  NULL,                 /* GetAnchor */
+  NULL,                 /* GetClipVertices */
+  NULL,                 /* GetContours */
   Coords,
-  NULL,			/* InsertChars */
-  NULL,			/* DeleteChars */
-  NULL,			/* Cursor */
-  NULL,			/* Index */
-  NULL,			/* Part */
-  NULL,			/* Selection */
-  NULL,			/* Contour */
+  NULL,                 /* InsertChars */
+  NULL,                 /* DeleteChars */
+  NULL,                 /* Cursor */
+  NULL,                 /* Index */
+  NULL,                 /* Part */
+  NULL,                 /* Selection */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 

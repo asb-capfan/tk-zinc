@@ -1,44 +1,51 @@
 package TestLog;
 
-# $Id: TestLog.pm,v 1.3 2003/03/21 13:25:41 mertz Exp $
+# $Id: TestLog.pm,v 1.4 2005/01/16 10:27:35 mertz Exp $
 # These test facilities has been developped by C. Mertz <mertz@cena.fr>
 
 use IO::Handle;    # for autoflushing the logs
 use Carp;
 
-use strict;
+use Exporter;
+@ISA = qw(Exporter);
 
-use vars qw( $VERSION @ISA @EXPORT );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+use vars qw( $VERSION @ISA);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 @EXPORT = qw( openLog setZincLog log test_eval test_no_eval printableItem printableArray printableList
 	      equal_flat_arrays nequal_cplx_arrays);
+use strict;
 
 use constant ERROR => '--an error--';
 
-my $opt_log;
-sub openLog {
-    my ($outfile);
-    ($outfile,$opt_log) = @_;
+my $selected_loglevel;
 
-    
-    if ( open LOG, "$outfile.prev" ) {
+sub openLog {
+    my ($outfile, $loglevel, $no_logfile) = @_;
+
+    $selected_loglevel = $loglevel;
+    if (defined $no_logfile && $no_logfile) {
+      open LOG, "> /dev/null";
+    }
+    else {
+      if ( open LOG, "$outfile.prev" ) {
 	close LOG;
 	unlink "$outfile.prev";
-    }
-    if ( open LOG, $outfile ) {
+      }
+      if ( open LOG, $outfile ) {
 	close LOG;
 	link $outfile, "$outfile.prev";
 	unlink "$outfile";
+      }
+      
+      open LOG,"> $outfile";
+      autoflush LOG 1;  # autoflush is important so that logs are up-to-date if Zinc crashes!
     }
-
-    open LOG,">$outfile";
-    autoflush LOG 1;  # autoflush is important so that logs are up-to-date if Zinc crashes!
 }
 
 
 
 ### print log information to the logfile
-### if $level is <= than opt_log (def = 0) then print log on the stdout
+### if $level is <= than selected_loglevel (def = 0) then print log on the stdout
 ###  - a loglevel of -100 means an error to be logged with #### prefix
 ###  - a loglevel of -10 means an error in the test to be logged with ## prefix
 ###  - a loglevel of 0 means an message to be usually printed (and logged in any case)
@@ -47,7 +54,7 @@ sub openLog {
 
 sub log {
     my ($loglevel, @strgs) = @_;
-    if ($loglevel <= $opt_log) {
+    if ($loglevel <= $selected_loglevel) {
 	print "#### " if $loglevel == -100;
 	print "## " if $loglevel == -10;
 	print @strgs;

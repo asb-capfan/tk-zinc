@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Id: test-no-crash.pl,v 1.19 2004/03/31 13:55:03 mertz Exp $
-# This non-regression test has been developped by C. Mertz <mertz@cena.fr>
+# $Id: test-no-crash.pl,v 1.20 2005/01/16 10:24:14 mertz Exp $
+# This non-regression / memory leak test has been developped by Christophe Mertz <mertz@intuilab.com>
 
 use Tk;
 use Tk::Zinc;
@@ -36,6 +36,7 @@ my $opt_render = -1;
 my $opt_type = 0;
 my $outfile;
 my $opt_tests = "all";
+my $opt_memoryleak = 0;
 
 # on récupère les options
 Getopt::Long::Configure('pass_through');
@@ -45,6 +46,7 @@ my $optstatus = GetOptions('log=i' => \$opt_log,
 			   'render:s' => \$opt_render,
 			   'type=s' => \$opt_type,
 			   'help' => \&usage,
+			   'memoryleak' => \$opt_memoryleak,
 			   'tests:s' => \$opt_tests,
 			   );
 
@@ -62,7 +64,19 @@ unless ($opt_render==0 or $opt_render==1 or $opt_render==2) {
 
 $outfile = "no-crash-$Tk::Zinc::VERSION.log" if (!defined $outfile);
 
-&openLog($outfile, $opt_log);
+## in case of memoryleak test, logs are not written in a file
+##  and logs are limited to high level logs on the standard output
+##  (only those with a loglevel <= -1000 will be written on stdout)
+my $nolog_file = 0;
+if ($opt_memoryleak) {
+  $opt_log = -1000;
+  my $nolog_file = 1;
+}
+
+
+
+
+&openLog($outfile, $opt_log, $nolog_file);
 
 sub usage {
     my ($text) = @_;
@@ -75,6 +89,10 @@ sub usage {
     print " -log <n>        trace level, defaulted to 0; higher level trace more infos\n";
     print " -out filename   the log filename. defaulted to no-crash.log\n";
     print "      NB: the previous log file is always renamed with a .prev suffix\n";
+    print " -memoryleak     to try to detect some memoryleak between first iteration of the test \n";
+    print "                 and the following iteration. This test NEVER finish automatically\n";
+    print "                 it is up to the tester to stop the memoryleak test after\n";
+    print "                 a significative number of iterations\n";
     print " -render 0|1|2   to select the render option of zinc (defaulted to 1)\n";
     print " -trace <an_item_option>  to better trace usage of an option\n";
     print " -type <a_zinc_item_type> to limits tests to this item type.\n";
@@ -85,9 +103,10 @@ sub usage {
 
 my $mw = MainWindow->new();
 
-&log (0, "#testing Zinc-perl Version=" . $Tk::Zinc::VERSION . " - ", $mw->zinc(), "\n");
+&log (-1000, "#testing Zinc-perl Version=" . $Tk::Zinc::VERSION . " - ", $mw->zinc(), "\n");
 
-## must be done after the LOG file is open
+## must be done after the LOG file is open:
+
 my @tests = &parseTestsOpt($opt_tests);
 my %tests;
 foreach my $t (@tests) {$tests{$t} = $t }
@@ -95,7 +114,7 @@ foreach my $t (@tests) {$tests{$t} = $t }
 
 # The explanation displayed when running this demo
 my $label=$mw->Label(-text => "This is a non-regression test, testing that
-zinc is not core-dumping!",
+zinc is not core-dumping! It can also be used for detecting memory leaks",
 		     -justify => 'left')->pack(-padx => 10, -pady => 10);
 
 
@@ -168,10 +187,11 @@ sub creating_items {
     &test_eval (1, "add", 'triangles', 1, [200,200 , 300,200 , 300,300, 200,300],
 		-colors => ["blue;50", "red;20", "green;80"]);
     
-    $image1 = $zinc->Photo(-file => Tk::findINC("Tk/icon.gif") );
-    $image2 = $zinc->Photo(-file => Tk::findINC("Tk/Xcamel.gif") );
-    $image3 = $zinc->Photo(-file => Tk::findINC("Tk/tranicon.gif") );
-    $image4 = $zinc->Photo(-file => Tk::findINC("Tk/anim.gif") );
+    # images are initialised ONLY ONCE! (to avoid memoryleaks)
+    $image1 = $zinc->Photo(-file => Tk::findINC("Tk/icon.gif") ) unless $image1;
+    $image2 = $zinc->Photo(-file => Tk::findINC("Tk/Xcamel.gif") ) unless $image2;
+    $image3 = $zinc->Photo(-file => Tk::findINC("Tk/tranicon.gif") ) unless $image3;
+    $image4 = $zinc->Photo(-file => Tk::findINC("Tk/anim.gif") ) unless $image4;
 
     &creating_datas;  # some of the data are using items!
 } # end creating_items
@@ -203,10 +223,10 @@ my %types;
 
 
 foreach my $itemType (@itemtypes) {
-    my $anItem = $zinc->find('withtype', $itemType);
+    my ($anItem) = $zinc->find('withtype', $itemType);
     if (!defined $anItem) { &log (-10, "no item $itemType\n"); next;};
     my @options = $zinc->itemconfigure($anItem);
-    for my $elem (@options) {
+    foreach my $elem (@options) {
 	my ($optionName, $optionType, $readOnly, $empty, $optionValue) = @$elem;
 	$options{$itemType}{$optionName} = [$optionType, $readOnly, $empty, $optionValue];
 	$types{$optionType} = 1;
@@ -216,7 +236,7 @@ foreach my $itemType (@itemtypes) {
 my %fieldOptions;
 
 {
-my $aTrack = $zinc->find('withtype', 'track');
+my ($aTrack) = $zinc->find('withtype', 'track');
 if (!defined $aTrack) { &log (-10, "no item track\n") }
 else {
     my @fieldOptions = $zinc->itemconfigure($aTrack, 0);
@@ -243,7 +263,8 @@ my %typesNonStandardValues;
 my %typesIllegalValues;
 
 sub creating_datas {
-    %typesValues =
+  return if defined $typesValues{'alignment'};
+  %typesValues =
 	('alignment' => ['left', 'right', 'center'],
 	 'alpha' => [0, 50, 100, 23],
 	 'anchor' => ['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se', 'center'],
@@ -264,6 +285,7 @@ sub creating_datas {
 			    ], ## TBC
 	 'dimension' => [0..5, 10, 50, 100, 0.0, 5.5, 100.5, 4.5],  ## and floats ?!
 	 'edgelist' => ['left', 'right', 'top', 'bottom', 'contour', 'oblique', 'counteroblique'], ## +combinations!
+         'filerule', => ['odd', 'negative','positive', 'abs_ge_eq2'],
 	 'font' => ['10x20', '6x10', '6x12', '6x13'],
 	 'image' => [$image1, $image2, $image3], ## TBC
 	 'integer' => [-10000, -100, -1, 0, 1, 10, 10000], ## pour quoi?
@@ -306,6 +328,7 @@ sub creating_datas {
 	 'dimension' => 45,
 	 'edgelist' => 'contour',
 	 'font' => '6x10',
+         'fillrule' => 'nonzero',
 	 'image' => $image4,
 	 'integer' => 7,
 	 'item' => $text3,
@@ -341,20 +364,12 @@ sub creating_datas {
 	 );
 }
 
-$mw->Button(-text => "Test options",
-	    -command => sub {&test_attributes},
-	    )->pack(-pady => 4);   
-
-$mw->Button(-text => "Test cloning",
-	    -command => sub {&test_cloning},
-	    )->pack(-pady => 4);   
-
-$mw->Button(-text => "Test fields attributes",
-	    -command => sub {&test_every_field_attributes},
-	    )->pack(-pady => 4);   
+$mw->Button(-text => "Exit",
+	    -command => sub { exit },
+	    )->pack(-pady => 4);
 
 sub test_attributes {
-    &log (0, "#---- Start of test_attributes ----\n");
+    &log (-1000, "#---- Start of test_attributes ----\n");
     foreach my $type (@itemtypes) {
 	my @items = $zinc->find('withtype', $type);
 	&log (0, "#--------- Testing ", (1+$#items), " ",$type," attributes ----------------\n");
@@ -362,6 +377,8 @@ sub test_attributes {
 	    &log (-100, "No such item: $type\n");
 	    next;
 	}
+        &log(0,"no such type '$type'\n"), next unless defined $options{$type};
+#        print $options{$type}, "\t\t", %{$options{$type}}, "\n";
 	my %theoptions = %{$options{$type}};
 	foreach my $item (@items) {
 	    ## il faudrait tester les options selon un ordre défini à l'avance
@@ -447,11 +464,11 @@ sub test_attributes {
 # test4: tester qu'en clonant on obtient bien une copie de tous les attributs
 
 sub test_cloning {
-    &log (0, "#---- Start of test_cloning ----\n");
+    &log (-1000, "#---- Start of test_cloning ----\n");
     &creating_items;
     foreach my $type (@itemtypes) {
-	my $item = $zinc->find('withtype', $type);
-	&log (0, "#--------- Cloning and testing item ",$type," ----------------\n");
+	my ($item) = $zinc->find('withtype', $type);
+	&log (0, "#--------- Cloning and testing item ",$type," $item ----------------\n");
 	if (!defined $item) { &log (-10, "No such item: $type\n"); next;};
 	my $clone = &test_eval(1, "clone", $item);
 
@@ -529,6 +546,7 @@ sub test_a_clone {
     foreach my $option (sort keys %theoptions) {
 	next if ($option eq -numfields); # BUG? makes the appli stop
 	next if ($option eq "-clip" and $type = "group"); # BUG? This test cannot be random. Clipping item must belong to the group
+        next if ($option eq '-connecteditem'); ## XXX this test should be corrected implemented,
 	my ($optionType, $readOnly, $empty, $optionValue) = @{$theoptions{$option}};
 	my $value = $typesNonStandardValues{$optionType};
 	if ($optionType ne 'boolean' && !defined $value) {
@@ -591,6 +609,7 @@ sub test_every_attributes_once {
     foreach my $option (sort keys %theoptions) {
 	next if ($option eq -numfields); # BUG? makes the appli stop
 	next if ($option eq "-clip" and $type = "group"); # BUG? This test cannot be random. Clipping item must belong to the group
+        next if ($option eq '-connecteditem'); ## XXX this test should be corrected implemented,
 	my ($optionType, $readOnly, $empty, $optionValue) = @{$theoptions{$option}};
 	my $value = $typesNonStandardValues{$optionType};
 	if ($optionType ne 'boolean' && !defined $value) {
@@ -608,7 +627,7 @@ sub test_every_attributes_once {
 
 
 sub test_every_field_attributes {
-    &log (0, "#---- Start of test_every_field_attributes ----\n");
+    &log (-1000, "#---- Start of test_every_field_attributes ----\n");
     foreach my $type qw(waypoint track tabular) {
 	next unless $itemtypes{$type};
 	my %theoptions = %fieldOptions;
@@ -711,7 +730,7 @@ sub createMapInfo {
 
 sub test_mapitems {
     my @mapinfoNames = @_;
-    &log (0, "#---- Start of test_mapitems ----\n");
+    &log (-1000, "#---- Start of test_mapitems ----\n");
     my @maps = $zinc->find('withtype', 'map');
     my $counter=0;
     foreach my $map (@maps) {
@@ -724,7 +743,7 @@ sub test_mapitems {
 
 ## testing the returned value of coords
 sub test_coords {
-    &log (0, "#---- Start of test_coords ----\n");
+    &log (-1000, "#---- Start of test_coords ----\n");
     foreach my $it ($zinc->find('withtag','*')) {
 	$zinc->remove($it);
     }
@@ -732,7 +751,7 @@ sub test_coords {
     &creating_items;
     foreach my $type ($zinc->add()) {
 	next if $type eq 'map'; ## map item does not support coords method
-	my $it = $zinc->find('withtype',$type);
+	my ($it) = $zinc->find('withtype',$type);
 	my @coordsAll= &test_eval (1, "coords", $it);
 	my $coordsAll = &printableArray(@coordsAll);
 	&log (1, "=> $coordsAll\n");
@@ -786,29 +805,30 @@ sub parseTestsOpt {
 &createMapInfo ('firstmap', 50, 20, 200, 200, 300);
 &createMapInfo ('secondmap', 12, 3, 200, 300, 50);
 
-if ($tests{1}) {
+sub theTest {
+  if ($tests{1}) {
     &test_mapitems ('firstmap', 'secondmap'); # should be done before really testing map items attributes
-}
-# #### &test_labelcontent; # should be done before really testing track/waypoint/tabular items attributes
-
-if ($tests{2}) {
+  }
+  # #### &test_labelcontent; # should be done before really testing track/waypoint/tabular items attributes
+  
+  if ($tests{2}) {
     &test_every_field_attributes;
-}
-
-if ($tests{3}) {
+  }
+  
+  if ($tests{3}) {
     &test_attributes; # on peut configurer tous les attributs
-}
+  }
 
-### we SHOULD test that setting a bad type value ofr an option does not core dump zinc!
+  ### we SHOULD test that setting a bad type value ofr an option does not core dump zinc!
 
-if ($tests{4}) {
+  if ($tests{4}) {
     &test_cloning; # we test that cloning items and modifiyng/removing them does not core dump
-}
+  }
 
-### we should also test multicontour curves
-if ($tests{5}) {
+  ### we should also test multicontour curves
+  if ($tests{5}) {
     &test_coords;
-}
+  }
 
 # #### &test_fonts;  ## and specially big fonts with render = 1;
 # #### &test_path_tags;
@@ -821,6 +841,39 @@ if ($tests{5}) {
 #
 #  cloning, deleting topgroup
 #
+}
+
+sub getMemoryUsage {
+  open (PROC, "/proc/$$/status");
+  my ($totalMemory,$dataMemory);
+  while (<PROC>) {
+    if (/^VmSize:\s+(\d+)/) {
+      $totalMemory = $1;
+    }
+    elsif (/^VmData:\s+(\d+)/) {
+      $dataMemory = $1;
+      last;
+    }
+  }
+  close PROC;
+  return ($totalMemory,$dataMemory);
+}
+
+
+
+if ($opt_memoryleak) {
+  my $iteration = 0;
+  while (1) {
+    my ($total,$data) = &getMemoryUsage;
+    ## get here the current memory state
+    &log(-1000, "#---- MemoryState iteration=$iteration totalMemory=$total  dataMemory=$data ----\n");
+    $iteration++;
+    &theTest;
+  }
+} else {
+  &theTest;
+}
+
 
 &log (0, "#---- End of test_no_crash ----\n");
 

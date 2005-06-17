@@ -1,26 +1,15 @@
 /*
  * Text.c -- Implementation of Text item.
  *
- * Authors		: Patrick LECOANET
- * Creation date	: Sat Mar 25 13:58:39 1995
+ * Authors              : Patrick LECOANET
+ * Creation date        : Sat Mar 25 13:58:39 1995
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -55,8 +44,8 @@ static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__
 /*
  * Bit offset of flags.
  */
-#define UNDERLINED	1
-#define OVERSTRIKED	2
+#define UNDERLINED      1
+#define OVERSTRIKED     2
 
 
 /*
@@ -68,43 +57,43 @@ static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__
  */
 typedef struct _TextLineInfo 
 {
-  char		*start;		/* Index of first char in line */
-  unsigned short  num_bytes;	/* Number of displayed bytes in line (NOT chars)*/
-  unsigned short width;		/* Line width in pixels */
-  unsigned short origin_x;	/* X pos for drawing the line */
+  char          *start;         /* Index of first char in line */
+  unsigned short  num_bytes;    /* Number of displayed bytes in line (NOT chars)*/
+  unsigned short width;         /* Line width in pixels */
+  unsigned short origin_x;      /* X pos for drawing the line */
   unsigned short origin_y;
 } TextLineInfoStruct, *TextLineInfo;
 
 typedef struct _TextItemStruct {
-  ZnItemStruct	header;
+  ZnItemStruct  header;
 
   /* Public data */
-  ZnPoint	pos;		/* Position at anchor */
-  ZnGradient	*color;
-  char		*text;
-  ZnImage	fill_pattern;
-  Tk_Font	font;
+  ZnPoint       pos;            /* Position at anchor */
+  ZnGradient    *color;
+  char          *text;
+  ZnImage       fill_pattern;
+  Tk_Font       font;
   unsigned short width;
-  short		spacing;
+  short         spacing;
   unsigned short flags;
-  Tk_Anchor	anchor;
-  Tk_Anchor	connection_anchor;
-  Tk_Justify	alignment;
+  Tk_Anchor     anchor;
+  Tk_Anchor     connection_anchor;
+  Tk_Justify    alignment;
 
   /* Private data */
   unsigned short num_chars;
   unsigned short insert_index;
-  ZnList	text_info;
+  ZnList        text_info;
   unsigned short max_width;
   unsigned short height;
-  ZnPoint	poly[4];
+  ZnPoint       poly[4];
 #ifdef GL
-  ZnTexFontInfo	*tfi;
+  ZnTexFontInfo *tfi;
 #endif
 } TextItemStruct, *TextItem;
 
 
-static ZnAttrConfig	text_attrs[] = {
+static ZnAttrConfig     text_attrs[] = {
   { ZN_CONFIG_ALIGNMENT, "-alignment", NULL,
     Tk_Offset(TextItemStruct, alignment), 0,
     ZN_COORDS_FLAG|ZN_LAYOUT_FLAG, False },
@@ -170,12 +159,12 @@ static ZnAttrConfig	text_attrs[] = {
  **********************************************************************************
  */
 static int
-Init(ZnItem		item,
-     int		*argc __unused,
-     Tcl_Obj *CONST	*args[] __unused)
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])
 {
-  ZnWInfo	*wi = item->wi;
-  TextItem	text = (TextItem) item;
+  ZnWInfo       *wi = item->wi;
+  TextItem      text = (TextItem) item;
 
   /*printf("size of a text(header) = %d(%d) %d\n",
     sizeof(TextItemStruct), sizeof(ZnItemStruct), sizeof(TextLineInfoStruct));*/
@@ -220,11 +209,11 @@ Init(ZnItem		item,
  **********************************************************************************
  */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  TextItem	text = (TextItem) item;
-  ZnWInfo	*wi = item->wi;
-  char		*str;
+  TextItem      text = (TextItem) item;
+  ZnWInfo       *wi = item->wi;
+  char          *str;
 
   if (text->text) {
     str = ZnMalloc((strlen(text->text) + 1) * sizeof(char));
@@ -259,9 +248,9 @@ Clone(ZnItem	item)
  **********************************************************************************
  */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
-  TextItem	text = (TextItem) item;
+  TextItem      text = (TextItem) item;
 
   if (text->text) {
     ZnFree(text->text);
@@ -292,20 +281,20 @@ Destroy(ZnItem	item)
  **********************************************************************************
  */
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
-  TextItem	text = (TextItem) item;
-  ZnItem	old_connected = item->connected_item;
-  unsigned int	num_chars;
+  TextItem      text = (TextItem) item;
+  ZnItem        old_connected = item->connected_item;
+  unsigned int  num_chars;
 #ifdef GL
-  Tk_Font	old_font = text->font;
+  Tk_Font       old_font = text->font;
 #endif
 
   if (ZnConfigureAttributes(item->wi, item, item, text_attrs,
-			    argc, argv, flags) == TCL_ERROR) {
+                            argc, argv, flags) == TCL_ERROR) {
     return TCL_ERROR;
   }
 
@@ -329,14 +318,14 @@ Configure(ZnItem	item,
      */
     if (item == ti->sel_item) {
       if (ti->sel_last > (int) num_chars) {
-	ti->sel_last = num_chars;
+        ti->sel_last = num_chars;
       }
       if (ti->sel_first >= ti->sel_last) {
-	ti->sel_item = ZN_NO_ITEM;
-	ti->sel_field = ZN_NO_PART;
+        ti->sel_item = ZN_NO_ITEM;
+        ti->sel_field = ZN_NO_PART;
       }
       if ((ti->anchor_item == item) && (ti->sel_anchor > (int) num_chars)) {
-	ti->sel_anchor = num_chars;
+        ti->sel_anchor = num_chars;
       }
     }
     if (text->insert_index > num_chars) {
@@ -351,8 +340,8 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
-	 (item->parent == item->connected_item->parent))) {
+        (ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
+         (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
     else {
@@ -372,9 +361,9 @@ Configure(ZnItem	item,
  **********************************************************************************
  */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, text_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -389,8 +378,8 @@ Query(ZnItem		item,
  * of the text (upper left point in item coordinates).
  */
 static ZnTransfo *
-ComputeTransfoAndOrigin(ZnItem	  item,
-			ZnPoint   *origin)
+ComputeTransfoAndOrigin(ZnItem    item,
+                        ZnPoint   *origin)
 {
   TextItem text = (TextItem) item;
 
@@ -401,8 +390,8 @@ ComputeTransfoAndOrigin(ZnItem	  item,
     ZnTransfo inv;
 
     item->connected_item->class->GetAnchor(item->connected_item,
-					   text->connection_anchor,
-					   origin);
+                                           text->connection_anchor,
+                                           origin);
 
     /* GetAnchor return a position in device coordinates not in
      * the item coordinate space. To compute the text origin
@@ -412,7 +401,7 @@ ComputeTransfoAndOrigin(ZnItem	  item,
     ZnTransfoInvert(item->transfo, &inv);
     ZnTransformPoint(&inv, origin, origin);
     ZnAnchor2Origin(origin, (ZnReal) text->max_width,
-		    (ZnReal) text->height, text->anchor, origin);
+                    (ZnReal) text->height, text->anchor, origin);
     origin->x = ZnNearestInt(origin->x);
     origin->y = ZnNearestInt(origin->y);
     /*
@@ -427,7 +416,7 @@ ComputeTransfoAndOrigin(ZnItem	  item,
     ZnPoint p;
     p.x = p.y = 0;
     ZnAnchor2Origin(&p, (ZnReal) text->max_width,
-		    (ZnReal) text->height, text->anchor, origin);
+                    (ZnReal) text->height, text->anchor, origin);
     origin->x = ZnNearestInt(origin->x);
     origin->y = ZnNearestInt(origin->y);
 
@@ -440,14 +429,14 @@ ComputeTransfoAndOrigin(ZnItem	  item,
  * Compute the selection and the cursor geometry.
  */
 void
-ComputeCursor(ZnItem	   item,
-	      int	   *cursor_line,
-	      unsigned int *cursor_offset)
+ComputeCursor(ZnItem       item,
+              int          *cursor_line,
+              unsigned int *cursor_offset)
 {
-  TextItem	text = (TextItem) item;
-  ZnWInfo	*wi = item->wi;
-  ZnTextInfo	*ti = &wi->text_info;
-  TextLineInfo	lines, lines_ptr;
+  TextItem      text = (TextItem) item;
+  ZnWInfo       *wi = item->wi;
+  ZnTextInfo    *ti = &wi->text_info;
+  TextLineInfo  lines, lines_ptr;
   unsigned int  i, line_index, insert_index, num_lines;
 
   num_lines = ZnListSize(text->text_info);
@@ -465,10 +454,10 @@ ComputeCursor(ZnItem	   item,
        */
       line_index = lines_ptr->start - text->text;
       if ((insert_index >= line_index) &&
-	  (insert_index <= line_index + lines_ptr->num_bytes)) {
-	*cursor_line = i;
-	*cursor_offset = Tk_TextWidth(text->font, (char *) lines_ptr->start,
-				      insert_index - line_index);
+          (insert_index <= line_index + lines_ptr->num_bytes)) {
+        *cursor_line = i;
+        *cursor_offset = Tk_TextWidth(text->font, (char *) lines_ptr->start,
+                                      insert_index - line_index);
       }
     }
   }
@@ -476,17 +465,17 @@ ComputeCursor(ZnItem	   item,
 }
 
 static void
-ComputeSelection(ZnItem		item,
-		 int		*sel_first_line,
-		 int		*sel_last_line,
-		 unsigned int	*sel_start_offset,
-		 unsigned int	*sel_stop_offset)
+ComputeSelection(ZnItem         item,
+                 int            *sel_first_line,
+                 int            *sel_last_line,
+                 unsigned int   *sel_start_offset,
+                 unsigned int   *sel_stop_offset)
 {  
-  TextItem	text = (TextItem) item;
-  ZnWInfo	*wi = item->wi;
-  ZnTextInfo	*ti = &wi->text_info;
-  TextLineInfo	lines_ptr, lines;
-  int		i, num_lines, byte_index;
+  TextItem      text = (TextItem) item;
+  ZnWInfo       *wi = item->wi;
+  ZnTextInfo    *ti = &wi->text_info;
+  TextLineInfo  lines_ptr, lines;
+  int           i, num_lines, byte_index;
   unsigned int  line_index;
   unsigned int  sel_first, sel_last;
 
@@ -507,28 +496,28 @@ ComputeSelection(ZnItem		item,
      */
     line_index = lines_ptr->start - text->text;
     if ((sel_last >= line_index) &&
-	(sel_first <= (line_index + lines_ptr->num_bytes))) {
+        (sel_first <= (line_index + lines_ptr->num_bytes))) {
       if (*sel_first_line < 0) {
-	byte_index = sel_first - line_index;
-	if (byte_index <= 0) {
-	  *sel_first_line = i;
-	  *sel_start_offset = 0;
-	  /*printf("sel_start_offset 1 : %d\n", *sel_start_offset);*/
-	}
-	else if (byte_index <= lines_ptr->num_bytes) {
-	  *sel_first_line = i;
-	  *sel_start_offset = Tk_TextWidth(text->font, (char *) lines_ptr->start,
-					   byte_index);
-	  /*printf("sel_start_offset 2 : %d\n", *sel_start_offset);*/
-	}
+        byte_index = sel_first - line_index;
+        if (byte_index <= 0) {
+          *sel_first_line = i;
+          *sel_start_offset = 0;
+          /*printf("sel_start_offset 1 : %d\n", *sel_start_offset);*/
+        }
+        else if (byte_index <= lines_ptr->num_bytes) {
+          *sel_first_line = i;
+          *sel_start_offset = Tk_TextWidth(text->font, (char *) lines_ptr->start,
+                                           byte_index);
+          /*printf("sel_start_offset 2 : %d\n", *sel_start_offset);*/
+        }
       }
       byte_index = ti->sel_last+1 - line_index;
       *sel_last_line = i;
       if (byte_index == lines_ptr->num_bytes+1)
-	*sel_stop_offset = lines_ptr->width;
+        *sel_stop_offset = lines_ptr->width;
       else if (byte_index <= lines_ptr->num_bytes)
-	*sel_stop_offset = Tk_TextWidth(text->font, (char *) lines_ptr->start,
-					byte_index);
+        *sel_stop_offset = Tk_TextWidth(text->font, (char *) lines_ptr->start,
+                                        byte_index);
     }
   }
 }
@@ -542,15 +531,15 @@ ComputeSelection(ZnItem		item,
  **********************************************************************************
  */
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force __unused)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  ZnWInfo	*wi = item->wi;
-  TextItem	text = (TextItem) item;
-  TextLineInfo	infos;
+  ZnWInfo       *wi = item->wi;
+  TextItem      text = (TextItem) item;
+  TextLineInfo  infos;
   Tk_FontMetrics fm;
-  ZnTransfo	*transfo;
-  int		i, num_lines, cur_dy, font_height;
+  ZnTransfo     *transfo;
+  int           i, num_lines, cur_dy, font_height;
   
   ZnResetBBox(&item->item_bounding_box);
   
@@ -563,7 +552,7 @@ ComputeCoordinates(ZnItem	item,
    */
   if (ISSET(item->inv_flags, ZN_LAYOUT_FLAG)) {
     char *scan;
-    int	 wrap, prev_num_lines;
+    int  wrap, prev_num_lines;
 
     text->max_width = 0;
     if (text->text_info != NULL) {
@@ -586,54 +575,54 @@ ComputeCoordinates(ZnItem	item,
       TextLineInfoStruct info;
 
       while (*scan) {
-	char	*special;
-	int	num, w;
+        char    *special;
+        int     num, w;
 
-	/*
-	 * Limit the excursion of Tk_MeasureChars to the end
-	 * of the line. Do not include \n in the measure done.
-	 */
-	num = strcspn(scan, "\r\n");
-	special = scan + num;
-	info.num_bytes = Tk_MeasureChars(text->font, scan, num, wrap,
-					 TK_WHOLE_WORDS|TK_AT_LEAST_ONE, &w);
-	
-	info.width = w;
-	info.start = scan;
-	text->max_width = MAX(info.width, text->max_width);
-	
-	scan += info.num_bytes;
+        /*
+         * Limit the excursion of Tk_MeasureChars to the end
+         * of the line. Do not include \n in the measure done.
+         */
+        num = strcspn(scan, "\r\n");
+        special = scan + num;
+        info.num_bytes = Tk_MeasureChars(text->font, scan, num, wrap,
+                                         TK_WHOLE_WORDS|TK_AT_LEAST_ONE, &w);
+        
+        info.width = w;
+        info.start = scan;
+        text->max_width = MAX(info.width, text->max_width);
+        
+        scan += info.num_bytes;
 
-	/*
-	 * Skip the newline line character.
-	 */
-	if ((*scan == '\r') || (*scan == '\n')) {
-	  scan++;
-	}
-	else {
-	  /*
-	   * Skip white spaces occuring after an
-	   * automatic line break.
-	   */
-	  while (*scan == ' ') {
-	    scan++;
-	  }
-	}
-	
-	ZnListAdd(text->text_info, &info, ZnListTail);
-	/*printf("adding a text info : %s, num_bytes :  %d, width : %d\n",
-	  info.start, info.num_bytes, info.width);*/
+        /*
+         * Skip the newline line character.
+         */
+        if ((*scan == '\r') || (*scan == '\n')) {
+          scan++;
+        }
+        else {
+          /*
+           * Skip white spaces occuring after an
+           * automatic line break.
+           */
+          while (*scan == ' ') {
+            scan++;
+          }
+        }
+        
+        ZnListAdd(text->text_info, &info, ZnListTail);
+        /*printf("adding a text info : %s, num_bytes :  %d, width : %d\n",
+          info.start, info.num_bytes, info.width);*/
       }
       if (*text->text && ((scan[-1] == '\r') || (scan[-1] == '\n'))) {
-	/* Build a text info even for an empty line
-	 * at the end of text or for an empty text.
-	 * It is needed to enable selection and cursor
-	 * insertion to behave correctly.
-	 */
-	info.num_bytes = 0;
-	info.width = 0;
-	info.start = scan;
-	ZnListAdd(text->text_info, &info, ZnListTail);
+        /* Build a text info even for an empty line
+         * at the end of text or for an empty text.
+         * It is needed to enable selection and cursor
+         * insertion to behave correctly.
+         */
+        info.num_bytes = 0;
+        info.width = 0;
+        info.start = scan;
+        ZnListAdd(text->text_info, &info, ZnListTail);
       }
     }
   
@@ -648,27 +637,27 @@ ComputeCoordinates(ZnItem	item,
     for (i = 0; i < num_lines; i++) {
       switch (text->alignment) {
       case TK_JUSTIFY_LEFT:
-	infos[i].origin_x = 0;
-	break;
+        infos[i].origin_x = 0;
+        break;
       case TK_JUSTIFY_CENTER:
-	infos[i].origin_x = (text->max_width + 1 - infos[i].width)/2;
-	break;
+        infos[i].origin_x = (text->max_width + 1 - infos[i].width)/2;
+        break;
       case TK_JUSTIFY_RIGHT:
-	infos[i].origin_x = text->max_width + 1 - infos[i].width;
-	break;
+        infos[i].origin_x = text->max_width + 1 - infos[i].width;
+        break;
       }
       infos[i].origin_y = cur_dy;
       cur_dy += font_height + text->spacing;
       /*printf("fixing line %d x : %d, y : %d\n", i, infos[i].origin_x,
-	infos[i].origin_y);*/
+        infos[i].origin_y);*/
     }
   } /* ISSET(item->inv_flags, INV_TEXT_LAYOUT) */
     
   text->height = font_height;
   if (text->text_info && text->max_width) {
     unsigned int h, cursor_offset;
-    int		 cursor_line;
-    ZnPoint	 origin, box[4];
+    int          cursor_line;
+    ZnPoint      origin, box[4];
 
     num_lines = ZnListSize(text->text_info);
     infos = ZnListArray(text->text_info);
@@ -699,13 +688,13 @@ ComputeCoordinates(ZnItem	item,
     ComputeCursor(item, &cursor_line, &cursor_offset);
     if (cursor_line >= 0) {
       if (num_lines) {
-	box[0].x = origin.x + infos[cursor_line].origin_x + cursor_offset -
-	  wi->text_info.insert_width/2;
-	box[0].y = origin.y + infos[cursor_line].origin_y - fm.ascent + 1;
+        box[0].x = origin.x + infos[cursor_line].origin_x + cursor_offset -
+          wi->text_info.insert_width/2;
+        box[0].y = origin.y + infos[cursor_line].origin_y - fm.ascent + 1;
       }
       else {
-	box[0].x = origin.x;
-	box[0].y = origin.y;
+        box[0].x = origin.x;
+        box[0].y = origin.y;
       }
       box[2].x = box[0].x + wi->text_info.insert_width;
       box[2].y = box[0].y + font_height - 1;
@@ -719,8 +708,8 @@ ComputeCoordinates(ZnItem	item,
   }
 
   /*printf("bbox origin: %g %g corner %g %g\n",
-	 item->item_bounding_box.orig.x, item->item_bounding_box.orig.y,
-	 item->item_bounding_box.corner.x, item->item_bounding_box.corner.y);*/
+         item->item_bounding_box.orig.x, item->item_bounding_box.orig.y,
+         item->item_bounding_box.corner.x, item->item_bounding_box.corner.y);*/
   /*
    * Update connected items.
    */
@@ -732,25 +721,25 @@ ComputeCoordinates(ZnItem	item,
  **********************************************************************************
  *
  * ToArea --
- *	Tell if the object is entirely outside (-1),
- *	entirely inside (1) or in between (0).
+ *      Tell if the object is entirely outside (-1),
+ *      entirely inside (1) or in between (0).
  *
  **********************************************************************************
  */
 static int
-ToArea(ZnItem	item,
-       ZnToArea	ta)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
-  TextItem	text = (TextItem) item;
-  int		inside = -1;
-  ZnBool	first_done = False;
-  int		num_lines, i;
-  TextLineInfo	lines, lines_ptr;
+  TextItem      text = (TextItem) item;
+  int           inside = -1;
+  ZnBool        first_done = False;
+  int           num_lines, i;
+  TextLineInfo  lines, lines_ptr;
   Tk_FontMetrics fm;
-  int		font_height;
-  ZnBBox	line_bbox, *area = ta->area;
-  ZnPoint	box[4], p, origin;
-  ZnTransfo	inv, *transfo;
+  int           font_height;
+  ZnBBox        line_bbox, *area = ta->area;
+  ZnPoint       box[4], p, origin;
+  ZnTransfo     inv, *transfo;
 
   if (!text->text_info || !text->text) {
     return -1;
@@ -785,12 +774,12 @@ ToArea(ZnItem	item,
       first_done = True;
       inside = ZnPolygonInBBox(box, 4, &line_bbox, NULL);
       if (inside == 0) {
-	return 0;
+        return 0;
       }
     }
     else {
       if (ZnPolygonInBBox(box, 4, &line_bbox, NULL) == 0) {
-	return 0;
+        return 0;
       }
     }
   }
@@ -807,26 +796,26 @@ ToArea(ZnItem	item,
  **********************************************************************************
  */
 static void
-Draw(ZnItem	item)
+Draw(ZnItem     item)
 {
-  ZnWInfo	*wi = item->wi;
-  TextItem	text = (TextItem) item;
-  XGCValues  	values;
-  ZnPoint	pos, box[4], origin;
-  ZnTransfo	*transfo;
-  Drawable	drw;
-  GC		gc;
-  XImage	*src_im, *dest_im=NULL;
+  ZnWInfo       *wi = item->wi;
+  TextItem      text = (TextItem) item;
+  XGCValues     values;
+  ZnPoint       pos, box[4], origin;
+  ZnTransfo     *transfo;
+  Drawable      drw;
+  GC            gc;
+  XImage        *src_im, *dest_im=NULL;
   unsigned int  dest_im_width=0, dest_im_height=0;
-  unsigned int	gc_mask = 0;
+  unsigned int  gc_mask = 0;
   Tk_FontMetrics fm;
-  unsigned int	font_height;  
-  int		num_lines, i;
-  TextLineInfo	lines, lines_ptr;
-  ZnTextInfo	*ti = &wi->text_info;
-  unsigned int	underline_thickness, underline_pos=0, overstrike_pos=0;
-  int		sel_first_line=-1, sel_last_line=-1, cursor_line=-1;
-  unsigned int	sel_start_offset=0, sel_stop_offset=0, cursor_offset=0;
+  unsigned int  font_height;  
+  int           num_lines, i;
+  TextLineInfo  lines, lines_ptr;
+  ZnTextInfo    *ti = &wi->text_info;
+  unsigned int  underline_thickness, underline_pos=0, overstrike_pos=0;
+  int           sel_first_line=-1, sel_last_line=-1, cursor_line=-1;
+  unsigned int  sel_start_offset=0, sel_stop_offset=0, cursor_offset=0;
 
   if (!text->text_info/* || !text->text*/) {
     return;
@@ -844,7 +833,7 @@ Draw(ZnItem	item)
    */
   ComputeCursor(item, &cursor_line, &cursor_offset);
   ComputeSelection(item, &sel_first_line, &sel_last_line,
-		   &sel_start_offset, &sel_stop_offset);
+                   &sel_start_offset, &sel_stop_offset);
 
 
   ZnTransformPoint(transfo, &origin, &pos);
@@ -863,9 +852,9 @@ Draw(ZnItem	item)
     
     if (sel_first_line == sel_last_line) {
       box[0].x = origin.x + 
-	lines[sel_first_line].origin_x + sel_start_offset;
+        lines[sel_first_line].origin_x + sel_start_offset;
       box[0].y = origin.y +
-	lines[sel_first_line].origin_y - fm.ascent;
+        lines[sel_first_line].origin_y - fm.ascent;
       box[2].x = box[0].x + sel_stop_offset - sel_start_offset;
       box[2].y = box[0].y + font_height;
       box[1].x = box[2].x;
@@ -874,18 +863,18 @@ Draw(ZnItem	item)
       box[3].y = box[2].y;
       ZnTransformPoints(transfo, box, box, 4);
       for (i = 0; i < 4; i++) {
-	xp[i].x = (short) box[i].x;
-	xp[i].y = (short) box[i].y;
+        xp[i].x = (short) box[i].x;
+        xp[i].y = (short) box[i].y;
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
     }
     else {
       box[0].x = origin.x + 
-	lines[sel_first_line].origin_x + sel_start_offset;
+        lines[sel_first_line].origin_x + sel_start_offset;
       box[0].y = origin.y +
-	lines[sel_first_line].origin_y - fm.ascent;
+        lines[sel_first_line].origin_y - fm.ascent;
       box[2].x = box[0].x +
-	text->max_width-lines[sel_first_line].origin_x-sel_start_offset;
+        text->max_width-lines[sel_first_line].origin_x-sel_start_offset;
       box[2].y = box[0].y + font_height;
       box[1].x = box[2].x;
       box[1].y = box[0].y;
@@ -893,26 +882,26 @@ Draw(ZnItem	item)
       box[3].y = box[2].y;
       ZnTransformPoints(transfo, box, box, 4);
       for (i = 0; i < 4; i++) {
-	xp[i].x = (short) box[i].x;
-	xp[i].y = (short) box[i].y;
+        xp[i].x = (short) box[i].x;
+        xp[i].y = (short) box[i].y;
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
       for (i = sel_first_line+1, lines_ptr = &lines[sel_first_line+1];
-	   i < sel_last_line; i++, lines_ptr++) {
-	box[0].x = origin.x;
-	box[0].y = origin.y + lines_ptr->origin_y - fm.ascent;
-	box[2].x = box[0].x + text->max_width;
-	box[2].y = box[0].y + font_height;
-	box[1].x = box[2].x;
-	box[1].y = box[0].y;
-	box[3].x = box[0].x;
-	box[3].y = box[2].y;
-	ZnTransformPoints(transfo, box, box, 4);
-	for (i = 0; i < 4; i++) {
-	  xp[i].x = (short) box[i].x;
-	  xp[i].y = (short) box[i].y;
-	}
-	XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
+           i < sel_last_line; i++, lines_ptr++) {
+        box[0].x = origin.x;
+        box[0].y = origin.y + lines_ptr->origin_y - fm.ascent;
+        box[2].x = box[0].x + text->max_width;
+        box[2].y = box[0].y + font_height;
+        box[1].x = box[2].x;
+        box[1].y = box[0].y;
+        box[3].x = box[0].x;
+        box[3].y = box[2].y;
+        ZnTransformPoints(transfo, box, box, 4);
+        for (i = 0; i < 4; i++) {
+          xp[i].x = (short) box[i].x;
+          xp[i].y = (short) box[i].y;
+        }
+        XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
       }
       box[0].x = origin.x;
       box[0].y = origin.y + lines[sel_last_line].origin_y - fm.ascent;
@@ -924,8 +913,8 @@ Draw(ZnItem	item)
       box[3].y = box[2].y;
       ZnTransformPoints(transfo, box, box, 4);
       for (i = 0; i < 4; i++) {
-	xp[i].x = (short) box[i].x;
-	xp[i].y = (short) box[i].y;
+        xp[i].x = (short) box[i].x;
+        xp[i].y = (short) box[i].y;
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
     }
@@ -948,7 +937,7 @@ Draw(ZnItem	item)
     box[1].y = box[0].y + font_height - 1;
     ZnTransformPoints(transfo, box, box, 2);
     XDrawLine(wi->dpy, wi->draw_buffer, wi->gc,
-	      (int) box[0].x, (int) box[0].y, (int) box[1].x, (int) box[1].y);
+              (int) box[0].x, (int) box[0].y, (int) box[1].x, (int) box[1].y);
   }
 
 
@@ -968,21 +957,21 @@ Draw(ZnItem	item)
   }
   else {
     dest_im_width = (unsigned int) (item->item_bounding_box.corner.x -
-				    item->item_bounding_box.orig.x);
+                                    item->item_bounding_box.orig.x);
     dest_im_height = (unsigned int) (item->item_bounding_box.corner.y -
-				     item->item_bounding_box.orig.y);
+                                     item->item_bounding_box.orig.y);
 
     drw = Tk_GetPixmap(wi->dpy, wi->draw_buffer,
-		       MAX(dest_im_width, text->max_width),
-		       MAX(dest_im_height, text->height), 1);
+                       MAX(dest_im_width, text->max_width),
+                       MAX(dest_im_height, text->height), 1);
     gc = XCreateGC(wi->dpy, drw, 0, NULL);
     XSetForeground(wi->dpy, gc, 0);
     XFillRectangle(wi->dpy, drw, gc, 0, 0,
-		   MAX(dest_im_width, text->max_width),
-		   MAX(dest_im_height, text->height));
+                   MAX(dest_im_width, text->max_width),
+                   MAX(dest_im_height, text->height));
     dest_im = XCreateImage(wi->dpy, Tk_Visual(wi->win), 1,
-			   XYPixmap, 0, NULL, dest_im_width, dest_im_height,
-			   8, 0);
+                           XYPixmap, 0, NULL, dest_im_width, dest_im_height,
+                           8, 0);
     dest_im->data = ZnMalloc(dest_im->bytes_per_line * dest_im->height);
     memset(dest_im->data, 0, dest_im->bytes_per_line * dest_im->height);
 
@@ -1021,30 +1010,30 @@ Draw(ZnItem	item)
   }
   XChangeGC(wi->dpy, gc, gc_mask, &values);
   for (i = 0, lines_ptr = lines; i < num_lines; i++, lines_ptr++) {
-    int	tmp_x, tmp_y;
+    int tmp_x, tmp_y;
     
     tmp_x = (int)(pos.x + lines_ptr->origin_x);
     tmp_y = (int)(pos.y + lines_ptr->origin_y);
     Tk_DrawChars(wi->dpy, drw, gc,
-		 text->font, (char *) lines_ptr->start,
-		 (int) lines_ptr->num_bytes, tmp_x, tmp_y);
+                 text->font, (char *) lines_ptr->start,
+                 (int) lines_ptr->num_bytes, tmp_x, tmp_y);
     if (ISSET(text->flags, UNDERLINED)) {
       int y_under = tmp_y + underline_pos;
       
       XDrawLine(wi->dpy, drw, gc,
-		tmp_x, y_under, tmp_x + (int) lines_ptr->width, y_under);
+                tmp_x, y_under, tmp_x + (int) lines_ptr->width, y_under);
     }
     if (ISSET(text->flags, OVERSTRIKED)) {
       int y_over = tmp_y-overstrike_pos;
       
       XDrawLine(wi->dpy, drw, gc,
-		tmp_x, y_over, tmp_x + (int) lines_ptr->width, y_over);
+                tmp_x, y_over, tmp_x + (int) lines_ptr->width, y_over);
     }
   }
 
   if (dest_im != NULL) {
     src_im = XGetImage(wi->dpy, drw, 0, 0, text->max_width, text->height,
-		       1, XYPixmap);
+                       1, XYPixmap);
 
     box[0].x = origin.x;
     box[0].y = origin.y;
@@ -1065,7 +1054,7 @@ Draw(ZnItem	item)
     ZnMapImage(src_im, dest_im, box);
 
     TkPutImage(NULL, 0,wi->dpy, drw, gc, dest_im,
-	       0, 0, 0, 0, dest_im_width, dest_im_height);
+               0, 0, 0, 0, dest_im_width, dest_im_height);
 
     values.foreground = ZnGetGradientPixel(text->color, 0.0);
     values.stipple = drw;
@@ -1073,12 +1062,12 @@ Draw(ZnItem	item)
     values.ts_y_origin = (int) item->item_bounding_box.orig.y;
     values.fill_style = FillStippled;
     XChangeGC(wi->dpy, wi->gc,
-	      GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground,
-	      &values);
+              GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground,
+              &values);
     XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,
-		   (int) item->item_bounding_box.orig.x,
-		   (int) item->item_bounding_box.orig.y,
-		   dest_im_width, dest_im_height);
+                   (int) item->item_bounding_box.orig.x,
+                   (int) item->item_bounding_box.orig.y,
+                   dest_im_width, dest_im_height);
 
     XFreeGC(wi->dpy, gc);
     Tk_FreePixmap(wi->dpy, drw);
@@ -1097,23 +1086,23 @@ Draw(ZnItem	item)
  */
 #ifdef GL
 static void
-Render(ZnItem	item)
+Render(ZnItem   item)
 {
-  ZnWInfo	*wi = item->wi;
-  TextItem	text = (TextItem) item;
-  TextLineInfo	lines, lines_ptr;
-  ZnTextInfo	*ti = &wi->text_info;
-  ZnPoint	o, c, origin;
-  ZnTransfo	*transfo;
-  GLdouble	m[16];
-  int		i, num_lines;
-  XColor	*color;
+  ZnWInfo       *wi = item->wi;
+  TextItem      text = (TextItem) item;
+  TextLineInfo  lines, lines_ptr;
+  ZnTextInfo    *ti = &wi->text_info;
+  ZnPoint       o, c, origin;
+  ZnTransfo     *transfo;
+  GLdouble      m[16];
+  int           i, num_lines;
+  XColor        *color;
   unsigned short alpha;
   Tk_FontMetrics fm;
-  int		font_height;  
-  int		underline_thickness, underline_pos=0, overstrike_pos=0;
-  int		sel_first_line=-1, sel_last_line=-1, cursor_line=-1;
-  int		sel_start_offset=0, sel_stop_offset=0, cursor_offset=0;
+  int           font_height;  
+  int           underline_thickness, underline_pos=0, overstrike_pos=0;
+  int           sel_first_line=-1, sel_last_line=-1, cursor_line=-1;
+  int           sel_start_offset=0, sel_stop_offset=0, cursor_offset=0;
 
   if (!text->text_info) {
     return;
@@ -1145,7 +1134,9 @@ Render(ZnItem	item)
      */
     ComputeCursor(item, &cursor_line, &cursor_offset);
     ComputeSelection(item, &sel_first_line, &sel_last_line,
-		     &sel_start_offset, &sel_stop_offset);
+                     &sel_start_offset, &sel_stop_offset);
+  
+    ZnGLMakeCurrent(wi->dpy, wi);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glPushMatrix();
@@ -1172,40 +1163,40 @@ Render(ZnItem	item)
       o.y = lines[sel_first_line].origin_y - fm.ascent;
       glBegin(GL_QUADS);
       if (sel_first_line == sel_last_line) {
-	c.x = o.x + sel_stop_offset - sel_start_offset;
-	c.y = o.y + font_height;
-	glVertex2d(o.x, o.y);
-	glVertex2d(o.x, c.y);
-	glVertex2d(c.x, c.y);
-	glVertex2d(c.x, o.y);
+        c.x = o.x + sel_stop_offset - sel_start_offset;
+        c.y = o.y + font_height;
+        glVertex2d(o.x, o.y);
+        glVertex2d(o.x, c.y);
+        glVertex2d(c.x, c.y);
+        glVertex2d(c.x, o.y);
       }
       else {
-	c.x = o.x + (text->max_width - 
-		     lines[sel_first_line].origin_x - sel_start_offset);
-	c.y = o.y + font_height;
-	glVertex2d(o.x, o.y);
-	glVertex2d(o.x, c.y);
-	glVertex2d(c.x, c.y);
-	glVertex2d(c.x, o.y);
-	for (i = sel_first_line+1, lines_ptr = &lines[sel_first_line+1];
-	     i < sel_last_line; i++, lines_ptr++) {
-	  o.x = 0;
-	  o.y = lines_ptr->origin_y - fm.ascent;
-	  c.x = o.x + text->max_width;
-	  c.y = o.y + font_height;
-	  glVertex2d(o.x, o.y);
-	  glVertex2d(o.x, c.y);
-	  glVertex2d(c.x, c.y);
-	  glVertex2d(c.x, o.y);
-	}
-	o.x = 0;
-	o.y = lines[sel_last_line].origin_y - fm.ascent;
-	c.x = o.x + lines[sel_last_line].origin_x + sel_stop_offset;
-	c.y = o.y + font_height;
-	glVertex2d(o.x, o.y);
-	glVertex2d(o.x, c.y);
-	glVertex2d(c.x, c.y);
-	glVertex2d(c.x, o.y);
+        c.x = o.x + (text->max_width - 
+                     lines[sel_first_line].origin_x - sel_start_offset);
+        c.y = o.y + font_height;
+        glVertex2d(o.x, o.y);
+        glVertex2d(o.x, c.y);
+        glVertex2d(c.x, c.y);
+        glVertex2d(c.x, o.y);
+        for (i = sel_first_line+1, lines_ptr = &lines[sel_first_line+1];
+             i < sel_last_line; i++, lines_ptr++) {
+          o.x = 0;
+          o.y = lines_ptr->origin_y - fm.ascent;
+          c.x = o.x + text->max_width;
+          c.y = o.y + font_height;
+          glVertex2d(o.x, o.y);
+          glVertex2d(o.x, c.y);
+          glVertex2d(c.x, c.y);
+          glVertex2d(c.x, o.y);
+        }
+        o.x = 0;
+        o.y = lines[sel_last_line].origin_y - fm.ascent;
+        c.x = o.x + lines[sel_last_line].origin_x + sel_stop_offset;
+        c.y = o.y + font_height;
+        glVertex2d(o.x, o.y);
+        glVertex2d(o.x, c.y);
+        glVertex2d(c.x, c.y);
+        glVertex2d(c.x, o.y);
       }
       glEnd();
     }
@@ -1214,7 +1205,7 @@ Render(ZnItem	item)
      * Render the cursor.
      */
     if ((cursor_line >= 0) &&
-	(wi->focus_item == item) && ti->cursor_on) {
+        (wi->focus_item == item) && ti->cursor_on) {
       color = ZnGetGradientColor(ti->insert_color, 0.0, &alpha);
       alpha = ZnComposeAlpha(alpha, wi->alpha);
       glColor4us(color->red, color->green, color->blue, alpha);
@@ -1245,21 +1236,21 @@ Render(ZnItem	item)
       glTranslated(lines_ptr->origin_x, lines_ptr->origin_y, 0.0);
 
       if (ISSET(text->flags, UNDERLINED) || ISSET(text->flags, OVERSTRIKED)) {
-	glLineWidth((GLfloat) underline_thickness);
-	glDisable(GL_TEXTURE_2D);
-	if (ISSET(text->flags, UNDERLINED)) {
-	  glBegin(GL_LINES);
-	  glVertex2d(0, underline_pos);
-	  glVertex2d(lines_ptr->width, underline_pos);
-	  glEnd();
-	}
-	if (ISSET(text->flags, OVERSTRIKED)) {
-	  glBegin(GL_LINES);
-	  glVertex2d(0, -overstrike_pos);
-	  glVertex2d(lines_ptr->width, -overstrike_pos);
-	  glEnd();
-	}
-	glEnable(GL_TEXTURE_2D);
+        glLineWidth((GLfloat) underline_thickness);
+        glDisable(GL_TEXTURE_2D);
+        if (ISSET(text->flags, UNDERLINED)) {
+          glBegin(GL_LINES);
+          glVertex2d(0, underline_pos);
+          glVertex2d(lines_ptr->width, underline_pos);
+          glEnd();
+        }
+        if (ISSET(text->flags, OVERSTRIKED)) {
+          glBegin(GL_LINES);
+          glVertex2d(0, -overstrike_pos);
+          glVertex2d(lines_ptr->width, -overstrike_pos);
+          glEnd();
+        }
+        glEnable(GL_TEXTURE_2D);
       }
 
       ZnRenderString(text->tfi, lines_ptr->start, lines_ptr->num_bytes);
@@ -1280,7 +1271,7 @@ Render(ZnItem	item)
 }
 #else
 static void
-Render(ZnItem	item __unused)
+Render(ZnItem   item)
 {
 }
 #endif
@@ -1294,11 +1285,11 @@ Render(ZnItem	item __unused)
  **********************************************************************************
  */
 static ZnBool
-IsSensitive(ZnItem	item,
-	    int		item_part __unused)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
   return (ISSET(item->flags, ZN_SENSITIVE_BIT) &&
-	  item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
+          item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
 }
 
 
@@ -1310,17 +1301,17 @@ IsSensitive(ZnItem	item,
  **********************************************************************************
  */
 static double
-Pick(ZnItem	item,
-     ZnPick	ps)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
-  TextItem	text = (TextItem) item;
-  double	dist = 1.0e40, new_dist;
-  int		num_lines, i;
-  TextLineInfo	lines, lines_ptr;
+  TextItem      text = (TextItem) item;
+  double        dist = 1.0e40, new_dist;
+  int           num_lines, i;
+  TextLineInfo  lines, lines_ptr;
   Tk_FontMetrics fm;
-  int		font_height;
-  ZnPoint	box[4], origin, *p = ps->point;
-  ZnTransfo	*transfo;
+  int           font_height;
+  ZnPoint       box[4], origin, *p = ps->point;
+  ZnTransfo     *transfo;
 
   if (!text->text_info || !text->text) {
     return dist;
@@ -1365,10 +1356,76 @@ Pick(ZnItem	item,
  *
  **********************************************************************************
  */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
 {
+  ZnWInfo        *wi = item->wi;
+  TextItem       text = (TextItem) item;
+  Tk_FontMetrics fm;
+  TextLineInfo   lines, lines_ptr;
+  ZnPoint        origin;
+  ZnReal         alignment;
+  int            i, num_lines;
+  char           path[150];
+
+  lines = (TextLineInfo) ZnListArray(text->text_info);
+  num_lines = ZnListSize(text->text_info);
+
+  if (Tk_PostscriptFont(wi->interp, wi->ps_info, text->font) != TCL_OK) {
+    return TCL_ERROR;
+  }
+  if (Tk_PostscriptColor(wi->interp, wi->ps_info,
+                         ZnGetGradientColor(text->color, 0.0, NULL)) != TCL_OK) {
+    return TCL_ERROR;
+  }
+  if (text->fill_pattern != ZnUnspecifiedImage) {
+    Tcl_AppendResult(wi->interp, "/StippleText {\n    ", NULL);
+    Tk_PostscriptStipple(wi->interp, wi->win, wi->ps_info,
+                         ZnImagePixmap(text->fill_pattern, wi->win));
+    Tcl_AppendResult(wi->interp, "} bind def\n", NULL);
+  }
+
+  ComputeTransfoAndOrigin(item, &origin);
+
+  sprintf(path, "/InitialTransform load setmatrix\n"
+          "[%.15g %.15g %.15g %.15g %.15g %.15g] concat\n"
+          "1 -1 scale\n",
+          wi->current_transfo->_[0][0], wi->current_transfo->_[0][1], 
+          wi->current_transfo->_[1][0], wi->current_transfo->_[1][1], 
+          wi->current_transfo->_[2][0], wi->current_transfo->_[2][1]);
+  Tcl_AppendResult(wi->interp, path, NULL);
+
+  sprintf(path, "%.15g %.15g [\n", origin.x, origin.y);
+  Tcl_AppendResult(wi->interp, path, NULL);
+
+  /*
+   * Emit code to draw the lines.
+   */
+  for (i = 0, lines_ptr = lines; i < num_lines; i++, lines_ptr++) {
+    ZnPostscriptString(wi->interp, lines_ptr->start, lines_ptr->num_bytes);
+  }
+
+  switch (text->alignment) {
+    default:
+    case TK_JUSTIFY_LEFT:
+      alignment = 0;
+      break;
+    case TK_JUSTIFY_CENTER:
+      alignment = 0.5;
+      break;
+    case TK_JUSTIFY_RIGHT:
+      alignment = 1;
+      break;
+  }
+  Tk_GetFontMetrics(text->font, &fm);
+  /* DrawText should not mess with anchors, they are already accounted for */
+  sprintf(path, "] %d %g %g %g %s DrawText\n", fm.linespace, 0.0, 0.0, 
+          alignment, (text->fill_pattern == ZnUnspecifiedImage) ? "false" : "true");
+  Tcl_AppendResult(wi->interp, path, NULL);
+
+  return TCL_OK;
 }
 
 
@@ -1380,11 +1437,11 @@ PostScript(ZnItem	item __unused,
  **********************************************************************************
  */
 static void
-GetAnchor(ZnItem	item,
-	  Tk_Anchor	anchor,
-	  ZnPoint	*p)
+GetAnchor(ZnItem        item,
+          Tk_Anchor     anchor,
+          ZnPoint       *p)
 {
-  TextItem	text = (TextItem) item;
+  TextItem      text = (TextItem) item;
 
   if (text->num_chars != 0) {
     ZnRectOrigin2Anchor(text->poly, anchor, p);
@@ -1399,16 +1456,16 @@ GetAnchor(ZnItem	item,
  **********************************************************************************
  *
  * GetClipVertices --
- *	Get the clipping shape.
- *	Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
+ *      Get the clipping shape.
+ *      Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
  *
  **********************************************************************************
  */
 static ZnBool
-GetClipVertices(ZnItem		item,
-		ZnTriStrip	*tristrip)
+GetClipVertices(ZnItem          item,
+                ZnTriStrip      *tristrip)
 {
-  TextItem	text = (TextItem) item;
+  TextItem      text = (TextItem) item;
 
   ZnTriStrip1(tristrip, text->poly, 4, False);
 
@@ -1420,32 +1477,32 @@ GetClipVertices(ZnItem		item,
  **********************************************************************************
  *
  * Coords --
- *	Return or edit the item origin. This doesn't take care of
- *	the possible attachment. The change will be effective at the
- *	end of the attachment.
+ *      Return or edit the item origin. This doesn't take care of
+ *      the possible attachment. The change will be effective at the
+ *      end of the attachment.
  *
  **********************************************************************************
  */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index __unused,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
-  TextItem	text = (TextItem) item;
+  TextItem      text = (TextItem) item;
   
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp,
-		     " texts can't add or remove vertices", NULL);
+                     " texts can't add or remove vertices", NULL);
     return TCL_ERROR;
   }
   else if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
     if (*num_pts == 0) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need 1 point on texts", NULL);
+                       " coords command need 1 point on texts", NULL);
       return TCL_ERROR;
     }
     text->pos = (*pts)[0];
@@ -1463,21 +1520,21 @@ Coords(ZnItem		item,
  **********************************************************************************
  *
  * Index --
- *	Parse a text index and return its value and a
- *	error status (standard Tcl result).
+ *      Parse a text index and return its value and a
+ *      error status (standard Tcl result).
  *
  **********************************************************************************
  */
 static int
-PointToChar(TextItem	text,
-	    int		x,
-	    int		y)
+PointToChar(TextItem    text,
+            int         x,
+            int         y)
 {
-  int		i, n, num_lines, dummy, byte_index;
-  ZnPoint	p;
-  TextLineInfo	ti;
+  int           i, n, num_lines, dummy, byte_index;
+  ZnPoint       p;
+  TextLineInfo  ti;
   Tk_FontMetrics fm;
-  ZnReal	a, b;
+  ZnReal        a, b;
 
   byte_index = 0;
   if (!text->text_info) {
@@ -1489,9 +1546,9 @@ PointToChar(TextItem	text,
   a = ZnLineToPointDist(&text->poly[0], &text->poly[2], &p, NULL);
   b = ZnLineToPointDist(&text->poly[0], &text->poly[1], &p, NULL);
   p.x = (text->max_width * b /
-	 hypot(text->poly[2].x - text->poly[0].x, text->poly[2].y - text->poly[0].y));
+         hypot(text->poly[2].x - text->poly[0].x, text->poly[2].y - text->poly[0].y));
   p.y = (text->height * a /
-	 hypot(text->poly[1].x - text->poly[0].x, text->poly[1].y - text->poly[0].y));
+         hypot(text->poly[1].x - text->poly[0].x, text->poly[1].y - text->poly[0].y));
   p.x = ZnNearestInt(p.x);
   p.y = ZnNearestInt(p.y);
 
@@ -1511,24 +1568,24 @@ PointToChar(TextItem	text,
   for (i = 0; i < num_lines; i++, ti++) {
     if (p.y < ti->origin_y + fm.descent) {
       if (p.x < ti->origin_x) {
-	/*
-	 * Point to the left of the current line, returns
-	 * index of first char.
-	 */
-	byte_index = ti->start - text->text;
-	break;
+        /*
+         * Point to the left of the current line, returns
+         * index of first char.
+         */
+        byte_index = ti->start - text->text;
+        break;
       }
       if (p.x >= (ti->origin_x + ti->width)) {
-	/*
-	 * Point to the right of the current line, returns
-	 * index past the last char.
-	 */
-	byte_index = ti->start + ti->num_bytes - text->text;
-	break;
+        /*
+         * Point to the right of the current line, returns
+         * index past the last char.
+         */
+        byte_index = ti->start + ti->num_bytes - text->text;
+        break;
       }
       n = Tk_MeasureChars(text->font, ti->start, (int) ti->num_bytes,
-			  (int) (p.x + 2 - ti->origin_x), TK_PARTIAL_OK,
-			  &dummy);
+                          (int) (p.x + 2 - ti->origin_x), TK_PARTIAL_OK,
+                          &dummy);
 #ifdef PTK_800
       byte_index = (ti->start + n - 1) - text->text;
 #else
@@ -1562,14 +1619,14 @@ PointToChar(TextItem	text,
  *
  */
 static int
-MoveFromIndex(TextItem	   text,
-	      unsigned int char_index,
-	      int	   move)
+MoveFromIndex(TextItem     text,
+              unsigned int char_index,
+              int          move)
 {
-  unsigned int	num_lines, byte_index, num_bytes=0;
-  unsigned int	line_index, line_start=0;
-  TextLineInfo	lines, p;
-  char		*strp;
+  unsigned int  num_lines, byte_index, num_bytes=0;
+  unsigned int  line_index, line_start=0;
+  TextLineInfo  lines, p;
+  char          *strp;
 
   if (!text->text_info || !text->text) {
     return char_index;
@@ -1641,18 +1698,18 @@ MoveFromIndex(TextItem	   text,
 }
 
 static int
-Index(ZnItem	item,
-      int	field __unused,
-      Tcl_Obj	*index_spec,
-      int	*index)
+Index(ZnItem    item,
+      int       field,
+      Tcl_Obj   *index_spec,
+      int       *index)
 {
-  TextItem	text = (TextItem) item;
-  ZnWInfo	*wi = item->wi;
-  ZnTextInfo	*ti = &wi->text_info;
-  unsigned int	length;
-  int		c, x, y;
-  double	tmp;
-  char		*end, *p;
+  TextItem      text = (TextItem) item;
+  ZnWInfo       *wi = item->wi;
+  ZnTextInfo    *ti = &wi->text_info;
+  unsigned int  length;
+  int           c, x, y;
+  double        tmp;
+  char          *end, *p;
 
   p = Tcl_GetString(index_spec);
   c = p[0];
@@ -1683,7 +1740,7 @@ Index(ZnItem	item,
     *index = text->insert_index;
   }
   else if ((c == 's') && (strncmp(p, "sel.first", length) == 0) &&
-	   (length >= 5)) {
+           (length >= 5)) {
     if (ti->sel_item != item) {
       Tcl_AppendResult(wi->interp, "selection isn't in item", (char *) NULL);
       return TCL_ERROR;
@@ -1691,7 +1748,7 @@ Index(ZnItem	item,
     *index = ti->sel_first;
   }
   else if ((c == 's') && (strncmp(p, "sel.last", length) == 0) &&
-	   (length >= 5)) {
+           (length >= 5)) {
     if (ti->sel_item != item) {
       Tcl_AppendResult(wi->interp, "selection isn't in item", (char *) NULL);
       return TCL_ERROR;
@@ -1747,15 +1804,15 @@ Index(ZnItem	item,
  **********************************************************************************
  */
 static void
-InsertChars(ZnItem	item,
-	    int		field __unused,
-	    int		*index,
-	    char	*chars)
+InsertChars(ZnItem      item,
+            int         field,
+            int         *index,
+            char        *chars)
 {
-  TextItem	text = (TextItem) item;
-  ZnTextInfo	*ti = &item->wi->text_info;
-  unsigned int	num_chars, byte_index, num_bytes = strlen(chars);
-  char		*new;
+  TextItem      text = (TextItem) item;
+  ZnTextInfo    *ti = &item->wi->text_info;
+  unsigned int  num_chars, byte_index, num_bytes = strlen(chars);
+  char          *new;
 
   if (num_bytes == 0) {
     return;
@@ -1811,16 +1868,16 @@ InsertChars(ZnItem	item,
  **********************************************************************************
  */
 static void
-DeleteChars(ZnItem	item,
-	    int		field __unused,
-	    int		*first,
-	    int		*last)
+DeleteChars(ZnItem      item,
+            int         field,
+            int         *first,
+            int         *last)
 {
-  TextItem	text = (TextItem) item;
-  int		byte_count, first_offset;
-  int		char_count, num_bytes;
-  ZnTextInfo	*ti = &item->wi->text_info;
-  char		*new;
+  TextItem      text = (TextItem) item;
+  int           byte_count, first_offset;
+  int           char_count, num_bytes;
+  ZnTextInfo    *ti = &item->wi->text_info;
+  char          *new;
   
   if (!text->text) {
     return;
@@ -1867,13 +1924,13 @@ DeleteChars(ZnItem	item,
     if (ti->sel_first > *first) {
       ti->sel_first -= char_count;
       if (ti->sel_first < *first) {
-	ti->sel_first = *first;
+        ti->sel_first = *first;
       }
     }
     if (ti->sel_last >= *first) {
       ti->sel_last -= char_count;
       if (ti->sel_last < *first - 1) {
-	ti->sel_last = *first - 1;
+        ti->sel_last = *first - 1;
       }
     }
     if (ti->sel_first > ti->sel_last) {
@@ -1882,7 +1939,7 @@ DeleteChars(ZnItem	item,
     if ((ti->anchor_item == item) && (ti->sel_anchor > *first)) {
       ti->sel_anchor -= char_count;
       if (ti->sel_anchor < *first) {
-	ti->sel_anchor = *first;
+        ti->sel_anchor = *first;
       }
     }
   }
@@ -1899,11 +1956,11 @@ DeleteChars(ZnItem	item,
  **********************************************************************************
  */
 static void
-TextCursor(ZnItem	item,
-	   int		field __unused,
-	   int		index)
+TextCursor(ZnItem       item,
+           int          field,
+           int          index)
 {
-  TextItem	text = (TextItem) item;
+  TextItem      text = (TextItem) item;
 
   if (index < 0) {
     text->insert_index = 0;
@@ -1925,17 +1982,17 @@ TextCursor(ZnItem	item,
  **********************************************************************************
  */
 static int
-Selection(ZnItem	item,
-	  int		field __unused,
-	  int		offset,
-	  char		*chars,
-	  int		max_bytes)
+Selection(ZnItem        item,
+          int           field,
+          int           offset,
+          char          *chars,
+          int           max_bytes)
 {
-  TextItem	text = (TextItem) item;
-  ZnWInfo	*wi = item->wi;
-  ZnTextInfo	*ti = &wi->text_info;
-  int		count;
-  char	const	*sel_first, *sel_last;
+  TextItem      text = (TextItem) item;
+  ZnWInfo       *wi = item->wi;
+  ZnTextInfo    *ti = &wi->text_info;
+  int           count;
+  char  const   *sel_first, *sel_last;
 
   if (!text->text) {
     return 0;
@@ -1971,7 +2028,7 @@ static ZnItemClassStruct TEXT_ITEM_CLASS = {
   "text",
   sizeof(TextItemStruct),
   text_attrs,
-  0,			/* num_parts */
+  0,                    /* num_parts */
   ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   Tk_Offset(TextItemStruct, pos),
   Init,
@@ -1979,25 +2036,25 @@ static ZnItemClassStruct TEXT_ITEM_CLASS = {
   Destroy,
   Configure,
   Query,
-  NULL,			/* GetFieldSet */
+  NULL,                 /* GetFieldSet */
   GetAnchor,
   GetClipVertices,
-  NULL,			/* GetContours */
+  NULL,                 /* GetContours */
   Coords,
   InsertChars,
   DeleteChars,
   TextCursor,
   Index,
-  NULL,			/* Part */
+  NULL,                 /* Part */
   Selection,
-  NULL,			/* Contour */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 

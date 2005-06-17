@@ -1,28 +1,17 @@
 /*
  * Track.c -- Implementation of Track and WayPoint items.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	:
+ * Authors              : Patrick Lecoanet.
+ * Creation date        :
  *
- * $Id: Track.c,v 1.77 2004/04/30 12:04:50 lecoanet Exp $
+ * $Id: Track.c,v 1.85 2005/05/10 07:59:48 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -41,7 +30,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Track.c,v 1.77 2004/04/30 12:04:50 lecoanet Exp $";
+static const char rcsid[] = "$Id: Track.c,v 1.85 2005/05/10 07:59:48 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -53,14 +42,14 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
 /*
  * Some default values
 */
-#define DEFAULT_MARKER_SIZE		0
-#define DEFAULT_LABEL_ANGLE		20
-#define DEFAULT_LABEL_DISTANCE		50
-#define DEFAULT_LINE_WIDTH		1
-#define DEFAULT_LABEL_PREFERRED_ANGLE	0
-#define DEFAULT_CONVERGENCE_STYLE	0
+#define DEFAULT_MARKER_SIZE             0
+#define DEFAULT_LABEL_ANGLE             20
+#define DEFAULT_LABEL_DISTANCE          50
+#define DEFAULT_LINE_WIDTH              1
+#define DEFAULT_LABEL_PREFERRED_ANGLE   0
+#define DEFAULT_CONVERGENCE_STYLE       0
 
-#define SPEED_VECTOR_PICKING_THRESHOLD	5	/* In pixels	*/
+#define SPEED_VECTOR_PICKING_THRESHOLD  5       /* In pixels    */
 
 /*
  * Sets a threshold for calculating distance from label_dx, label_dy.
@@ -69,21 +58,21 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  */
 #define LABEL_DISTANCE_THRESHOLD 5 
 
-#define MARKER_FILLED_BIT		1 << 0
-#define FILLED_HISTORY_BIT		1 << 1
-#define DOT_MIXED_HISTORY_BIT		1 << 2
-#define CIRCLE_HISTORY_BIT		1 << 3
-#define SV_MARK_BIT			1 << 4
-#define SV_TICKS_BIT			1 << 5
-#define POLAR_BIT			1 << 6
-#define FROZEN_LABEL_BIT		1 << 7
-#define LAST_AS_FIRST_BIT		1 << 8
-#define HISTORY_VISIBLE_BIT		1 << 9
+#define MARKER_FILLED_BIT               1 << 0
+#define FILLED_HISTORY_BIT              1 << 1
+#define DOT_MIXED_HISTORY_BIT           1 << 2
+#define CIRCLE_HISTORY_BIT              1 << 3
+#define SV_MARK_BIT                     1 << 4
+#define SV_TICKS_BIT                    1 << 5
+#define POLAR_BIT                       1 << 6
+#define FROZEN_LABEL_BIT                1 << 7
+#define LAST_AS_FIRST_BIT               1 << 8
+#define HISTORY_VISIBLE_BIT             1 << 9
 
-#define CURRENT_POSITION	-2
-#define LEADER			-3
-#define CONNECTION		-4
-#define SPEED_VECTOR		-5
+#define CURRENT_POSITION        -2
+#define LEADER                  -3
+#define CONNECTION              -4
+#define SPEED_VECTOR            -5
 
 
 /*
@@ -94,56 +83,57 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
 **********************************************************************************
 */
 typedef struct {
-  ZnPoint	world;	/* world coord of pos    */
-  ZnPoint	dev;	/* dev coord of pos      */
-  ZnBool	visible;
+  ZnPoint       world;  /* world coord of pos    */
+  ZnPoint       dev;    /* dev coord of pos      */
+  ZnBool        visible;
 } HistoryStruct, *History;
   
 typedef struct _TrackItemStruct {
-  ZnItemStruct	header;
+  ZnItemStruct  header;
   
   /* Public data */
   unsigned short flags;
-  ZnImage	symbol;			/* item symbol			*/
-  ZnGradient	*symbol_color;
-  int		label_angle;		/* Label angle from track. */
-  ZnDim		label_distance;		/* Label distance from track. */
-  ZnDim		label_dx;		/* Label dx/dy from track.	*/
-  ZnDim		label_dy;
+  ZnImage       symbol;                 /* item symbol                  */
+  ZnGradient    *symbol_color;
+  int           label_angle;            /* Label angle from track. */
+  ZnDim         label_distance;         /* Label distance from track. */
+  ZnDim         label_dx;               /* Label dx/dy from track.      */
+  ZnDim         label_dy;
   int           label_preferred_angle;
   int           label_convergence_style;
-  Tk_Anchor	label_anchor;
-  ZnLeaderAnchors leader_anchors;	/* Spec of the leader attachment */
-  ZnGradient	*leader_color;		/* leader color			*/
-  ZnLineStyle	leader_style;
-  ZnLineShape	leader_shape;
-  ZnLineEnd	leader_first_end;
-  ZnLineEnd	leader_last_end;
-  ZnDim		leader_width;
-  ZnDim		marker_size;		/* world size of error circle	*/
-  ZnGradient	*marker_color;		/* error circle color		*/
-  ZnLineStyle	marker_style;		/* error circle style		*/
-  ZnImage	marker_fill_pattern;	/* error circle fill pattern	*/
-  ZnGradient	*connection_color;	/* connection color		*/
-  ZnLineStyle	connection_style;
-  ZnDim		connection_width;
-  ZnGradient	*speed_vector_color;	/* s. v. color			*/
-  ZnPoint	pos;			/* item world coordinates	*/
-  ZnPoint	speed_vector;		/* s. v. slope in world coord	*/
-  ZnDim		speed_vector_width;
-  ZnGradient	*history_color;
+  Tk_Anchor     label_anchor;
+  ZnLeaderAnchors leader_anchors;       /* Spec of the leader attachment */
+  ZnGradient    *leader_color;          /* leader color                 */
+  ZnLineStyle   leader_style;
+  ZnLineShape   leader_shape;
+  ZnLineEnd     leader_first_end;
+  ZnLineEnd     leader_last_end;
+  ZnDim         leader_width;
+  ZnDim         marker_size;            /* world size of error circle   */
+  ZnGradient    *marker_color;          /* error circle color           */
+  ZnLineStyle   marker_style;           /* error circle style           */
+  ZnImage       marker_fill_pattern;    /* error circle fill pattern    */
+  ZnGradient    *connection_color;      /* connection color             */
+  ZnLineStyle   connection_style;
+  ZnDim         connection_width;
+  ZnGradient    *speed_vector_color;    /* s. v. color                  */
+  ZnPoint       pos;                    /* item world coordinates       */
+  ZnPoint       speed_vector;           /* s. v. slope in world coord   */
+  ZnDim         speed_vector_width;
+  ZnGradient    *history_color;
+  ZnDim         history_width;
 
   /* Private data */
   ZnFieldSetStruct field_set;
-  ZnPoint	dev;			/* device coords of current pos */
-  ZnPoint	speed_vector_dev;	/* s. v. end in device coord	*/
-  ZnDim		marker_size_dev;	/* dev size of error circle   	*/
-  ZnList	history;		/* pos list			*/
-  ZnList	leader_points;
+  ZnPoint       dev;                    /* device coords of current pos */
+  ZnPoint       speed_vector_dev;       /* s. v. end in device coord    */
+  ZnDim         marker_size_dev;        /* dev size of error circle     */
+  ZnList        history;                /* pos list                     */
+  ZnList        leader_points;
 } TrackItemStruct, *TrackItem;
 
 
-static ZnAttrConfig	track_attrs[] = {
+static ZnAttrConfig     track_attrs[] = {
   { ZN_CONFIG_BOOL, "-circlehistory", NULL,
     Tk_Offset(TrackItemStruct, flags), CIRCLE_HISTORY_BIT, ZN_DRAW_FLAG, False },
   { ZN_CONFIG_BOOL, "-composealpha", NULL,
@@ -175,6 +165,8 @@ static ZnAttrConfig	track_attrs[] = {
     Tk_Offset(TrackItemStruct, flags), FROZEN_LABEL_BIT, ZN_COORDS_FLAG, False },
   { ZN_CONFIG_GRADIENT, "-historycolor", NULL,
     Tk_Offset(TrackItemStruct, history_color), 0, ZN_DRAW_FLAG, False },
+  { ZN_CONFIG_DIM, "-historywidth", NULL,
+    Tk_Offset(TrackItemStruct, history_width), 0, ZN_COORDS_FLAG, False },
   { ZN_CONFIG_ANCHOR, "-labelanchor", NULL,
     Tk_Offset(TrackItemStruct, label_anchor), 0, ZN_COORDS_FLAG, False },
   { ZN_CONFIG_ANGLE, "-labelangle", NULL,
@@ -265,7 +257,7 @@ static ZnAttrConfig	track_attrs[] = {
   { ZN_CONFIG_END, NULL, NULL, 0, 0, 0, False }
 };
 
-static ZnAttrConfig	wp_attrs[] = {
+static ZnAttrConfig     wp_attrs[] = {
   { ZN_CONFIG_BOOL, "-composealpha", NULL,
     Tk_Offset(TrackItemStruct, header.flags), ZN_COMPOSE_ALPHA_BIT,
     ZN_DRAW_FLAG, False },
@@ -366,14 +358,14 @@ static ZnAttrConfig	wp_attrs[] = {
 **********************************************************************************
 */
 static int
-Init(ZnItem		item,
-     int		*argc,
-     Tcl_Obj *CONST	*args[])
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])
 {
-  TrackItem	track = (TrackItem) item;
-  ZnFieldSet	field_set = &track->field_set;
-  ZnWInfo	*wi = item->wi;
-  int		num_fields;
+  TrackItem     track = (TrackItem) item;
+  ZnFieldSet    field_set = &track->field_set;
+  ZnWInfo       *wi = item->wi;
+  int           num_fields;
 
   /*printf("size of a track = %d\n", sizeof(TrackItemStruct));*/
    
@@ -410,6 +402,7 @@ Init(ZnItem		item,
   track->marker_fill_pattern = ZnUnspecifiedImage;
   track->speed_vector_color = ZnGetGradientByValue(wi->fore_color);
   track->history_color = ZnGetGradientByValue(wi->fore_color);
+        track->history_width = 8;
   CLEAR(track->flags, MARKER_FILLED_BIT);
   SET(track->flags, FILLED_HISTORY_BIT);
   CLEAR(track->flags, DOT_MIXED_HISTORY_BIT);
@@ -477,9 +470,9 @@ Init(ZnItem		item,
 **********************************************************************************
 */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  TrackItem	track = (TrackItem) item;
+  TrackItem     track = (TrackItem) item;
 
   if (track->history) {
     track->history = ZnListDuplicate(track->history);
@@ -528,9 +521,9 @@ Clone(ZnItem	item)
 **********************************************************************************
 */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
-  TrackItem	track   = (TrackItem) item;
+  TrackItem     track   = (TrackItem) item;
 
   if (track->leader_points) {
     ZnListFree(track->leader_points);
@@ -576,13 +569,13 @@ Destroy(ZnItem	item)
 **********************************************************************************
 */
 static void
-AddToHistory(TrackItem	track,
-	     ZnPoint	old_pos)
+AddToHistory(TrackItem  track,
+             ZnPoint    old_pos)
 {
-  ZnWInfo	*wi = ((ZnItem) track)->wi;
+  ZnWInfo       *wi = ((ZnItem) track)->wi;
   
   if (track->history) {
-    HistoryStruct	hist;
+    HistoryStruct       hist;
     
     hist.world = old_pos;
     hist.dev = track->dev;
@@ -595,20 +588,20 @@ AddToHistory(TrackItem	track,
      * is not valid. */
     /*printf("creating history\n");*/
     track->history = ZnListNew(wi->track_managed_history_size+1,
-			       sizeof(HistoryStruct));
+                               sizeof(HistoryStruct));
   }
 }
 
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
-  TrackItem	track = (TrackItem) item;
-  ZnWInfo	*wi = item->wi;
-  ZnItem	old_connected;
-  ZnPoint	old_pos;
+  TrackItem     track = (TrackItem) item;
+  ZnWInfo       *wi = item->wi;
+  ZnItem        old_connected;
+  ZnPoint       old_pos;
   
   old_pos = track->pos;
   old_connected = item->connected_item;
@@ -639,9 +632,9 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(((item->connected_item->class == ZnTrack) ||
-	  (item->connected_item->class == ZnWayPoint)) &&
-	 (item->parent == item->connected_item->parent))) {
+        (((item->connected_item->class == ZnTrack) ||
+          (item->connected_item->class == ZnWayPoint)) &&
+         (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
     else {
@@ -676,9 +669,9 @@ Configure(ZnItem	item,
 **********************************************************************************
 */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, track_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -696,22 +689,22 @@ Query(ZnItem		item,
 **********************************************************************************
 */
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force __unused)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  ZnWInfo	*wi = item->wi;
-  TrackItem	track = (TrackItem) item;
-  ZnFieldSet	field_set = &track->field_set;
-  ZnItem	c_item;
-  History	hist;
-  ZnPoint	old_label_pos, old_pos, p, xp;
-  ZnDim		old_label_width, old_label_height;
-  ZnReal	rotation;
-  ZnBBox	bbox;
-  ZnPoint	*points;
-  unsigned int	num_points, num_acc_pos, i;
-  int		alignment;
-  int		w2=0, h2=0, w=0, h=0;
+  ZnWInfo       *wi = item->wi;
+  TrackItem     track = (TrackItem) item;
+  ZnFieldSet    field_set = &track->field_set;
+  ZnItem        c_item;
+  History       hist;
+  ZnPoint       old_label_pos, old_pos, p, xp;
+  ZnDim         old_label_width, old_label_height;
+  ZnReal        rotation;
+  ZnBBox        bbox;
+  ZnPoint       *points;
+  unsigned int  num_points, num_acc_pos, i;
+  int           alignment;
+  int           w2=0, h2=0, w=0, h=0;
   
   ZnResetBBox(&item->item_bounding_box);
   old_label_pos = field_set->label_pos;
@@ -749,19 +742,21 @@ ComputeCoordinates(ZnItem	item,
      */
     ZnListTruncate(track->history, wi->track_managed_history_size);
     visible_history_size = (ISSET(track->flags, HISTORY_VISIBLE_BIT) ?
-			    wi->track_visible_history_size : 0);
+                            wi->track_visible_history_size : 0);
 
     ZnResetBBox(&bbox);
+    w = (int) track->history_width;
+        w2 = (w+1)/2;
     num_acc_pos = ZnListSize(track->history);
     hist = ZnListArray(track->history);
     for (i = 0; i < num_acc_pos; i++) {
       ZnTransformPoint(wi->current_transfo, &hist[i].world, &hist[i].dev);
       if ((i < visible_history_size) && (hist[i].visible)) {
-	bbox.orig.x = hist[i].dev.x - w2;
-	bbox.orig.y = hist[i].dev.y - h2;
-	bbox.corner.x = bbox.orig.x + w;
-	bbox.corner.y = bbox.orig.y + h;
-	ZnAddBBoxToBBox(&item->item_bounding_box, &bbox);
+        bbox.orig.x = hist[i].dev.x - w2;
+        bbox.orig.y = hist[i].dev.y - w2;
+        bbox.corner.x = bbox.orig.x + w;
+        bbox.corner.y = bbox.orig.y + w;
+        ZnAddBBoxToBBox(&item->item_bounding_box, &bbox);
       }
     }
   }
@@ -778,15 +773,15 @@ ComputeCoordinates(ZnItem	item,
     if (ISSET(track->flags, SV_MARK_BIT)) {
       int w = (int) track->speed_vector_width + 1;
       ZnAddPointToBBox(&item->item_bounding_box,
-		       track->speed_vector_dev.x - w,
-		       track->speed_vector_dev.y - w);
+                       track->speed_vector_dev.x - w,
+                       track->speed_vector_dev.y - w);
       ZnAddPointToBBox(&item->item_bounding_box,
-		       track->speed_vector_dev.x + w,
-		       track->speed_vector_dev.y + w);      
+                       track->speed_vector_dev.x + w,
+                       track->speed_vector_dev.y + w);      
     }
     else {
       ZnAddPointToBBox(&item->item_bounding_box, track->speed_vector_dev.x,
-		       track->speed_vector_dev.y);
+                       track->speed_vector_dev.y);
     }
   }
   
@@ -795,11 +790,10 @@ ComputeCoordinates(ZnItem	item,
    */
   c_item = item->connected_item;
   if ((c_item != ZN_NO_ITEM) && (track->connection_width > 0)) {
-    ZnResetBBox(&bbox);
     w2 = (int) track->connection_width/2;
     ZnAddPointToBBox(&item->item_bounding_box, track->dev.x-w2, track->dev.y-w2);
     ZnAddPointToBBox(&item->item_bounding_box, ((TrackItem)c_item)->dev.x+w2,
-		     ((TrackItem)c_item)->dev.y+w2);
+                     ((TrackItem)c_item)->dev.y+w2);
   }
 
   /*
@@ -814,110 +808,119 @@ ComputeCoordinates(ZnItem	item,
   track->marker_size_dev = ZnNearestInt(track->marker_size_dev);
   if (track->marker_size_dev > PRECISION_LIMIT) {
     ZnAddPointToBBox(&item->item_bounding_box,
-		     track->dev.x - (ZnPos) track->marker_size_dev,
-		     track->dev.y - (ZnPos) track->marker_size_dev);
+                     track->dev.x - (ZnPos) track->marker_size_dev,
+                     track->dev.y - (ZnPos) track->marker_size_dev);
     ZnAddPointToBBox(&item->item_bounding_box,
-		     track->dev.x + (ZnPos) track->marker_size_dev,
-		     track->dev.y + (ZnPos) track->marker_size_dev);
+                     track->dev.x + (ZnPos) track->marker_size_dev,
+                     track->dev.y + (ZnPos) track->marker_size_dev);
   } 
   
   /* Compute the new label bounding box. */
   if (field_set->label_format && field_set->num_fields) {
-    ZnDim	bb_width, bb_height, dist;
-    ZnPoint	leader_end;
+    ZnDim       bb_width, bb_height;
+    ZnReal      rho, dist;
+    ZnPoint     leader_end;
+    int it;
 
     ZnFIELD.GetLabelBBox(field_set, &bb_width, &bb_height);
     /*
      * Compute the label position.
      */
     if (ISSET(track->flags, POLAR_BIT)) {
-#ifdef DP
-      /* Alternative  on ne calcule pas une distance minimum mais
-       * on fait confiance à la distance effective track->label_distance
-       * attention aux problemes d'arrondi de ZnPointPolarToCartesian !!!
-       */
-      dist = track->label_distance ;
-#else
-      /*
-       * Adjust the min dist spec given in label_distance by
-       * the size of the label.
-       */
-      if ((track->label_anchor == TK_ANCHOR_N) ||
-	  (track->label_anchor == TK_ANCHOR_CENTER) ||
-	  (track->label_anchor == TK_ANCHOR_S)) {
-	dist = sqrt(bb_width*bb_width/4+bb_height*bb_height/4);
-      }
-      else {
-	dist = sqrt(bb_width*bb_width+bb_height*bb_height);
-      }
-      dist += track->label_distance;
-#endif
+      rho = track->label_distance;
       /*
        * Compute heading after applying the transform.
        */
       ZnTransfoDecompose(wi->current_transfo, NULL, NULL, &rotation, NULL);
       /*printf("rotation=%g, heading=%g, angle=%d\n", rotation,
-	ZnProjectionToAngle(track->speed_vector.x, track->speed_vector.y),
-	track->label_angle);*/
+        ZnProjectionToAngle(track->speed_vector.x, track->speed_vector.y),
+        track->label_angle);*/
       rotation = ZnProjectionToAngle(track->speed_vector.x, track->speed_vector.y)-rotation;
-      ZnPointPolarToCartesian(rotation, dist, (ZnReal) track->label_angle,
-			      &track->label_dx, &track->label_dy);
+      it = 0;
+      while (1) {
+        ZnPointPolarToCartesian(rotation, rho, (ZnReal) track->label_angle,
+                                &track->label_dx, &track->label_dy);
+        field_set->label_pos.x = track->dev.x + track->label_dx;
+        field_set->label_pos.y = track->dev.y - track->label_dy;
+        ZnAnchor2Origin(&field_set->label_pos, bb_width, bb_height,
+                        track->label_anchor, &field_set->label_pos);
+        ZnResetBBox(&bbox);
+        ZnAddPointToBBox(&bbox, field_set->label_pos.x, field_set->label_pos.y);
+        ZnAddPointToBBox(&bbox, field_set->label_pos.x + bb_width, field_set->label_pos.y + bb_height);
+        dist = ZnRectangleToPointDist(&bbox, &track->dev);
+        dist = track->label_distance - dist;
+        if (ABS(dist) < 1.0 || it > 5) {
+          break;
+        }
+        it++;
+        rho += dist;
+      }
     }
-    field_set->label_pos.x = track->dev.x + track->label_dx;
-    field_set->label_pos.y = track->dev.y - track->label_dy;
-    ZnAnchor2Origin(&field_set->label_pos, bb_width, bb_height,
-		    track->label_anchor, &field_set->label_pos);
+    else {
+      field_set->label_pos.x = track->dev.x + track->label_dx;
+      field_set->label_pos.y = track->dev.y - track->label_dy;
+      ZnAnchor2Origin(&field_set->label_pos, bb_width, bb_height,
+                      track->label_anchor, &field_set->label_pos);
+    }
     field_set->label_pos.x = ZnNearestInt(field_set->label_pos.x);
     field_set->label_pos.y = ZnNearestInt(field_set->label_pos.y);
 
-    ZnAddPointToBBox(&item->item_bounding_box, field_set->label_pos.x,
-		     field_set->label_pos.y);
+    /*
+     * Need to compensate for GL thick lines
+     */
+#ifdef GL
+#define CORR 1
+#else
+#define CORR 0
+#endif
+    ZnAddPointToBBox(&item->item_bounding_box, field_set->label_pos.x - CORR, field_set->label_pos.y - CORR);
     ZnAddPointToBBox(&item->item_bounding_box,
-		     field_set->label_pos.x + (ZnPos) bb_width,
-		     field_set->label_pos.y + (ZnPos) bb_height);
-    
+                     field_set->label_pos.x + (ZnPos) bb_width + CORR,
+                     field_set->label_pos.y + (ZnPos) bb_height + CORR);
+#undef CORR
+
     /*
      * Process the leader.
      */
     if (track->leader_width > 0) {
-      int	left_x, left_y, right_x, right_y;
-      ZnPoint	end_points[ZN_LINE_END_POINTS];
+      int       left_x, left_y, right_x, right_y;
+      ZnPoint   end_points[ZN_LINE_END_POINTS];
       
       /*
        * Compute the actual leader end in the label.
        */
       if (track->leader_anchors) {
-	left_x = track->leader_anchors->left_x;
-	right_x = track->leader_anchors->right_x;
-	left_y = track->leader_anchors->left_y;
-	right_y = track->leader_anchors->right_y;
+        left_x = track->leader_anchors->left_x;
+        right_x = track->leader_anchors->right_x;
+        left_y = track->leader_anchors->left_y;
+        right_y = track->leader_anchors->right_y;
       }
       else {
-	left_x = right_x = left_y = right_y = 50;
+        left_x = right_x = left_y = right_y = 50;
       }
       if (track->label_angle >= 270 || track->label_angle < 90) {
-	if (track->leader_anchors && (left_y < 0)) {
-	  ZnFIELD.GetFieldBBox(field_set, (unsigned int) left_x, &bbox);
-	  leader_end.x = bbox.orig.x;
-	  leader_end.y = bbox.corner.y;
-	}
-	else {
-	  leader_end.x = field_set->label_pos.x + left_x*bb_width/100;
-	  leader_end.y = field_set->label_pos.y + left_y*bb_height/100;
-	}
-	alignment = ZN_AA_LEFT;
+        if (track->leader_anchors && (left_y < 0)) {
+          ZnFIELD.GetFieldBBox(field_set, (unsigned int) left_x, &bbox);
+          leader_end.x = bbox.orig.x;
+          leader_end.y = bbox.corner.y;
+        }
+        else {
+          leader_end.x = field_set->label_pos.x + left_x*bb_width/100;
+          leader_end.y = field_set->label_pos.y + left_y*bb_height/100;
+        }
+        alignment = ZN_AA_LEFT;
       }
       else {
-	if (track->leader_anchors && (right_y < 0)) {
-	  ZnFIELD.GetFieldBBox(field_set, (unsigned int) right_x, &bbox);
-	  leader_end.x = bbox.corner.x;
-	  leader_end.y = bbox.corner.y;
-	}
-	else {
-	  leader_end.x = field_set->label_pos.x + right_x*bb_width/100;
-	  leader_end.y = field_set->label_pos.y + right_y*bb_height/100;
-	}
-	alignment = ZN_AA_RIGHT;
+        if (track->leader_anchors && (right_y < 0)) {
+          ZnFIELD.GetFieldBBox(field_set, (unsigned int) right_x, &bbox);
+          leader_end.x = bbox.corner.x;
+          leader_end.y = bbox.corner.y;
+        }
+        else {
+          leader_end.x = field_set->label_pos.x + right_x*bb_width/100;
+          leader_end.y = field_set->label_pos.y + right_y*bb_height/100;
+        }
+        alignment = ZN_AA_RIGHT;
       }
       
       ZnFIELD.SetFieldsAutoAlign(field_set, alignment);
@@ -927,24 +930,24 @@ ComputeCoordinates(ZnItem	item,
       
       /* Setup leader shape points */
       if (!track->leader_points) {
-	track->leader_points = ZnListNew(ZN_LINE_SHAPE_POINTS, sizeof(ZnPoint));
+        track->leader_points = ZnListNew(ZN_LINE_SHAPE_POINTS, sizeof(ZnPoint));
       }
       ZnLineShapePoints(&track->dev, &leader_end, track->leader_width,
-			track->leader_shape, &bbox, track->leader_points);
+                        track->leader_shape, &bbox, track->leader_points);
       ZnAddBBoxToBBox(&item->item_bounding_box, &bbox);
       points = (ZnPoint *) ZnListArray(track->leader_points);
       num_points = ZnListSize(track->leader_points);
       
       /* Setup leader ends */
       if (track->leader_first_end != NULL) {
-	ZnGetLineEnd(&points[0], &points[1], track->leader_width,
-		     CapRound, track->leader_first_end, end_points);
-	ZnAddPointsToBBox(&item->item_bounding_box, end_points, ZN_LINE_END_POINTS);
+        ZnGetLineEnd(&points[0], &points[1], track->leader_width,
+                     CapRound, track->leader_first_end, end_points);
+        ZnAddPointsToBBox(&item->item_bounding_box, end_points, ZN_LINE_END_POINTS);
       }
       if (track->leader_last_end != NULL) {
-	ZnGetLineEnd(&points[num_points-1], &points[num_points-2], track->leader_width,
-		     CapRound, track->leader_last_end, end_points);
-	ZnAddPointsToBBox(&item->item_bounding_box, end_points, ZN_LINE_END_POINTS);
+        ZnGetLineEnd(&points[num_points-1], &points[num_points-2], track->leader_width,
+                     CapRound, track->leader_last_end, end_points);
+        ZnAddPointsToBBox(&item->item_bounding_box, end_points, ZN_LINE_END_POINTS);
       }
     }
   }
@@ -966,21 +969,21 @@ ComputeCoordinates(ZnItem	item,
 **********************************************************************************
 *
 * ToArea --
-*	Tell if the object is entirely outside (-1),
-*	entirely inside (1) or in between (0).
+*       Tell if the object is entirely outside (-1),
+*       entirely inside (1) or in between (0).
 *
 **********************************************************************************
 */
 static int
-ToArea(ZnItem	item,
-       ZnToArea	ta)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
-  TrackItem	track = (TrackItem) item;
-  int		inside;
-  int		width, height;
-  ZnDim		lwidth, lheight;
-  ZnBBox	bbox, *area = ta->area;
-  ZnPoint	pts[2];
+  TrackItem     track = (TrackItem) item;
+  int           inside;
+  int           width, height;
+  ZnDim         lwidth, lheight;
+  ZnBBox        bbox, *area = ta->area;
+  ZnPoint       pts[2];
 
   /*
    * Try the current position.
@@ -1013,32 +1016,32 @@ ToArea(ZnItem	item,
    * Try the leader.
    */
   if (track->field_set.label_format && (track->leader_width > 0)) {
-    ZnPoint	  end_points[ZN_LINE_END_POINTS];
-    ZnPoint	  *points;
+    ZnPoint       end_points[ZN_LINE_END_POINTS];
+    ZnPoint       *points;
     unsigned int  num_points;
 
     points = (ZnPoint *) ZnListArray(track->leader_points);
     num_points = ZnListSize(track->leader_points);
     lwidth = track->leader_width > 1 ? track->leader_width : 0;
     if (ZnPolylineInBBox(points, num_points, lwidth,
-			 CapRound, JoinRound, area) != inside) {
+                         CapRound, JoinRound, area) != inside) {
       /*printf("track leader\n");*/
       return 0;
     }
     if (track->leader_first_end != NULL) {
       ZnGetLineEnd(&points[0], &points[1], track->leader_width,
-		   CapRound, track->leader_first_end, end_points);
+                   CapRound, track->leader_first_end, end_points);
       if (ZnPolygonInBBox(end_points, ZN_LINE_END_POINTS, area, NULL) != inside) {
-	/*printf("track leader\n");*/
-	return 0;
+        /*printf("track leader\n");*/
+        return 0;
       }
     }
     if (track->leader_last_end != NULL) {
       ZnGetLineEnd(&points[num_points-1], &points[num_points-2], track->leader_width,
-		   CapRound, track->leader_last_end, end_points);
+                   CapRound, track->leader_last_end, end_points);
       if (ZnPolygonInBBox(end_points, ZN_LINE_END_POINTS, area, NULL) != inside) {
-	/*printf("track leader\n");*/
-	return 0;
+        /*printf("track leader\n");*/
+        return 0;
       }
     }
   }
@@ -1081,16 +1084,16 @@ ToArea(ZnItem	item,
 **********************************************************************************
 */
 static void
-Draw(ZnItem	item)
+Draw(ZnItem     item)
 {
-  ZnWInfo	*wi = item->wi;
-  TrackItem	track = (TrackItem) item;
-  ZnItem	c_item;
-  XGCValues	values;
-  History	hist;
-  unsigned int	h_side_size, side_size, width=0, height=0;
-  unsigned int	i, nb_hist, num_acc_pos;
-  int		x, y;
+  ZnWInfo       *wi = item->wi;
+  TrackItem     track = (TrackItem) item;
+  ZnItem        c_item;
+  XGCValues     values;
+  History       hist;
+  unsigned int  h_side_size, side_size, width=0, height=0;
+  unsigned int  i, nb_hist, num_acc_pos;
+  int           x, y;
 
   /* Draw the marker */
   if (track->marker_size_dev != 0) {
@@ -1099,33 +1102,33 @@ Draw(ZnItem	item)
     values.line_width = 0;
     if (ISSET(track->flags, MARKER_FILLED_BIT)) {
       if (track->marker_fill_pattern == ZnUnspecifiedImage) {
-	/* Fill solid */
-	values.fill_style = FillSolid;
-	XChangeGC(wi->dpy, wi->gc, GCFillStyle | GCLineWidth | GCForeground, &values);
+        /* Fill solid */
+        values.fill_style = FillSolid;
+        XChangeGC(wi->dpy, wi->gc, GCFillStyle | GCLineWidth | GCForeground, &values);
       }
       else {
-	/* Fill stippled */
-	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(track->marker_fill_pattern, wi->win);
-	XChangeGC(wi->dpy, wi->gc,
-		  GCFillStyle | GCStipple | GCLineWidth | GCForeground, &values);
+        /* Fill stippled */
+        values.fill_style = FillStippled;
+        values.stipple = ZnImagePixmap(track->marker_fill_pattern, wi->win);
+        XChangeGC(wi->dpy, wi->gc,
+                  GCFillStyle | GCStipple | GCLineWidth | GCForeground, &values);
       }
       XFillArc(wi->dpy, wi->draw_buffer, wi->gc,
-	       (int) (track->dev.x - (ZnPos) track->marker_size_dev),
-	       (int) (track->dev.y - (ZnPos) track->marker_size_dev),
-	       (unsigned int) track->marker_size_dev * 2,
-	       (unsigned int) track->marker_size_dev * 2,
-	       0, 360 * 64);
+               (int) (track->dev.x - (ZnPos) track->marker_size_dev),
+               (int) (track->dev.y - (ZnPos) track->marker_size_dev),
+               (unsigned int) track->marker_size_dev * 2,
+               (unsigned int) track->marker_size_dev * 2,
+               0, 360 * 64);
     }
     else {
       values.fill_style = FillSolid;
       XChangeGC(wi->dpy, wi->gc, GCFillStyle | GCLineWidth | GCForeground, &values);
       XDrawArc(wi->dpy, wi->draw_buffer, wi->gc,
-	       (int) (track->dev.x - (ZnPos) track->marker_size_dev),
-	       (int) (track->dev.y - (ZnPos) track->marker_size_dev),
-	       (unsigned int) (track->marker_size_dev * 2),
-	       (unsigned int) (track->marker_size_dev * 2),
-	       0, 360 * 64);
+               (int) (track->dev.x - (ZnPos) track->marker_size_dev),
+               (int) (track->dev.y - (ZnPos) track->marker_size_dev),
+               (unsigned int) (track->marker_size_dev * 2),
+               (unsigned int) (track->marker_size_dev * 2),
+               0, 360 * 64);
     }
   }
   
@@ -1134,13 +1137,13 @@ Draw(ZnItem	item)
    */
   c_item = item->connected_item;
   if ((c_item != ZN_NO_ITEM) && (track->connection_width > 0)) {
-    ZnPoint	pts[2];
+    ZnPoint     pts[2];
     
     pts[0] = track->dev;
     pts[1] = ((TrackItem) item->connected_item)->dev;
     ZnDrawLineShape(wi, pts, 2, track->connection_style,
-		    ZnGetGradientPixel(track->connection_color, 0.0),
-		    track->connection_width, ZN_LINE_STRAIGHT);
+                    ZnGetGradientPixel(track->connection_color, 0.0),
+                    track->connection_width, ZN_LINE_STRAIGHT);
   }
 
   /*
@@ -1152,19 +1155,19 @@ Draw(ZnItem	item)
     values.line_style = LineSolid;
     values.fill_style = FillSolid;
     XChangeGC(wi->dpy, wi->gc,
-	      GCForeground | GCLineWidth | GCLineStyle | GCFillStyle, &values);
+              GCForeground | GCLineWidth | GCLineStyle | GCFillStyle, &values);
     XDrawLine(wi->dpy, wi->draw_buffer, wi->gc,
-	      (int) track->dev.x,
-	      (int) track->dev.y,
-	      (int) track->speed_vector_dev.x,
-	      (int) track->speed_vector_dev.y);
+              (int) track->dev.x,
+              (int) track->dev.y,
+              (int) track->speed_vector_dev.x,
+              (int) track->speed_vector_dev.y);
   }
   
   /*
    * Draw the leader.
    */
   if (track->field_set.label_format && (track->leader_width > 0)) {
-    ZnPoint	 end_points[ZN_LINE_END_POINTS];
+    ZnPoint      end_points[ZN_LINE_END_POINTS];
     XPoint       xpoints[ZN_LINE_END_POINTS];
     ZnPoint      *points;
     unsigned int num_points;
@@ -1172,27 +1175,27 @@ Draw(ZnItem	item)
     points = (ZnPoint *) ZnListArray(track->leader_points);
     num_points = ZnListSize(track->leader_points);
     ZnDrawLineShape(wi, points, num_points, track->leader_style,
-		    ZnGetGradientPixel(track->leader_color, 0.0),
-		    track->leader_width, track->leader_shape);
+                    ZnGetGradientPixel(track->leader_color, 0.0),
+                    track->leader_width, track->leader_shape);
     if (track->leader_first_end != NULL) {
       ZnGetLineEnd(&points[0], &points[1], track->leader_width,
-		   CapRound, track->leader_first_end, end_points);
+                   CapRound, track->leader_first_end, end_points);
       for (i = 0; i < ZN_LINE_END_POINTS; i++) {
-	xpoints[i].x = (short) end_points[i].x;
-	xpoints[i].y = (short) end_points[i].y;
+        xpoints[i].x = (short) end_points[i].x;
+        xpoints[i].y = (short) end_points[i].y;
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xpoints, ZN_LINE_END_POINTS,
-		   Nonconvex, CoordModeOrigin);
+                   Nonconvex, CoordModeOrigin);
     }
     if (track->leader_last_end != NULL) {
       ZnGetLineEnd(&points[num_points-1], &points[num_points-2], track->leader_width,
-		   CapRound, track->leader_last_end, end_points);
+                   CapRound, track->leader_last_end, end_points);
       for (i = 0; i < ZN_LINE_END_POINTS; i++) {
-	xpoints[i].x = (short) end_points[i].x;
-	xpoints[i].y = (short) end_points[i].y;
+        xpoints[i].x = (short) end_points[i].x;
+        xpoints[i].y = (short) end_points[i].y;
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xpoints, ZN_LINE_END_POINTS,
-		   Nonconvex, CoordModeOrigin);
+                   Nonconvex, CoordModeOrigin);
     }
   }
   
@@ -1207,7 +1210,7 @@ Draw(ZnItem	item)
     unsigned int visible_history_size;
 
     visible_history_size = (ISSET(track->flags, HISTORY_VISIBLE_BIT) ?
-			    wi->track_visible_history_size : 0);
+                            wi->track_visible_history_size : 0);
 
     values.foreground = ZnGetGradientPixel(track->history_color, 0.0);
     values.fill_style = FillSolid;
@@ -1219,48 +1222,48 @@ Draw(ZnItem	item)
     }
     num_acc_pos = MIN(visible_history_size, ZnListSize(track->history));
     hist = ZnListArray(track->history);
-    side_size = MAX(width, height);
+    side_size = (int) track->history_width;
 
     for (i = 0, nb_hist = 0; i < num_acc_pos; i++) {
       if (ISSET(track->flags, LAST_AS_FIRST_BIT) &&
-	  (i == visible_history_size-1)) {
-	values.foreground = ZnGetGradientPixel(track->symbol_color, 0.0);
-	XChangeGC(wi->dpy, wi->gc, GCForeground, &values);
+          (i == visible_history_size-1)) {
+        values.foreground = ZnGetGradientPixel(track->symbol_color, 0.0);
+        XChangeGC(wi->dpy, wi->gc, GCForeground, &values);
       }
       side_size--;
       side_size = MAX(1, side_size);
       h_side_size = (side_size+1)/2;
       if (hist[i].visible) {
-	if (ISSET(track->flags, DOT_MIXED_HISTORY_BIT) && !(nb_hist++ % 2)) {
-	  x = (int) hist[i].dev.x;
-	  y = (int) hist[i].dev.y;
-	  /* Draw a point (portability layer doesn't define a XDrawPoint) */
-	  XDrawLine(wi->dpy, wi->draw_buffer, wi->gc, x, y, x, y);
-	}
-	else {
-	  x = ((int) hist[i].dev.x) - h_side_size;
-	  y = ((int) hist[i].dev.y) - h_side_size;
-	  if (ISSET(track->flags, CIRCLE_HISTORY_BIT)) {
-	    if (ISSET(track->flags, FILLED_HISTORY_BIT)) {
-	      XFillArc(wi->dpy, wi->draw_buffer, wi->gc,  
-		       x, y, side_size, side_size, 0, 360*64);
-	    }
-	    else {
-	      XDrawArc(wi->dpy, wi->draw_buffer, wi->gc,  
-		       x, y, side_size - 1, side_size - 1, 0, 360*64);
-	    }
-	  }
-	  else {
-	    if (ISSET(track->flags, FILLED_HISTORY_BIT)) {
-	      XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,  
-			     x, y, side_size, side_size);
-	    }
-	    else {
-	      XDrawRectangle(wi->dpy, wi->draw_buffer, wi->gc,  
-			     x, y, side_size - 1, side_size - 1);
-	    }
-	  }
-	}
+        if (ISSET(track->flags, DOT_MIXED_HISTORY_BIT) && !(nb_hist++ % 2)) {
+          x = (int) hist[i].dev.x;
+          y = (int) hist[i].dev.y;
+          /* Draw a point (portability layer doesn't define a XDrawPoint) */
+          XDrawLine(wi->dpy, wi->draw_buffer, wi->gc, x, y, x, y);
+        }
+        else {
+          x = ((int) hist[i].dev.x) - h_side_size;
+          y = ((int) hist[i].dev.y) - h_side_size;
+          if (ISSET(track->flags, CIRCLE_HISTORY_BIT)) {
+            if (ISSET(track->flags, FILLED_HISTORY_BIT)) {
+              XFillArc(wi->dpy, wi->draw_buffer, wi->gc,  
+                       x, y, side_size, side_size, 0, 360*64);
+            }
+            else {
+              XDrawArc(wi->dpy, wi->draw_buffer, wi->gc,  
+                       x, y, side_size - 1, side_size - 1, 0, 360*64);
+            }
+          }
+          else {
+            if (ISSET(track->flags, FILLED_HISTORY_BIT)) {
+              XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,  
+                             x, y, side_size, side_size);
+            }
+            else {
+              XDrawRectangle(wi->dpy, wi->draw_buffer, wi->gc,  
+                             x, y, side_size - 1, side_size - 1);
+            }
+          }
+        }
       }
     }
   }
@@ -1277,8 +1280,8 @@ Draw(ZnItem	item)
     values.ts_x_origin = x;
     values.ts_y_origin = y;
     XChangeGC(wi->dpy, wi->gc,
-	      GCForeground|GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin,
-	      &values);
+              GCForeground|GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin,
+              &values);
     XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc, x, y, width, height);
   }
 
@@ -1299,7 +1302,7 @@ Draw(ZnItem	item)
 #ifdef GL
 struct MarkerCBData {
   ZnPoint *p;
-  int	  num;
+  int     num;
   ZnReal  size;
   ZnPoint center;
 };
@@ -1308,31 +1311,31 @@ static void
 MarkerRenderCB(void *closure)
 {
   struct MarkerCBData *cbd = (struct MarkerCBData *) closure;
-  int		      i;
+  int                 i;
 
   glBegin(GL_TRIANGLE_FAN);
   glVertex2d(cbd->center.x, cbd->center.y);  
   for (i = 0; i < cbd->num; i++) {
     glVertex2d(cbd->center.x + cbd->p[i].x*cbd->size,
-	       cbd->center.y + cbd->p[i].y*cbd->size);
+               cbd->center.y + cbd->p[i].y*cbd->size);
   }
   glEnd();
 }
 
 static void
-Render(ZnItem	item)
+Render(ZnItem   item)
 {
-  ZnWInfo	*wi = item->wi;
-  TrackItem	track = (TrackItem) item;
-  TrackItem	c_item;
-  History	hist;
-  unsigned int	h_side_size, side_size, width=0, height=0;
-  unsigned int	i, j, nb_hist, num_acc_pos;
+  ZnWInfo       *wi = item->wi;
+  TrackItem     track = (TrackItem) item;
+  TrackItem     c_item;
+  History       hist;
+  unsigned int  h_side_size, side_size, width=0, height=0;
+  unsigned int  i, j, nb_hist, num_acc_pos;
   unsigned short alpha;
-  XColor	*color;
-  ZnPoint	*points;
-  unsigned int	num_points;
-  ZnReal	x0, y0, size;
+  XColor        *color;
+  ZnPoint       *points;
+  unsigned int  num_points;
+  ZnReal        x0, y0, size;
 
   /* Draw the marker */
   if (track->marker_size_dev != 0) {
@@ -1341,7 +1344,7 @@ Render(ZnItem	item)
     y0 = track->dev.y;
     size = track->marker_size_dev;
     if (ISSET(track->flags, MARKER_FILLED_BIT)) {
-      ZnBBox		  bbox;
+      ZnBBox              bbox;
       struct MarkerCBData cbd;
 
       cbd.center.x = x0;
@@ -1351,17 +1354,17 @@ Render(ZnItem	item)
       cbd.p = points;
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
       if (track->marker_fill_pattern != ZnUnspecifiedImage) { /* Fill stippled */
-	ZnResetBBox(&bbox);
-	ZnAddPointToBBox(&bbox, track->dev.x-size, track->dev.y-size);
-	ZnAddPointToBBox(&bbox, track->dev.x+size, track->dev.y+size);
-	ZnRenderTile(wi, track->marker_fill_pattern, track->marker_color,
-		     MarkerRenderCB, &cbd, (ZnPoint *) &bbox);
+        ZnResetBBox(&bbox);
+        ZnAddPointToBBox(&bbox, track->dev.x-size, track->dev.y-size);
+        ZnAddPointToBBox(&bbox, track->dev.x+size, track->dev.y+size);
+        ZnRenderTile(wi, track->marker_fill_pattern, track->marker_color,
+                     MarkerRenderCB, &cbd, (ZnPoint *) &bbox);
       }
       else {
-	color = ZnGetGradientColor(track->marker_color, 0.0, &alpha);
-	alpha = ZnComposeAlpha(alpha, wi->alpha);
-	glColor4us(color->red, color->green, color->blue, alpha);
-	MarkerRenderCB(&cbd);
+        color = ZnGetGradientColor(track->marker_color, 0.0, &alpha);
+        alpha = ZnComposeAlpha(alpha, wi->alpha);
+        glColor4us(color->red, color->green, color->blue, alpha);
+        MarkerRenderCB(&cbd);
       }
     }
     else {
@@ -1369,7 +1372,7 @@ Render(ZnItem	item)
       ZnSetLineStyle(wi, track->marker_style);
       glBegin(GL_LINE_LOOP);
       for (i = 0; i < num_points; i++) {
-	glVertex2d(x0 + points[i].x*size, y0 + points[i].y*size);
+        glVertex2d(x0 + points[i].x*size, y0 + points[i].y*size);
       }
       glEnd();
     }
@@ -1395,8 +1398,8 @@ Render(ZnItem	item)
    */
   if ((item->class == ZnTrack) && (track->speed_vector_width > 0)) {
     unsigned int num_clips=0, svlength=0;
-    ZnReal	 svxstep=0, svystep=0;
-    GLfloat	 ticksize=0;
+    ZnReal       svxstep=0, svystep=0;
+    GLfloat      ticksize=0;
 
     color = ZnGetGradientColor(track->speed_vector_color, 0.0, &alpha);
     alpha = ZnComposeAlpha(alpha, wi->alpha);
@@ -1407,23 +1410,23 @@ Render(ZnItem	item)
      * Turn off AA to obtain a square point precisely defined
      */
     if (ISSET(track->flags, SV_TICKS_BIT) ||
-	ISSET(track->flags, SV_MARK_BIT)) {
+        ISSET(track->flags, SV_MARK_BIT)) {
       glDisable(GL_POINT_SMOOTH);
       
       if (ISSET(track->flags, SV_TICKS_BIT)) {
-	num_clips = ZnListSize(wi->clip_stack);
-	ticksize = 3;
-	svlength = (int) wi->speed_vector_length;
-	svxstep = (track->speed_vector_dev.x-track->dev.x)/svlength;	
-	svystep = (track->speed_vector_dev.y-track->dev.y)/svlength;	
-	glPointSize(ticksize);
-	ZnGlStartClip(num_clips, False);
-	glBegin(GL_POINTS);
-	for (i = 1; i < svlength; i++) {
-	  glVertex2d(track->dev.x + i*svxstep, track->dev.y + i*svystep);
-	}
-	glEnd();
-	ZnGlRenderClipped();
+        num_clips = ZnListSize(wi->clip_stack);
+        ticksize = 3;
+        svlength = (int) wi->speed_vector_length;
+        svxstep = (track->speed_vector_dev.x-track->dev.x)/svlength;    
+        svystep = (track->speed_vector_dev.y-track->dev.y)/svlength;    
+        glPointSize(ticksize);
+        ZnGlStartClip(num_clips, False);
+        glBegin(GL_POINTS);
+        for (i = 1; i < svlength; i++) {
+          glVertex2d(track->dev.x + i*svxstep, track->dev.y + i*svystep);
+        }
+        glEnd();
+        ZnGlRenderClipped();
       }
     }
 
@@ -1440,18 +1443,18 @@ Render(ZnItem	item)
     }
 
     if (ISSET(track->flags, SV_TICKS_BIT) ||
-	ISSET(track->flags, SV_MARK_BIT)) {
+        ISSET(track->flags, SV_MARK_BIT)) {
       glEnable(GL_POINT_SMOOTH);
 
       if (ISSET(track->flags, SV_TICKS_BIT)) {
-	glPointSize(ticksize);
-	ZnGlRestoreStencil(num_clips, False);
-	glBegin(GL_POINTS);
-	for (i = 1; i < svlength; i++) {
-	  glVertex2d(track->dev.x + i*svxstep, track->dev.y + i*svystep);
-	}
-	glEnd();
-	ZnGlEndClip(num_clips);
+        glPointSize(ticksize);
+        ZnGlRestoreStencil(num_clips, False);
+        glBegin(GL_POINTS);
+        for (i = 1; i < svlength; i++) {
+          glVertex2d(track->dev.x + i*svxstep, track->dev.y + i*svystep);
+        }
+        glEnd();
+        ZnGlEndClip(num_clips);
       }
     }
   }
@@ -1463,10 +1466,10 @@ Render(ZnItem	item)
     points = ZnListArray(track->leader_points);
     num_points = ZnListSize(track->leader_points);
     ZnRenderPolyline(wi,
-		     points, num_points, track->leader_width,
-		     track->leader_style, CapRound, JoinRound,
-		     track->leader_first_end, track->leader_last_end,
-		     track->leader_color);
+                     points, num_points, track->leader_width,
+                     track->leader_style, CapRound, JoinRound,
+                     track->leader_first_end, track->leader_last_end,
+                     track->leader_color);
   }
   
   if (track->symbol != ZnUnspecifiedImage) {
@@ -1480,7 +1483,7 @@ Render(ZnItem	item)
     unsigned int visible_history_size;
 
     visible_history_size = (ISSET(track->flags, HISTORY_VISIBLE_BIT) ?
-			    wi->track_visible_history_size : 0);
+                            wi->track_visible_history_size : 0);
 
     points = ZnGetCirclePoints(3, ZN_CIRCLE_COARSE, 0.0, 2*M_PI, &num_points, NULL);
     color = ZnGetGradientColor(track->history_color, 0.0, &alpha);
@@ -1490,7 +1493,7 @@ Render(ZnItem	item)
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     num_acc_pos = MIN(visible_history_size, ZnListSize(track->history));
     hist = ZnListArray(track->history);
-    side_size = MAX(width, height);
+    side_size = (int) track->history_width;
     /*
      * Turning off line and point smoothing
      * to enhance ;-) history drawing.
@@ -1499,64 +1502,64 @@ Render(ZnItem	item)
     glDisable(GL_POINT_SMOOTH);
     for (i = 0, nb_hist = 0; i < num_acc_pos; i++) {
       if (ISSET(track->flags, LAST_AS_FIRST_BIT) &&
-	  (i == visible_history_size-1)) {
-	color = ZnGetGradientColor(track->symbol_color, 0.0, &alpha);
-	alpha = ZnComposeAlpha(alpha, wi->alpha);
-	glColor4us(color->red, color->green, color->blue, alpha);
+          (i == visible_history_size-1)) {
+        color = ZnGetGradientColor(track->symbol_color, 0.0, &alpha);
+        alpha = ZnComposeAlpha(alpha, wi->alpha);
+        glColor4us(color->red, color->green, color->blue, alpha);
       }
       side_size--;
       side_size = MAX(1, side_size);
       h_side_size = (side_size+1)/2;
       if (hist[i].visible) {
-	x0 = hist[i].dev.x;
-	y0 = hist[i].dev.y;
-	if ((ISSET(track->flags, DOT_MIXED_HISTORY_BIT) && !(nb_hist++ % 2)) ||
-	    (side_size == 1)) {
-	  glPointSize(1.0);    
-	  glBegin(GL_POINTS);
-	  glVertex2d(x0, y0);
-	  glEnd();
-	}
-	else {
-	  if (ISSET(track->flags, CIRCLE_HISTORY_BIT)) {
-	    if (ISSET(track->flags, FILLED_HISTORY_BIT)) {
-	      glPointSize((GLfloat) side_size);
-	      glBegin(GL_POINTS);
-	      glVertex2d(x0, y0);
-	      glEnd();
-	    }
-	    else {
+        x0 = hist[i].dev.x;
+        y0 = hist[i].dev.y;
+        if ((ISSET(track->flags, DOT_MIXED_HISTORY_BIT) && !(nb_hist++ % 2)) ||
+            (side_size == 1)) {
+          glPointSize(1.0);    
+          glBegin(GL_POINTS);
+          glVertex2d(x0, y0);
+          glEnd();
+        }
+        else {
+          if (ISSET(track->flags, CIRCLE_HISTORY_BIT)) {
+            if (ISSET(track->flags, FILLED_HISTORY_BIT)) {
+              glPointSize((GLfloat) side_size);
+              glBegin(GL_POINTS);
+              glVertex2d(x0, y0);
+              glEnd();
+            }
+            else {
 #if 1
-	      glBegin(GL_LINE_LOOP);
-	      for (j = 0; j < num_points; j++) {
-		glVertex2d(x0 + points[j].x*h_side_size,
-			   y0 + points[j].y*h_side_size);
-	      }
-	      glEnd();
+              glBegin(GL_LINE_LOOP);
+              for (j = 0; j < num_points; j++) {
+                glVertex2d(x0 + points[j].x*h_side_size,
+                           y0 + points[j].y*h_side_size);
+              }
+              glEnd();
 #else
-	      RenderHollowDot(wi, &hist[i].dev, side_size+1);
+              RenderHollowDot(wi, &hist[i].dev, side_size+1);
 #endif
-	    }
-	  }
-	  else {
-	    if (ISSET(track->flags, FILLED_HISTORY_BIT)) {
-	      glBegin(GL_QUADS);
-	      glVertex2d(x0 - h_side_size, y0 - h_side_size);
-	      glVertex2d(x0 - h_side_size, y0 + h_side_size);
-	      glVertex2d(x0 + h_side_size, y0 + h_side_size);
-	      glVertex2d(x0 + h_side_size, y0 - h_side_size);
-	      glEnd();
-	    }
-	    else {
-	      glBegin(GL_LINE_LOOP);
-	      glVertex2d(x0 - h_side_size, y0 - h_side_size);
-	      glVertex2d(x0 - h_side_size, y0 + h_side_size);
-	      glVertex2d(x0 + h_side_size, y0 + h_side_size);
-	      glVertex2d(x0 + h_side_size, y0 - h_side_size);
-	      glEnd();
-	    }
-	  }
-	}
+            }
+          }
+          else {
+            if (ISSET(track->flags, FILLED_HISTORY_BIT)) {
+              glBegin(GL_QUADS);
+              glVertex2d(x0 - h_side_size, y0 - h_side_size);
+              glVertex2d(x0 - h_side_size, y0 + h_side_size);
+              glVertex2d(x0 + h_side_size, y0 + h_side_size);
+              glVertex2d(x0 + h_side_size, y0 - h_side_size);
+              glEnd();
+            }
+            else {
+              glBegin(GL_LINE_LOOP);
+              glVertex2d(x0 - h_side_size, y0 - h_side_size);
+              glVertex2d(x0 - h_side_size, y0 + h_side_size);
+              glVertex2d(x0 + h_side_size, y0 + h_side_size);
+              glVertex2d(x0 + h_side_size, y0 - h_side_size);
+              glEnd();
+            }
+          }
+        }
       }
     }
     glEnable(GL_LINE_SMOOTH);
@@ -1581,7 +1584,7 @@ Render(ZnItem	item)
 } 
 #else
 static void
-Render(ZnItem	item __unused)
+Render(ZnItem   item)
 {
 }
 #endif
@@ -1595,8 +1598,8 @@ Render(ZnItem	item __unused)
 **********************************************************************************
 */
 static ZnBool
-IsSensitive(ZnItem	item,
-	    int		item_part)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
   if (ISCLEAR(item->flags, ZN_SENSITIVE_BIT) ||
       !item->parent->class->IsSensitive(item->parent, ZN_NO_PART)) {
@@ -1624,20 +1627,20 @@ IsSensitive(ZnItem	item,
 **********************************************************************************
 */
 static double
-Pick(ZnItem	item,
-     ZnPick	ps)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
-  TrackItem	track = (TrackItem) item;
-  ZnItem	c_item;
-  ZnBBox	bbox;
-  double	dist=0, new_dist;
-  ZnPoint	*points, *p = ps->point;
-  int		num_points, i;
-  int		width=0, height=0;
-  double	width_2;
-  int		best_part;
-  ZnPoint	pts[2];
-		     
+  TrackItem     track = (TrackItem) item;
+  ZnItem        c_item;
+  ZnBBox        bbox;
+  double        dist=0, new_dist;
+  ZnPoint       *points, *p = ps->point;
+  int           num_points, i;
+  int           width=0, height=0;
+  double        width_2;
+  int           best_part;
+  ZnPoint       pts[2];
+                     
   /*
    * Try one of the fields.
    */
@@ -1681,35 +1684,35 @@ Pick(ZnItem	item,
       new_dist = ZnLineToPointDist(&points[i], &points[i+1], p, NULL);
       new_dist -= width_2;
       if (new_dist < dist) {
-	best_part = LEADER;
-	dist = new_dist;
+        best_part = LEADER;
+        dist = new_dist;
       }
       if (dist <= 0.0) {
-	goto report0;
+        goto report0;
       }
     }
     if (track->leader_first_end != NULL) {
       ZnGetLineEnd(&points[0], &points[1], track->leader_width,
-		   CapRound, track->leader_first_end, end_points);
+                   CapRound, track->leader_first_end, end_points);
       new_dist = ZnPolygonToPointDist(end_points, ZN_LINE_END_POINTS, p);
       if (new_dist < dist) {
-	best_part = LEADER;
-	dist = new_dist;	
+        best_part = LEADER;
+        dist = new_dist;        
       }
       if (dist <= 0.0) {
-	goto report0;
+        goto report0;
       }
     }
     if (track->leader_last_end != NULL) {
       ZnGetLineEnd(&points[num_points-1], &points[num_points-2], track->leader_width,
-		   CapRound, track->leader_last_end, end_points);
+                   CapRound, track->leader_last_end, end_points);
       new_dist = ZnPolygonToPointDist(end_points, ZN_LINE_END_POINTS, p);
       if (new_dist < dist) {
-	best_part = LEADER;
-	dist = new_dist;	
+        best_part = LEADER;
+        dist = new_dist;        
       }
       if (dist <= 0.0) {
-	goto report0;
+        goto report0;
       }
     }
   }
@@ -1721,7 +1724,7 @@ Pick(ZnItem	item,
     pts[0] = track->dev;
     pts[1] = track->speed_vector_dev;
     new_dist = ZnPolylineToPointDist(pts, 2, track->speed_vector_width,
-				     CapRound, JoinRound, p);
+                                     CapRound, JoinRound, p);
     if (new_dist < dist) {
       best_part = SPEED_VECTOR;
       dist = new_dist;
@@ -1739,7 +1742,7 @@ Pick(ZnItem	item,
     pts[0] = track->dev;
     pts[1] = ((TrackItem) item->connected_item)->dev;
     new_dist = ZnPolylineToPointDist(pts, 2, track->connection_width,
-				     CapRound, JoinRound, p);
+                                     CapRound, JoinRound, p);
     if (new_dist < dist) {
       dist = new_dist;
       best_part = CONNECTION;
@@ -1764,14 +1767,16 @@ Pick(ZnItem	item,
 *
 **********************************************************************************
 */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
 {
+	return TCL_OK;
 }
 
 
-#ifdef OM
+#ifdef ATC
 /*
 **********************************************************************************
 *
@@ -1788,28 +1793,28 @@ PostScript(ZnItem	item __unused,
  *   dealing with tracks.
  */
 void *
-ZnSendTrackToOm(void	*ptr,
-		void	*item,
-		int	*x,
-		int	*y,
-		int	*sv_dx,
-		int	*sv_dy,
-		/*int	*label_x,
-		  int	*label_y,
-		  int	*label_width,
-		  int	*label_height,*/
-		int	*rho,
-		int	*theta,
-		int	*visibility,
-		int	*locked,
-		int	*preferred_angle,
-		int	*convergence_style)
+ZnSendTrackToOm(void    *ptr,
+                void    *item,
+                int     *x,
+                int     *y,
+                int     *sv_dx,
+                int     *sv_dy,
+                /*int   *label_x,
+                  int   *label_y,
+                  int   *label_width,
+                  int   *label_height,*/
+                int     *rho,
+                int     *theta,
+                int     *visibility,
+                int     *locked,
+                int     *preferred_angle,
+                int     *convergence_style)
 {
-  ZnWInfo	*wi = (ZnWInfo *) ptr;
-  ZnItem	current_item = (ZnItem) item;
-  TrackItem	track;
-  ZnBBox	zn_bbox, bbox;
-  ZnBool	to_be_sent;
+  ZnWInfo       *wi = (ZnWInfo *) ptr;
+  ZnItem        current_item = (ZnItem) item;
+  TrackItem     track;
+  ZnBBox        zn_bbox, bbox;
+  ZnBool        to_be_sent;
 
   int rho_derived ;
 
@@ -1852,7 +1857,7 @@ ZnSendTrackToOm(void	*ptr,
        *label_x = track->field_set.label_pos.x;
        *label_y = wi->height - track->field_set.label_pos.y;
        if (track->field_set.label_format) {
-       ZnDim	bb_width, bb_height;
+       ZnDim    bb_width, bb_height;
 
        ZnFIELD.GetLabelBBox(&track->field_set, &bb_width, &bb_height);
        *label_width = bb_width;
@@ -1869,15 +1874,15 @@ ZnSendTrackToOm(void	*ptr,
        * roundoff error.
        */
       rho_derived = (int) sqrt(track->label_dx*track->label_dx +
-			       track->label_dy*track->label_dy);
+                               track->label_dy*track->label_dy);
 #ifdef DP
       if (ABS(rho_derived - track->label_distance) < LABEL_DISTANCE_THRESHOLD) {
-	/* The error is narrow so value discarded */
-	*rho = 	track->label_distance ;
+        /* The error is narrow so value discarded */
+        *rho =  track->label_distance ;
       }
       else {
-	/* Means a user change has been performed on label_dx label_dy */
-	*rho = rho_derived ;
+        /* Means a user change has been performed on label_dx label_dy */
+        *rho = rho_derived ;
       }
 #else
       *rho = rho_derived;
@@ -1905,12 +1910,12 @@ ZnSendTrackToOm(void	*ptr,
 **********************************************************************************
 */
 void
-ZnSetLabelAngleFromOm(void	*ptr __unused,	/* No longer in use. */
-		      void	*item,
-		      int	rho __unused,
-		      int	theta)
+ZnSetLabelAngleFromOm(void      *ptr,   /* No longer in use. */
+                      void      *item,
+                      int       rho,
+                      int       theta)
 {
-  TrackItem	track = (TrackItem) item;
+  TrackItem     track = (TrackItem) item;
 
   theta %= 360;
   if (theta < 0) {
@@ -1932,27 +1937,27 @@ ZnSetLabelAngleFromOm(void	*ptr __unused,	/* No longer in use. */
 **********************************************************************************
 *
 * ZnQueryLabelPosition -- OverlapMan query the widget about what would be the
-*			  label position if label_angle is theta
+*                         label position if label_angle is theta
 *
 **********************************************************************************
 */
 void
-ZnQueryLabelPosition(void	*ptr __unused,	/* No longer in use. */
-		     void	*item,
-		     int	theta,
-		     int	*x,
-		     int	*y,
-		     int	*w,
-		     int	*h)
+ZnQueryLabelPosition(void       *ptr,   /* No longer in use. */
+                     void       *item,
+                     int        theta,
+                     int        *x,
+                     int        *y,
+                     int        *w,
+                     int        *h)
 {
-  ZnItem	it = (ZnItem) item;
-  ZnWInfo	*wi = it->wi;
-  TrackItem	track = (TrackItem) it;
+  ZnItem        it = (ZnItem) item;
+  ZnWInfo       *wi = it->wi;
+  TrackItem     track = (TrackItem) it;
   
   if (track->field_set.label_format) {
-    ZnDim	bb_width, bb_height;
-    ZnDim	delta_x, delta_y;
-    ZnReal	heading;
+    ZnDim       bb_width, bb_height;
+    ZnDim       delta_x, delta_y;
+    ZnReal      heading;
     
     /*
      * !! BUG !! This doesn't work if the current transform has some rotation.
@@ -1985,9 +1990,9 @@ ZnQueryLabelPosition(void	*ptr __unused,	/* No longer in use. */
 **********************************************************************************
 */
 void
-ZnSetHistoryVisibility(ZnItem	item __unused,
-		       int	index __unused,
-		       ZnBool	visible __unused)
+ZnSetHistoryVisibility(ZnItem   item,
+                       int      index,
+                       ZnBool   visible)
 {
 }
 
@@ -2000,9 +2005,9 @@ ZnSetHistoryVisibility(ZnItem	item __unused,
 **********************************************************************************
 */
 void
-ZnTruncHistory(ZnItem	item)
+ZnTruncHistory(ZnItem   item)
 {
-  TrackItem	track = (TrackItem) item;
+  TrackItem     track = (TrackItem) item;
 
   if (track->history) {
     int size = ZnListSize (track->history);
@@ -2023,7 +2028,7 @@ ZnTruncHistory(ZnItem	item)
 **********************************************************************************
 */
 static ZnFieldSet
-GetFieldSet(ZnItem	item)
+GetFieldSet(ZnItem      item)
 {
   return &((TrackItem) item)->field_set;
 }
@@ -2037,12 +2042,12 @@ GetFieldSet(ZnItem	item)
 **********************************************************************************
 */
 static void
-GetAnchor(ZnItem	item,
-	  Tk_Anchor	anchor,
-	  ZnPoint	*p)
+GetAnchor(ZnItem        item,
+          Tk_Anchor     anchor,
+          ZnPoint       *p)
 {
-  ZnFieldSet	field_set = &((TrackItem) item)->field_set;
-  ZnDim		width, height;
+  ZnFieldSet    field_set = &((TrackItem) item)->field_set;
+  ZnDim         width, height;
   
   if (field_set->label_format) {
     ZnFIELD.GetLabelBBox(field_set, &width, &height);
@@ -2058,31 +2063,31 @@ GetAnchor(ZnItem	item,
 **********************************************************************************
 *
 * Coords --
-*	Return or edit the item position.
+*       Return or edit the item position.
 *
 **********************************************************************************
 */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index __unused,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
-  TrackItem	track = (TrackItem) item;
+  TrackItem     track = (TrackItem) item;
   
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp, " ",
-		     item->class->name, "s can't add or remove vertices", NULL);
+                     item->class->name, "s can't add or remove vertices", NULL);
     return TCL_ERROR;
   }
   else if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
     if (*num_pts == 0) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need 1 point on ",
-		       item->class->name, "s", NULL);
+                       " coords command need 1 point on ",
+                       item->class->name, "s", NULL);
       return TCL_ERROR;
     }
     if (item->class == ZnTrack) {
@@ -2103,18 +2108,18 @@ Coords(ZnItem		item,
 **********************************************************************************
 *
 * Part --
-*	Convert a private part from/to symbolic representation.
+*       Convert a private part from/to symbolic representation.
 *
 **********************************************************************************
 */
 static int
-Part(ZnItem	item,
-     Tcl_Obj	**part_spec,
-     int	*part)
+Part(ZnItem     item,
+     Tcl_Obj    **part_spec,
+     int        *part)
 {
-  char	*part_str="";
-  int	c;
-  char	*end;
+  char  *part_str="";
+  int   c;
+  char  *end;
   
   if (*part_spec) {
     part_str = Tcl_GetString(*part_spec);
@@ -2124,31 +2129,31 @@ Part(ZnItem	item,
     else if (isdigit(part_str[0])) {
       *part = strtol(part_str, &end, 0);
       if ((*end != 0) || (*part < 0) ||
-	  ((unsigned int) *part >= ((TrackItem) item)->field_set.num_fields)) {
-	goto part_error;
+          ((unsigned int) *part >= ((TrackItem) item)->field_set.num_fields)) {
+        goto part_error;
       }
     }
     else {
       c = part_str[0];
       if ((c == 'c') && (strcmp(part_str, "connection") == 0)) {
-	*part = CONNECTION;
+        *part = CONNECTION;
       }
       else if ((c == 'l') && (strcmp(part_str, "leader") == 0)) {
-	*part = LEADER;
+        *part = LEADER;
       }
       else if ((c == 'p') && (strcmp(part_str, "position") == 0)) {
-	*part = CURRENT_POSITION;
+        *part = CURRENT_POSITION;
       }
       else if ((c == 's') && (strcmp(part_str, "speedvector") == 0)) {
-	if (item->class != ZnTrack) {
-	  goto part_error;
-	}
-	*part = SPEED_VECTOR;
+        if (item->class != ZnTrack) {
+          goto part_error;
+        }
+        *part = SPEED_VECTOR;
       }
       else {
       part_error:
-	Tcl_AppendResult(item->wi->interp, " invalid item part specification", NULL);
-	return TCL_ERROR;	
+        Tcl_AppendResult(item->wi->interp, " invalid item part specification", NULL);
+        return TCL_ERROR;       
       }
     }
   }
@@ -2161,24 +2166,24 @@ Part(ZnItem	item,
       switch (*part) {
       default:
       case ZN_NO_PART:
-	break;
+        break;
       case CURRENT_POSITION:
-	part_str = "position";
-	break;
+        part_str = "position";
+        break;
       case LEADER:
-	part_str = "leader";
-	break;
+        part_str = "leader";
+        break;
       case CONNECTION:
-	part_str = "connection";
-	break;
+        part_str = "connection";
+        break;
       case SPEED_VECTOR:
-	if (item->class == ZnTrack) {
-	  part_str = "speedvector";
-	  break;
-	}
+        if (item->class == ZnTrack) {
+          part_str = "speedvector";
+          break;
+        }
       }
       if (part_str[0]) {
-	*part_spec = Tcl_NewStringObj(part_str, -1);
+        *part_spec = Tcl_NewStringObj(part_str, -1);
       }
     }
   }
@@ -2190,19 +2195,19 @@ Part(ZnItem	item,
 **********************************************************************************
 *
 * Index --
-*	Parse a text index and return its value and aa
-*	error status (standard Tcl result).
+*       Parse a text index and return its value and aa
+*       error status (standard Tcl result).
 *
 **********************************************************************************
 */
 static int
-Index(ZnItem	item,
-      int	field,
-      Tcl_Obj	*index_spec,
-      int	*index)
+Index(ZnItem    item,
+      int       field,
+      Tcl_Obj   *index_spec,
+      int       *index)
 {
   return ZnFIELD.FieldIndex(&((TrackItem) item)->field_set, field,
-			    index_spec, index);
+                            index_spec, index);
 }
 
 
@@ -2214,13 +2219,13 @@ Index(ZnItem	item,
 **********************************************************************************
 */
 static void
-InsertChars(ZnItem	item,
-	    int		field,
-	    int		*index,
-	    char	*chars)
+InsertChars(ZnItem      item,
+            int         field,
+            int         *index,
+            char        *chars)
 {
   if (ZnFIELD.FieldInsertChars(&((TrackItem) item)->field_set,
-			       field, index, chars)) {
+                               field, index, chars)) {
     ZnITEM.Invalidate(item, ZN_COORDS_FLAG);
   }
 }
@@ -2234,13 +2239,13 @@ InsertChars(ZnItem	item,
 **********************************************************************************
 */
 static void
-DeleteChars(ZnItem	item,
-	    int		field,
-	    int		*first,
-	    int		*last)
+DeleteChars(ZnItem      item,
+            int         field,
+            int         *first,
+            int         *last)
 {
   if (ZnFIELD.FieldDeleteChars(&((TrackItem) item)->field_set,
-			       field, first, last)) {
+                               field, first, last)) {
     ZnITEM.Invalidate(item, ZN_COORDS_FLAG);
   }
 }
@@ -2254,9 +2259,9 @@ DeleteChars(ZnItem	item,
 **********************************************************************************
 */
 static void
-TrackCursor(ZnItem	item,
-	    int		field,
-	    int		index)
+TrackCursor(ZnItem      item,
+            int         field,
+            int         index)
 {
   ZnFIELD.FieldCursor(&((TrackItem) item)->field_set, field, index);
 }
@@ -2270,14 +2275,14 @@ TrackCursor(ZnItem	item,
 **********************************************************************************
 */
 static int
-Selection(ZnItem	item,
-	  int		field,
-	  int		offset,
-	  char		*chars,
-	  int		max_chars)
+Selection(ZnItem        item,
+          int           field,
+          int           offset,
+          char          *chars,
+          int           max_chars)
 {
   return ZnFIELD.FieldSelection(&((TrackItem) item)->field_set, field,
-				offset, chars, max_chars);
+                                offset, chars, max_chars);
 }
 
 
@@ -2299,7 +2304,7 @@ static ZnItemClassStruct TRACK_ITEM_CLASS = {
   "track",
   sizeof(TrackItemStruct),
   track_attrs,
-  4,			/* num_parts */
+  4,                    /* num_parts */
   ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   -1,
   Init,
@@ -2309,8 +2314,8 @@ static ZnItemClassStruct TRACK_ITEM_CLASS = {
   Query,
   GetFieldSet,
   GetAnchor,
-  NULL,			/* GetClipVertices */
-  NULL,			/* GetContours */
+  NULL,                 /* GetClipVertices */
+  NULL,                 /* GetContours */
   Coords,
   InsertChars,
   DeleteChars,
@@ -2318,14 +2323,14 @@ static ZnItemClassStruct TRACK_ITEM_CLASS = {
   Index,
   Part,
   Selection,
-  NULL,			/* Contour */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 
@@ -2333,7 +2338,7 @@ static ZnItemClassStruct WAY_POINT_ITEM_CLASS = {
   "waypoint",
   sizeof(TrackItemStruct),
   wp_attrs,
-  3,			/* num_parts */
+  3,                    /* num_parts */
   ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   -1,
   Init,
@@ -2343,8 +2348,8 @@ static ZnItemClassStruct WAY_POINT_ITEM_CLASS = {
   Query,
   GetFieldSet,
   GetAnchor,
-  NULL,			/* GetClipVertices */
-  NULL,			/* GetContours */
+  NULL,                 /* GetClipVertices */
+  NULL,                 /* GetContours */
   Coords,
   InsertChars,
   DeleteChars,
@@ -2352,14 +2357,14 @@ static ZnItemClassStruct WAY_POINT_ITEM_CLASS = {
   Index,
   Part,
   Selection,
-  NULL,			/* Contour */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 

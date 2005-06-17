@@ -1,28 +1,17 @@
 /*
  * Geo.c -- Implementation of common geometric routines.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	:
+ * Authors              : Patrick Lecoanet.
+ * Creation date        :
  *
- * $Id: Geo.c,v 1.47 2004/02/23 10:42:33 lecoanet Exp $
+ * $Id: Geo.c,v 1.51 2005/04/27 07:32:03 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -37,22 +26,22 @@
 #include <memory.h>
 
 
-static const char rcsid[] = "$Id: Geo.c,v 1.47 2004/02/23 10:42:33 lecoanet Exp $";
+static const char rcsid[] = "$Id: Geo.c,v 1.51 2005/04/27 07:32:03 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
 void
-ZnPolyInit(ZnPoly	*poly)
+ZnPolyInit(ZnPoly       *poly)
 {
   poly->num_contours = 0;
   poly->contours = NULL;
 }
 
 void
-ZnPolyContour1(ZnPoly		*poly,
-	       ZnPoint		*pts,
-	       unsigned int	num_pts,
-	       ZnBool		cw)
+ZnPolyContour1(ZnPoly           *poly,
+               ZnPoint          *pts,
+               unsigned int     num_pts,
+               ZnBool           cw)
 {
   poly->num_contours = 1;
   poly->contours = &poly->contour1;
@@ -63,13 +52,13 @@ ZnPolyContour1(ZnPoly		*poly,
 }
 
 void
-ZnPolySet(ZnPoly	*poly1,
-	  ZnPoly	*poly2)
+ZnPolySet(ZnPoly        *poly1,
+          ZnPoly        *poly2)
 {
   ZnPolyFree(poly1);
   if (poly2->num_contours == 1) {
     ZnPolyContour1(poly1, poly2->contours[0].points, poly2->contours[0].num_points,
-		   poly2->contours[0].cw);
+                   poly2->contours[0].cw);
     if (poly2->contours != &poly2->contour1) {
       ZnFree(poly2->contours);
     }
@@ -81,18 +70,17 @@ ZnPolySet(ZnPoly	*poly1,
 }
 
 void
-ZnPolyFree(ZnPoly	*poly)
+ZnPolyFree(ZnPoly       *poly)
 {
   if (poly->num_contours) {
     unsigned int i;
     for (i = 0; i < poly->num_contours; i++) {
       ZnFree(poly->contours[i].points);
 /*      if (poly->contours[i].controls) {
-	  ZnFree(poly->contours[i].controls);
+          ZnFree(poly->contours[i].controls);
       }*/
     }
-    if ((poly->contours != &poly->contour1) &&
-        (poly->num_contours > 1)) {
+    if (poly->contours != &poly->contour1) {
       ZnFree(poly->contours);
     }
     poly->num_contours = 0;
@@ -101,10 +89,10 @@ ZnPolyFree(ZnPoly	*poly)
 }
 
 void
-ZnTriStrip1(ZnTriStrip		*tristrip,
-	    ZnPoint		*pts,
-	    unsigned int	num_pts,
-	    ZnBool		fan)
+ZnTriStrip1(ZnTriStrip          *tristrip,
+            ZnPoint             *pts,
+            unsigned int        num_pts,
+            ZnBool              fan)
 {
   tristrip->num_strips = 1;
   tristrip->strips = &tristrip->strip1;
@@ -114,15 +102,14 @@ ZnTriStrip1(ZnTriStrip		*tristrip,
 }
 
 void
-ZnTriFree(ZnTriStrip	*tristrip)
+ZnTriFree(ZnTriStrip    *tristrip)
 {
   if (tristrip->num_strips) {
     unsigned int i;
     for (i = 0; i < tristrip->num_strips; i++) {
       ZnFree(tristrip->strips[i].points);
     }
-    if ((tristrip->strips != &tristrip->strip1) &&
-        (tristrip->num_strips > 1)) {
+    if (tristrip->strips != &tristrip->strip1) {
       ZnFree(tristrip->strips);
     }
     tristrip->num_strips = 0;
@@ -135,11 +122,11 @@ ZnTriFree(ZnTriStrip	*tristrip)
  * by position, anchor, width and height.
  */
 void
-ZnAnchor2Origin(ZnPoint		*position,
-		ZnDim		width,
-		ZnDim		height,
-		Tk_Anchor	anchor,
-		ZnPoint		*origin)
+ZnAnchor2Origin(ZnPoint         *position,
+                ZnDim           width,
+                ZnDim           height,
+                Tk_Anchor       anchor,
+                ZnPoint         *origin)
 {
   switch (anchor) {
   case TK_ANCHOR_CENTER:
@@ -186,11 +173,11 @@ ZnAnchor2Origin(ZnPoint		*position,
  * height and the anchor.
  */
 void
-ZnOrigin2Anchor(ZnPoint		*origin,
-		ZnDim		width,
-		ZnDim		height,
-		Tk_Anchor	anchor,
-		ZnPoint		*position)
+ZnOrigin2Anchor(ZnPoint         *origin,
+                ZnDim           width,
+                ZnDim           height,
+                Tk_Anchor       anchor,
+                ZnPoint         *position)
 {
   switch (anchor) {
   case TK_ANCHOR_CENTER:
@@ -242,9 +229,9 @@ ZnOrigin2Anchor(ZnPoint		*origin,
  *    v1 ------------ v3
  */
 void
-ZnRectOrigin2Anchor(ZnPoint	*rect,
-		    Tk_Anchor	anchor,
-		    ZnPoint	*position)
+ZnRectOrigin2Anchor(ZnPoint     *rect,
+                    Tk_Anchor   anchor,
+                    ZnPoint     *position)
 {
   switch (anchor) {
   case TK_ANCHOR_CENTER:
@@ -283,8 +270,8 @@ ZnRectOrigin2Anchor(ZnPoint	*rect,
 }
 
 void
-ZnBBox2XRect(ZnBBox	*bbox,
-	     XRectangle	*r)
+ZnBBox2XRect(ZnBBox     *bbox,
+             XRectangle *r)
 {
   r->x = ZnNearestInt(bbox->orig.x);
   r->y = ZnNearestInt(bbox->orig.y);
@@ -294,11 +281,11 @@ ZnBBox2XRect(ZnBBox	*bbox,
 
 
 void
-ZnGetStringBBox(char	*str,
-		Tk_Font	font,
-		ZnPos	x,
-		ZnPos	y,
-		ZnBBox	*str_bbox)
+ZnGetStringBBox(char    *str,
+                Tk_Font font,
+                ZnPos   x,
+                ZnPos   y,
+                ZnBBox  *str_bbox)
 {
   Tk_FontMetrics fm;
 
@@ -320,7 +307,7 @@ ZnResetBBox(ZnBBox *bbox)
 
 void
 ZnCopyBBox(ZnBBox *bbox_from,
-	   ZnBBox *bbox_to)
+           ZnBBox *bbox_to)
 {
   bbox_to->orig = bbox_from->orig;
   bbox_to->corner = bbox_from->corner;
@@ -329,8 +316,8 @@ ZnCopyBBox(ZnBBox *bbox_from,
 
 void
 ZnIntersectBBox(ZnBBox *bbox1,
-		ZnBBox *bbox2,
-		ZnBBox *bbox_inter)
+                ZnBBox *bbox2,
+                ZnBBox *bbox_inter)
 {
   if ((bbox1->corner.x < bbox2->orig.x) ||
       (bbox1->corner.y < bbox2->orig.y) ||
@@ -356,7 +343,7 @@ ZnIsEmptyBBox(ZnBBox *bbox)
 
 void
 ZnAddBBoxToBBox(ZnBBox *bbox,
-		ZnBBox *bbox2)
+                ZnBBox *bbox2)
 {
   if (ZnIsEmptyBBox(bbox2)) {
     return;
@@ -374,9 +361,9 @@ ZnAddBBoxToBBox(ZnBBox *bbox,
 
 
 void
-ZnAddPointToBBox(ZnBBox	*bbox,
-		 ZnPos	px,
-		 ZnPos	py)
+ZnAddPointToBBox(ZnBBox *bbox,
+                 ZnPos  px,
+                 ZnPos  py)
 {
   if (ZnIsEmptyBBox(bbox)) {
     bbox->orig.x = px;
@@ -394,9 +381,9 @@ ZnAddPointToBBox(ZnBBox	*bbox,
 
 
 void
-ZnAddPointsToBBox(ZnBBox	*bbox,
-		  ZnPoint	*points,
-		  unsigned int	num_points)
+ZnAddPointsToBBox(ZnBBox        *bbox,
+                  ZnPoint       *points,
+                  unsigned int  num_points)
 {
   ZnReal x1, y1, x2, y2, cur;
 
@@ -441,31 +428,37 @@ ZnAddPointsToBBox(ZnBBox	*bbox,
   }
   bbox->orig.x = x1;
   bbox->orig.y = y1;
-  bbox->corner.x = x2 + 1;
-  bbox->corner.y = y2 + 1;
+  if (x1 == x2) {
+    x2++;
+  }
+  if (y1 == y2) {
+    y2++;
+  }
+  bbox->corner.x = x2;
+  bbox->corner.y = y2;
 }
 
 
 void
-ZnAddStringToBBox(ZnBBox	*bbox,
-		  char		*str,
-		  Tk_Font	font,
-		  ZnPos		cx,
-		  ZnPos		cy)
+ZnAddStringToBBox(ZnBBox        *bbox,
+                  char          *str,
+                  Tk_Font       font,
+                  ZnPos         cx,
+                  ZnPos         cy)
 {
-  ZnBBox	str_bbox;
+  ZnBBox        str_bbox;
   
   ZnGetStringBBox(str, font, cx, cy, &str_bbox);
   ZnAddBBoxToBBox(bbox, &str_bbox);
 }
 
 ZnBool
-ZnPointInBBox(ZnBBox	*bbox,
-	      ZnPos	x,
-	      ZnPos	y)
+ZnPointInBBox(ZnBBox    *bbox,
+              ZnPos     x,
+              ZnPos     y)
 {
   return ((x >= bbox->orig.x) && (x < bbox->corner.x) &&
-	  (y >= bbox->orig.y) && (y < bbox->corner.y));
+          (y >= bbox->orig.y) && (y < bbox->corner.y));
 }
 
 
@@ -475,8 +468,8 @@ ZnPointInBBox(ZnBBox	*bbox,
  * 1 if it is entirely inside and 0 otherwise.
  */
 int
-ZnBBoxInBBox(ZnBBox	*bbox1,
-	     ZnBBox	*bbox2)
+ZnBBoxInBBox(ZnBBox     *bbox1,
+             ZnBBox     *bbox2)
 {
   if ((bbox1->corner.x <= bbox2->orig.x) ||
       (bbox1->orig.x >= bbox2->corner.x) ||
@@ -499,9 +492,9 @@ ZnBBoxInBBox(ZnBBox	*bbox1,
  * if it is entirely inside and 0 otherwise.
  */
 int
-ZnLineInBBox(ZnPoint	*p1,
-	     ZnPoint	*p2,
-	     ZnBBox	*bbox)
+ZnLineInBBox(ZnPoint    *p1,
+             ZnPoint    *p2,
+             ZnBBox     *bbox)
 {
   ZnBool p1_inside = ZnPointInBBox(bbox, p1->x, p1->y);
   ZnBool p2_inside = ZnPointInBBox(bbox, p2->x, p2->y);
@@ -520,25 +513,25 @@ ZnLineInBBox(ZnPoint	*p1,
   /* Vertical line */
   if (p1->x == p2->x) {
     if (((p1->y >= bbox->orig.y) ^ (p2->y >= bbox->orig.y)) &&
-	(p1->x >= bbox->orig.x) &&
-	(p1->x <= bbox->corner.x)) {
+        (p1->x >= bbox->orig.x) &&
+        (p1->x <= bbox->corner.x)) {
       return 0;
     }
   }
   /* Horizontal line */
   else if (p1->y == p2->y) {
     if (((p1->x >= bbox->orig.x) ^ (p2->x >= bbox->orig.x)) &&
-	(p1->y >= bbox->orig.y) &&
-	(p1->y <= bbox->corner.y)) {
+        (p1->y >= bbox->orig.y) &&
+        (p1->y <= bbox->corner.y)) {
       return 0;
     }
   }
   /* Diagonal, do it the hard way. */
   else {
-    ZnReal	slope = (p2->y - p1->y) / (p2->x - p1->x);
-    ZnDim	low, high, x, y;
-    ZnDim	bbox_width = bbox->corner.x - bbox->orig.x;
-    ZnDim	bbox_height = bbox->corner.y - bbox->orig.y;
+    ZnReal      slope = (p2->y - p1->y) / (p2->x - p1->x);
+    ZnDim       low, high, x, y;
+    ZnDim       bbox_width = bbox->corner.x - bbox->orig.x;
+    ZnDim       bbox_height = bbox->corner.y - bbox->orig.y;
 
     /* Check against left edge */
     if (p1->x < p2->x) {
@@ -552,15 +545,15 @@ ZnLineInBBox(ZnPoint	*p1,
 
     y = p1->y + (bbox->orig.x - p1->x) * slope;
     if ((bbox->orig.x >= low) && (bbox->orig.x <= high) &&
-	(y >= bbox->orig.y) && (y <= bbox->corner.y))
+        (y >= bbox->orig.y) && (y <= bbox->corner.y))
       return 0;
 
     /* Check against right edge */
     y += bbox_width * slope;
     if ((y >= bbox->orig.y) && (y <= bbox->corner.y) &&
-	(bbox->corner.x >= low) && (bbox->corner.x <= high))
+        (bbox->corner.x >= low) && (bbox->corner.x <= high))
       return 0;
-	
+        
     /* Check against bottom edge */
     if (p1->y < p2->y) {
       low = p1->y;
@@ -573,13 +566,13 @@ ZnLineInBBox(ZnPoint	*p1,
 
     x = p1->x + (bbox->orig.y - p1->y) / slope;
     if ((x >= bbox->orig.x) && (x <= bbox->corner.x) &&
-	(bbox->orig.y >= low) && (bbox->orig.y <= high))
+        (bbox->orig.y >= low) && (bbox->orig.y <= high))
       return 0;
 
     /* Check against top edge */
     x += bbox_height / slope;
     if ((x >= bbox->orig.x) && (x <= bbox->corner.x) &&
-	(bbox->corner.y >= low) && (bbox->corner.y <= high))
+        (bbox->corner.y >= low) && (bbox->corner.y <= high))
       return 0;
   }
 
@@ -588,12 +581,12 @@ ZnLineInBBox(ZnPoint	*p1,
 
 
 ZnBool
-ZnTestCCW(ZnPoint		*points,
-	  unsigned int	num_points)
+ZnTestCCW(ZnPoint               *points,
+          unsigned int  num_points)
 {
-  ZnPoint	*p, *p_p=NULL, *p_n=NULL, min;
-  ZnReal	xprod;
-  unsigned int	i, min_index;
+  ZnPoint       *p, *p_p=NULL, *p_n=NULL, min;
+  ZnReal        xprod;
+  unsigned int  i, min_index;
   
   if (num_points < 3) {
     return True;
@@ -608,7 +601,7 @@ ZnTestCCW(ZnPoint		*points,
   min_index = 0;
   for (i = 1, p++; i < num_points; i++, p++) {
     if ((p->y < min.y) ||
-	((p->y == min.y) && (p->x > min.x))) {
+        ((p->y == min.y) && (p->x > min.x))) {
       min_index = i;
       min = *p;
     }
@@ -645,29 +638,29 @@ ZnTestCCW(ZnPoint		*points,
 
 /*
  * ZnShiftLine --
- *	Given two points describing a line and a distance, return
- *	to points describing a line parallel to it at the given distance.
- *	When looking the line from p1 to p2 the new line will be dist away
- *	on its left. Negative values are allowed for dist, resulting in a line
- *	on the right.
+ *      Given two points describing a line and a distance, return
+ *      to points describing a line parallel to it at the given distance.
+ *      When looking the line from p1 to p2 the new line will be dist away
+ *      on its left. Negative values are allowed for dist, resulting in a line
+ *      on the right.
  */
 void
-ZnShiftLine(ZnPoint	*p1,
-	    ZnPoint	*p2,
-	    ZnReal	dist,
-	    ZnPoint	*p3,
-	    ZnPoint	*p4)
+ZnShiftLine(ZnPoint     *p1,
+            ZnPoint     *p2,
+            ZnReal      dist,
+            ZnPoint     *p3,
+            ZnPoint     *p4)
 {
-  static int	shift_table[129];
-  ZnBool	dx_neg, dy_neg;
-  int		dx, dy;
+  static int    shift_table[129];
+  ZnBool        dx_neg, dy_neg;
+  int           dx, dy;
 
   /*
    * Initialize the conversion table.
    */
   if (shift_table[0] == 0) {
-    int		i;
-    ZnReal	tangent, cosine;
+    int         i;
+    ZnReal      tangent, cosine;
     
     for (i = 0; i <= 128; i++) {
       tangent = i/128.0;
@@ -720,16 +713,16 @@ ZnShiftLine(ZnPoint	*p1,
 
 /*
  * IntersectLines --
- *	Given two lines described by two points, compute their intersection.
- *	The function returns True if the lines are not parallel and False
- *	otherwise.
+ *      Given two lines described by two points, compute their intersection.
+ *      The function returns True if the lines are not parallel and False
+ *      otherwise.
  */
 ZnBool
-ZnIntersectLines(ZnPoint	*a1,
-		 ZnPoint	*a2,
-		 ZnPoint	*b1,
-		 ZnPoint	*b2,
-		 ZnPoint	*pi)
+ZnIntersectLines(ZnPoint        *a1,
+                 ZnPoint        *a2,
+                 ZnPoint        *b1,
+                 ZnPoint        *b2,
+                 ZnPoint        *pi)
 {
   ZnReal dxadyb, dxbdya, dxadxb, dyadyb, p, q;
 
@@ -774,20 +767,20 @@ ZnIntersectLines(ZnPoint	*a1,
 
 /*
  * InsetPolygon --
- *	Inset the given polygon by the given amount. The
+ *      Inset the given polygon by the given amount. The
  *     value can be negative, in this case the polygon will
  *     be outset.
  */
 /**** A FINIR ****/
 void
-ZnInsetPolygon(ZnPoint		*p,
-	       unsigned int	num_points,
-	       ZnDim		inset)
+ZnInsetPolygon(ZnPoint          *p,
+               unsigned int     num_points,
+               ZnDim            inset)
 {
-  ZnPoint	*p1, *p2;
-  ZnPoint	new_p1, new_p2;
-  /*  ZnPoint	shift1, shift2;*/
-  unsigned int	i, processed_points;
+  ZnPoint       *p1, *p2;
+  ZnPoint       new_p1, new_p2;
+  /*  ZnPoint   shift1, shift2;*/
+  unsigned int  i, processed_points;
 
   processed_points = 0;
   
@@ -824,16 +817,16 @@ ZnInsetPolygon(ZnPoint		*p,
  * end is located around p2.
  */
 void
-ZnGetButtPoints(ZnPoint	*p1,
-		ZnPoint	*p2,
-		ZnDim	width,
-		ZnBool	projecting,
-		ZnPoint	*c1,
-		ZnPoint	*c2)
+ZnGetButtPoints(ZnPoint *p1,
+                ZnPoint *p2,
+                ZnDim   width,
+                ZnBool  projecting,
+                ZnPoint *c1,
+                ZnPoint *c2)
 {
-  ZnReal	w_2 = width/2.0;
-  ZnDim		length = hypot(p2->x - p1->x, p2->y - p1->y);
-  ZnReal	delta_x, delta_y;
+  ZnReal        w_2 = width/2.0;
+  ZnDim         length = hypot(p2->x - p1->x, p2->y - p1->y);
+  ZnReal        delta_x, delta_y;
   
   if (length == 0.0) {
     c1->x = c2->x = p2->x;
@@ -869,24 +862,24 @@ ZnGetButtPoints(ZnPoint	*p1,
  * Hmmm, the switch has been done but not the rounding ;-)
  */
 ZnBool
-ZnGetMiterPoints(ZnPoint	*p1,
-		 ZnPoint	*p2,
-		 ZnPoint	*p3,
-		 ZnDim		width,
-		 ZnPoint	*c1,
-		 ZnPoint	*c2)
+ZnGetMiterPoints(ZnPoint        *p1,
+                 ZnPoint        *p2,
+                 ZnPoint        *p3,
+                 ZnDim          width,
+                 ZnPoint        *c1,
+                 ZnPoint        *c2)
 {
-  static ZnReal	deg11 = (11.0*2.0*M_PI)/360.0;
-  ZnReal	theta1;		/* angle of p2-p1 segment. */
-  ZnReal	theta2;		/* angle of p2-p3 segment. */
-  ZnReal	theta;		/* angle of the joint */
-  ZnReal	theta3;		/* angle of bisector of the joint toward
-				 * the external point of the joint. */
-  ZnReal	dist;		/* distance of the external points
-				 * of the corner from the mid point
-				 * p2. */
-  ZnReal	delta_x, delta_y; /* projection of (dist,theta3) on x
-				   * and y. */
+  static ZnReal deg11 = (11.0*2.0*M_PI)/360.0;
+  ZnReal        theta1;         /* angle of p2-p1 segment. */
+  ZnReal        theta2;         /* angle of p2-p3 segment. */
+  ZnReal        theta;          /* angle of the joint */
+  ZnReal        theta3;         /* angle of bisector of the joint toward
+                                 * the external point of the joint. */
+  ZnReal        dist;           /* distance of the external points
+                                 * of the corner from the mid point
+                                 * p2. */
+  ZnReal        delta_x, delta_y; /* projection of (dist,theta3) on x
+                                   * and y. */
   
   if (p2->y == p1->y) {
     theta1 = (p2->x < p1->x) ? 0.0 : M_PI;
@@ -952,17 +945,17 @@ ZnGetMiterPoints(ZnPoint	*p1,
  * can be: CapRound, CapButt, CapProjecting.
  */
 int
-ZnPolylineInBBox(ZnPoint	*points,
-		 unsigned int	num_points,
-		 ZnDim		width,
-		 int		cap_style,
-		 int		join_style,
-		 ZnBBox		*bbox)
+ZnPolylineInBBox(ZnPoint        *points,
+                 unsigned int   num_points,
+                 ZnDim          width,
+                 int            cap_style,
+                 int            join_style,
+                 ZnBBox         *bbox)
 {
-  unsigned int	count;
-  int		inside = -1;
-  ZnBool	do_miter_as_bevel;
-  ZnPoint	poly[4];
+  unsigned int  count;
+  int           inside = -1;
+  ZnBool        do_miter_as_bevel;
+  ZnPoint       poly[4];
   
   /*
    * If the first point is inside the area, change inside
@@ -987,9 +980,9 @@ ZnPolylineInBBox(ZnPoint	*points,
      * around every joint if JoinRound.
      */
     if (((cap_style == CapRound) && (count == num_points)) ||
-	((join_style == JoinRound) && (count != num_points))) {
+        ((join_style == JoinRound) && (count != num_points))) {
       if (ZnOvalInBBox(points, width, width, bbox) != inside) {
-	return 0;
+        return 0;
       }
     }
     /*
@@ -1002,7 +995,7 @@ ZnPolylineInBBox(ZnPoint	*points,
      */
     if (count == num_points) {
       ZnGetButtPoints(&points[1], points, width,
-		      cap_style == CapProjecting, poly, &poly[1]);
+                      cap_style == CapProjecting, poly, &poly[1]);
     }
     /*
      * Here we are at a joint starting a new edge. If the
@@ -1024,10 +1017,10 @@ ZnPolylineInBBox(ZnPoint	*points,
        * poly[2].
        */
       if ((join_style == JoinBevel) || do_miter_as_bevel) {
-	if (ZnPolygonInBBox(poly, 4, bbox, NULL) != inside) {
-	  return 0;
-	}
-	do_miter_as_bevel = False;
+        if (ZnPolygonInBBox(poly, 4, bbox, NULL) != inside) {
+          return 0;
+        }
+        do_miter_as_bevel = False;
       }
     }
 
@@ -1036,13 +1029,13 @@ ZnPolylineInBBox(ZnPoint	*points,
      */
     if (count == 2) {
       ZnGetButtPoints(points, &points[1], width, cap_style == CapProjecting,
-		      &poly[2], &poly[3]);
+                      &poly[2], &poly[3]);
     }
     else if (join_style == JoinMiter) {
       if (ZnGetMiterPoints(points, &points[1], &points[2], width,
-			 &poly[2], &poly[3]) == False) {
-	do_miter_as_bevel = True;
-	ZnGetButtPoints(points, &points[1], width, 0, &poly[2], &poly[3]);
+                         &poly[2], &poly[3]) == False) {
+        do_miter_as_bevel = True;
+        ZnGetButtPoints(points, &points[1], width, 0, &poly[2], &poly[3]);
       }
     }
     else {
@@ -1075,14 +1068,14 @@ ZnPolylineInBBox(ZnPoint	*points,
  * polygon or not.
  */
 int
-ZnPolygonInBBox(ZnPoint		*points,
-		unsigned int	num_points,
-		ZnBBox		*bbox,
-		ZnBool		*area_enclosed)
+ZnPolygonInBBox(ZnPoint         *points,
+                unsigned int    num_points,
+                ZnBBox          *bbox,
+                ZnBool          *area_enclosed)
 {
-  int		inside, count;
-  ZnPoint	*p, *head, *first, *second;
-  ZnBool	closed;
+  int           inside, count;
+  ZnPoint       *p, *head, *first, *second;
+  ZnBool        closed;
 
   if (area_enclosed) {
     *area_enclosed = False;
@@ -1136,8 +1129,8 @@ ZnPolygonInBBox(ZnPoint		*points,
   }
 
   /*printf("PolygonInBBox, np = %d, x = %g, y = %g, dist = %g\n",
-	 num_points, bbox->orig.x, bbox->orig.y,
-	 PolygonToPointDist(points, num_points, &bbox->orig));*/
+         num_points, bbox->orig.x, bbox->orig.y,
+         PolygonToPointDist(points, num_points, &bbox->orig));*/
   if (ZnPolygonToPointDist(points, num_points, &bbox->orig) <= 0.0) {
     if (area_enclosed) {
       *area_enclosed = True;
@@ -1155,14 +1148,14 @@ ZnPolygonInBBox(ZnPoint		*points,
  * if it is entirely inside and 0 otherwise.
  */
 int
-ZnOvalInBBox(ZnPoint	*center,
-	     ZnDim	width,
-	     ZnDim	height,
-	     ZnBBox	*bbox)
+ZnOvalInBBox(ZnPoint    *center,
+             ZnDim      width,
+             ZnDim      height,
+             ZnBBox     *bbox)
 {
-  ZnPoint	origin, corner;
-  ZnDim		w_2, h_2;
-  ZnReal	delta_x, delta_y;
+  ZnPoint       origin, corner;
+  ZnDim         w_2, h_2;
+  ZnReal        delta_x, delta_y;
   
   w_2 = (width+1)/2;
   h_2 = (height+1)/2;
@@ -1261,12 +1254,12 @@ ZnOvalInBBox(ZnPoint	*center,
  * the result needs precision.
  */
 ZnBool
-ZnPointInAngle(int	start_angle,
-	       int	angle_extent,
-	       ZnPoint	*p)
+ZnPointInAngle(int      start_angle,
+               int      angle_extent,
+               ZnPoint  *p)
 {
   ZnReal point_angle;
-  int	 angle_diff;
+  int    angle_diff;
 
   if ((p->x == 0) && (p->y == 0)) {
     point_angle = 0.0;
@@ -1279,25 +1272,25 @@ ZnPointInAngle(int	start_angle,
     angle_diff += 360;
   }
   return ((angle_diff <= angle_extent) ||
-	  ((angle_extent < 0) && ((angle_diff - 360) >= angle_extent)));
+          ((angle_extent < 0) && ((angle_diff - 360) >= angle_extent)));
 }
 
 /*
  * PointPolarToCartesian --
- *	Convert a point in polar coordinates (rho, theta)
- *	in a reference system described by angle heading
- *	(angles running clockwise) to a point in cartesian
- *	coordinates (delta_x, delta_y).
+ *      Convert a point in polar coordinates (rho, theta)
+ *      in a reference system described by angle heading
+ *      (angles running clockwise) to a point in cartesian
+ *      coordinates (delta_x, delta_y).
  *
  */
 void
-ZnPointPolarToCartesian(ZnReal	heading,
-			ZnReal	rho,
-			ZnReal	theta,
-			ZnReal	*delta_x,
-			ZnReal	*delta_y)
+ZnPointPolarToCartesian(ZnReal  heading,
+                        ZnReal  rho,
+                        ZnReal  theta,
+                        ZnReal  *delta_x,
+                        ZnReal  *delta_y)
 {
-  ZnReal	to_angle;
+  ZnReal        to_angle;
 
   /* Compute angle in trigonometric system */
   /*  to_angle = ZnDegRad(theta) + heading - M_PI_2;*/
@@ -1311,8 +1304,8 @@ ZnPointPolarToCartesian(ZnReal	heading,
  * Return a vector angle given its projections
  */
 ZnReal
-ZnProjectionToAngle(ZnReal	dx,
-		    ZnReal	dy)
+ZnProjectionToAngle(ZnReal      dx,
+                    ZnReal      dy)
 {
   if (dx == 0) {
     if (dy < 0) {
@@ -1344,16 +1337,16 @@ ZnProjectionToAngle(ZnReal	dx,
  * This arc is origin centered.
  */
 ZnBool
-ZnHorizLineToArc(ZnReal	x1,
-		 ZnReal	x2,
-		 ZnReal	y,
-		 ZnReal	rx,
-		 ZnReal	ry,
-		 int	start_angle,
-		 int	angle_extent)
+ZnHorizLineToArc(ZnReal x1,
+                 ZnReal x2,
+                 ZnReal y,
+                 ZnReal rx,
+                 ZnReal ry,
+                 int    start_angle,
+                 int    angle_extent)
 {
-  ZnReal	tmp, x;
-  ZnPoint	t;
+  ZnReal        tmp, x;
+  ZnPoint       t;
   
   /*
    * Compute the x-coordinate of one possible intersection point
@@ -1392,16 +1385,16 @@ ZnHorizLineToArc(ZnReal	x1,
  * This arc is origin centered.
  */
 ZnBool
-ZnVertLineToArc(ZnReal	x,
-		ZnReal	y1,
-		ZnReal	y2,
-		ZnReal	rx,
-		ZnReal	ry,
-		int	start_angle,
-		int	angle_extent)
+ZnVertLineToArc(ZnReal  x,
+                ZnReal  y1,
+                ZnReal  y2,
+                ZnReal  rx,
+                ZnReal  ry,
+                int     start_angle,
+                int     angle_extent)
 {
-  ZnReal	tmp, y;
-  ZnPoint	t;
+  ZnReal        tmp, y;
+  ZnPoint       t;
   
   /*
    * Compute the y-coordinate of one possible intersection point
@@ -1437,11 +1430,11 @@ ZnVertLineToArc(ZnReal	x,
  * the rectangle.
  */
 ZnDim
-ZnRectangleToPointDist(ZnBBox	*bbox,
-		       ZnPoint	*p)
+ZnRectangleToPointDist(ZnBBox   *bbox,
+                       ZnPoint  *p)
 {
-  ZnDim		new_dist, dist;
-  ZnPoint	p1, p2;
+  ZnDim         new_dist, dist;
+  ZnPoint       p1, p2;
 
   p1.x = bbox->orig.x;
   p1.y = p2.y = bbox->orig.y;
@@ -1486,13 +1479,13 @@ ZnRectangleToPointDist(ZnBBox	*bbox,
  * described by <xl1,yl1>, <xl2,yl2>..
  */
 ZnDim
-ZnLineToPointDist(ZnPoint	*p1,
-		  ZnPoint	*p2,
-		  ZnPoint	*p,
-		  ZnPoint	*closest)
+ZnLineToPointDist(ZnPoint       *p1,
+                  ZnPoint       *p2,
+                  ZnPoint       *p,
+                  ZnPoint       *closest)
 {
-  ZnReal	x, y;
-  ZnReal	x_int, y_int;
+  ZnReal        x, y;
+  ZnReal        x_int, y_int;
 
   /*
    * First compute the closest point on the line. This is done
@@ -1534,7 +1527,7 @@ ZnLineToPointDist(ZnPoint	*p1,
    * on the segment.
    */
   else {
-    ZnReal	a1, a2, b1, b2;
+    ZnReal      a1, a2, b1, b2;
 
     a1 = (p2->y - p1->y) / (p2->x - p1->x);
     b1 = p1->y - a1*p1->x;
@@ -1547,22 +1540,22 @@ ZnLineToPointDist(ZnPoint	*p1,
 
     if (p1->x > p2->x) {
       if (x > p1->x) {
-	x = p1->x;
-	y = p1->y;
+        x = p1->x;
+        y = p1->y;
       }
       else if (x < p2->x) {
-	x = p2->x;
-	y = p2->y;
+        x = p2->x;
+        y = p2->y;
       }
     }
     else {
       if (x > p2->x) {
-	x = p2->x;
-	y = p2->y;
+        x = p2->x;
+        y = p2->y;
       }
       else if (x < p1->x) {
-	x = p1->x;
-	y = p1->y;
+        x = p1->x;
+        y = p1->y;
       }
     }
   }
@@ -1583,16 +1576,16 @@ ZnLineToPointDist(ZnPoint	*p1,
  * inside return values are negative.
  */
 ZnDim
-ZnPolygonToPointDist(ZnPoint		*points,
-		     unsigned int	num_points,
-		     ZnPoint		*p)
+ZnPolygonToPointDist(ZnPoint            *points,
+                     unsigned int       num_points,
+                     ZnPoint            *p)
 {
-  ZnDim		best_distance, dist;
-  int		intersections;
-  int		x_int, y_int;
-  ZnPoint	*first_point;
-  ZnReal	x, y;
-  ZnPoint	p1, p2;
+  ZnDim         best_distance, dist;
+  int           intersections;
+  int           x_int, y_int;
+  ZnPoint       *first_point;
+  ZnReal        x, y;
+  ZnPoint       p1, p2;
 
   /*
    * The algorithm iterates through all the edges of the polygon
@@ -1636,12 +1629,12 @@ ZnPolygonToPointDist(ZnPoint		*points,
     if (p1.x == p2.x) {
       x = p1.x;
       if (p1.y >= p2.y) {
-	y_int = (int) MIN(p1.y, p->y);
-	y_int = (int) MAX(y_int, p2.y);
+        y_int = (int) MIN(p1.y, p->y);
+        y_int = (int) MAX(y_int, p2.y);
       }
       else {
-	y_int = (int) MIN(p2.y, p->y);
-	y_int = (int) MAX(y_int, p1.y);
+        y_int = (int) MIN(p2.y, p->y);
+        y_int = (int) MAX(y_int, p1.y);
       }
       y = y_int;
     }
@@ -1650,25 +1643,25 @@ ZnPolygonToPointDist(ZnPoint		*points,
     else if (p1.y == p2.y) {
       y = p1.y;
       if (p1.x >= p2.x) {
-	x_int = (int) MIN(p1.x, p->x);
-	x_int = (int) MAX(x_int, p2.x);
-	if ((p->y < y) && (p->x < p1.x) && (p->x >= p2.x)) {
-	  intersections++;
-	}
+        x_int = (int) MIN(p1.x, p->x);
+        x_int = (int) MAX(x_int, p2.x);
+        if ((p->y < y) && (p->x < p1.x) && (p->x >= p2.x)) {
+          intersections++;
+        }
       }
       else {
-	x_int = (int) MIN(p2.x, p->x);
-	x_int = (int) MAX(x_int, p1.x);
-	if ((p->y < y) && (p->x < p2.x) && (p->x >= p1.x)) {
-	  intersections++;
-	}
+        x_int = (int) MIN(p2.x, p->x);
+        x_int = (int) MAX(x_int, p1.x);
+        if ((p->y < y) && (p->x < p2.x) && (p->x >= p1.x)) {
+          intersections++;
+        }
       }
       x = x_int;
     }
 
     /* Other */
     else {
-      ZnReal	a1, b1, a2, b2;
+      ZnReal    a1, b1, a2, b2;
 
       a1 = (p2.y - p1.y) / (p2.x - p1.x);
       b1 = p1.y - a1 * p1.x;
@@ -1680,30 +1673,30 @@ ZnPolygonToPointDist(ZnPoint		*points,
       y = a1 * x + b1; 
 
       if (p1.x > p2.x) {
-	if (x > p1.x) {
-	  x = p1.x;
-	  y = p1.y;
-	}
-	else if (x < p2.x) {
-	  x = p2.x;
-	  y = p2.y;
-	}
+        if (x > p1.x) {
+          x = p1.x;
+          y = p1.y;
+        }
+        else if (x < p2.x) {
+          x = p2.x;
+          y = p2.y;
+        }
       }
       else {
-	if (x > p2.x) {
-	  x = p2.x;
-	  y = p2.y;
-	}
-	else if (x < p1.x) {
-	  x = p1.x;
-	  y = p1.y;
-	}
+        if (x > p2.x) {
+          x = p2.x;
+          y = p2.y;
+        }
+        else if (x < p1.x) {
+          x = p1.x;
+          y = p1.y;
+        }
       }
 
-      if (((a1 * p->x + b1) > p->y) &&	/* True if point is lower */
-	  (p->x >= MIN(p1.x, p2.x)) &&
-	  (p->x < MAX(p1.x, p2.x))) {
-	intersections++;
+      if (((a1 * p->x + b1) > p->y) &&  /* True if point is lower */
+          (p->x >= MIN(p1.x, p2.x)) &&
+          (p->x < MAX(p1.x, p2.x))) {
+        intersections++;
       }
     }
 
@@ -1740,32 +1733,32 @@ ZnPolygonToPointDist(ZnPoint		*points,
  * in the process.
  */
 ZnDim
-ZnPolylineToPointDist(ZnPoint		*points,
-		      unsigned int	num_points,
-		      ZnDim		width,
-		      int		cap_style,
-		      int		join_style,		   
-		      ZnPoint		*p)
+ZnPolylineToPointDist(ZnPoint           *points,
+                      unsigned int      num_points,
+                      ZnDim             width,
+                      int               cap_style,
+                      int               join_style,                
+                      ZnPoint           *p)
 {
-  ZnBool	miter2bevel = False;
-  unsigned int	count;
-  ZnPoint	*ptr;
-  ZnPoint	outline[5];
-  ZnDim		dist, best_dist, h_width;
+  ZnBool        miter2bevel = False;
+  unsigned int  count;
+  ZnPoint       *ptr;
+  ZnPoint       outline[5];
+  ZnDim         dist, best_dist, h_width;
 
   best_dist = 1.0e36;
   h_width = width/2.0;
 
   for (count = num_points, ptr = points; count >= 2; count--, ptr++) {
     if (((cap_style == CapRound) && (count == num_points)) ||
-	((join_style == JoinRound) && (count != num_points))) {
+        ((join_style == JoinRound) && (count != num_points))) {
       dist = hypot(ptr->x - p->x, ptr->y - p->y) - h_width;
       if (dist <= 0.0) {
-	best_dist = 0.0;
-	goto done;
+        best_dist = 0.0;
+        goto done;
       }
       else if (dist < best_dist) {
-	best_dist = dist;
+        best_dist = dist;
       }
     }
     /*
@@ -1785,39 +1778,39 @@ ZnPolylineToPointDist(ZnPoint		*points,
        * that fills the joint.
        */
       if ((join_style == JoinBevel) || miter2bevel) {
-	outline[4] = outline[0];
-	dist = ZnPolygonToPointDist(outline, 5, p);
-	if (dist <= 0.0) {
-	  best_dist = 0.0;
-	  goto done;
-	}
-	else if (dist < best_dist) {
-	  best_dist = dist;
-	}
-	miter2bevel = False;
+        outline[4] = outline[0];
+        dist = ZnPolygonToPointDist(outline, 5, p);
+        if (dist <= 0.0) {
+          best_dist = 0.0;
+          goto done;
+        }
+        else if (dist < best_dist) {
+          best_dist = dist;
+        }
+        miter2bevel = False;
       }
     }
     if (count == 2) {
       ZnGetButtPoints(ptr, &ptr[1], width, cap_style==CapProjecting,
-		      &outline[2], &outline[3]);
+                      &outline[2], &outline[3]);
     }
     else if (join_style == JoinMiter) {
       if (ZnGetMiterPoints(ptr, &ptr[1], &ptr[2], width,
-			 &outline[2], &outline[3]) == False) {
-	miter2bevel = True;
-	ZnGetButtPoints(ptr, &ptr[1], width, 0, &outline[2], &outline[3]);
+                         &outline[2], &outline[3]) == False) {
+        miter2bevel = True;
+        ZnGetButtPoints(ptr, &ptr[1], width, 0, &outline[2], &outline[3]);
       }
       /*printf("2=%g+%g, 3=%g+%g\n",
-	outline[2].x, outline[2].y, outline[3].x, outline[3].y);*/
+        outline[2].x, outline[2].y, outline[3].x, outline[3].y);*/
     }
     else {
       ZnGetButtPoints(ptr, &ptr[1], width, 0, &outline[2], &outline[3]);
     }
     outline[4] = outline[0];
     /*printf("0=%g+%g, 1=%g+%g, 2=%g+%g, 3=%g+%g, 4=%g+%g\n",
-	   outline[0].x, outline[0].y, outline[1].x, outline[1].y,
-	   outline[2].x, outline[2].y, outline[3].x, outline[3].y,
-	   outline[4].x, outline[4].y);*/
+           outline[0].x, outline[0].y, outline[1].x, outline[1].y,
+           outline[2].x, outline[2].y, outline[3].x, outline[3].y,
+           outline[4].x, outline[4].y);*/
     dist = ZnPolygonToPointDist(outline, 5, p);
     if (dist <= 0.0) {
       best_dist = 0.0;
@@ -1855,17 +1848,17 @@ ZnPolylineToPointDist(ZnPoint		*points,
  * if the point is inside.
  */
 ZnDim
-ZnOvalToPointDist(ZnPoint	*center,
-		  ZnDim		width,
-		  ZnDim		height,
-		  ZnDim		line_width,
-		  ZnPoint	*p)
+ZnOvalToPointDist(ZnPoint       *center,
+                  ZnDim         width,
+                  ZnDim         height,
+                  ZnDim         line_width,
+                  ZnPoint       *p)
 {
   ZnReal x_delta, y_delta;
-  /*  ZnReal	x_diameter, y_diameter;*/
-  ZnDim	scaled_distance;
-  ZnDim	distance_to_outline;
-  ZnDim	distance_to_center;
+  /*  ZnReal    x_diameter, y_diameter;*/
+  ZnDim scaled_distance;
+  ZnDim distance_to_outline;
+  ZnDim distance_to_center;
 
   /*
    * Compute the distance from the point given to the center
@@ -1877,7 +1870,7 @@ ZnOvalToPointDist(ZnPoint	*center,
   y_delta = p->y - center->y;
   distance_to_center = hypot(x_delta, y_delta);
   scaled_distance = hypot(x_delta / ((width + line_width) / 2.0),
-			  y_delta / ((height + line_width) / 2.0));
+                          y_delta / ((height + line_width) / 2.0));
 
   /*
    * If the scaled distance is greater than 1.0 the point is outside
@@ -1918,10 +1911,10 @@ ZnOvalToPointDist(ZnPoint	*center,
 
 static int bezier_basis[][4] =
 {
-    {	-1,	3,     -3,	1},
-    {	 3,    -6,	3,	0},
-    {	-3,	3,	0,	0},
-    {	 1,	0,	0,	0}
+    {   -1,     3,     -3,      1},
+    {    3,    -6,      3,      0},
+    {   -3,     3,      0,      0},
+    {    1,     0,      0,      0}
 };
 
 /*
@@ -1929,19 +1922,19 @@ static int bezier_basis[][4] =
  *
  * Arc2Param --
  *
- *	Given a Bezier curve describing an arc and an angle return the parameter
- *	value for the intersection point between the arc and the ray at angle.
+ *      Given a Bezier curve describing an arc and an angle return the parameter
+ *      value for the intersection point between the arc and the ray at angle.
  *
  **********************************************************************************
  */
 #define EVAL(coeff, t) (((coeff[0]*t + coeff[1])*t + coeff[2]) * t + coeff[3])
 static ZnReal
-Arc2Param(ZnPoint	*controls,
-	  ZnReal	angle)
+Arc2Param(ZnPoint       *controls,
+          ZnReal        angle)
 {
-  ZnReal	coeff_x[4], coeff_y[4];
-  ZnReal	min_angle, min_t, max_angle, max_t, cur_angle, cur_t;
-  int		i, j, depth = 0;
+  ZnReal        coeff_x[4], coeff_y[4];
+  ZnReal        min_angle, min_t, max_angle, max_t, cur_angle, cur_t;
+  int           i, j, depth = 0;
 
   /* assume angle >= 0 */
   while (angle > M_PI) {
@@ -1995,19 +1988,19 @@ Arc2Param(ZnPoint	*controls,
  *
  * BezierSubdivide --
  *
- *	Subdivide a Bezier curve given by controls at parameter t. Return
- *	in controls, the first or the last part depending on boolean first.
+ *      Subdivide a Bezier curve given by controls at parameter t. Return
+ *      in controls, the first or the last part depending on boolean first.
  *
  **********************************************************************************
  */
 static void
-BezierSubdivide(ZnPoint	*controls,
-		ZnReal	t,
-		ZnBool	first)
+BezierSubdivide(ZnPoint *controls,
+                ZnReal  t,
+                ZnBool  first)
 {
-  ZnReal	s = 1.0 - t;
-  ZnPoint	r[7];
-  ZnPoint	a;
+  ZnReal        s = 1.0 - t;
+  ZnPoint       r[7];
+  ZnPoint       a;
 
   r[0] = controls[0];
   r[6] = controls[3];
@@ -2037,22 +2030,22 @@ BezierSubdivide(ZnPoint	*controls,
  **********************************************************************************
  *
  * ZnGetBezierPoints --
- *	Use recursive subdivision to approximate the curve. The subdivision stops
- *	when the error is under eps.
- *	This algorithm is adaptive, meaning that it computes the minimum number
- *	of segments needed to render each curve part.
+ *      Use recursive subdivision to approximate the curve. The subdivision stops
+ *      when the error is under eps.
+ *      This algorithm is adaptive, meaning that it computes the minimum number
+ *      of segments needed to render each curve part.
  *
  **********************************************************************************
  */
 void
-ZnGetBezierPoints(ZnPoint	*p1,
-		  ZnPoint	*c1,
-		  ZnPoint	*c2,
-		  ZnPoint	*p2,
-		  ZnList	to_points,
-		  ZnReal	eps)
+ZnGetBezierPoints(ZnPoint       *p1,
+                  ZnPoint       *c1,
+                  ZnPoint       *c2,
+                  ZnPoint       *p2,
+                  ZnList        to_points,
+                  ZnReal        eps)
 {
-  ZnReal	dist;
+  ZnReal        dist;
 
   dist = ZnLineToPointDist(p1, p2, c1, NULL);
   if ((dist < eps) && ((c1->x != c2->x) || (c1->y != c2->y))) {
@@ -2060,7 +2053,7 @@ ZnGetBezierPoints(ZnPoint	*p1,
   }
 
   if (dist > eps) {
-    ZnPoint	mid_segm, new_c1, new_c2;
+    ZnPoint     mid_segm, new_c1, new_c2;
     /*
      * Subdivide the curve at t = 0.5
      * and compute each new curve.
@@ -2093,22 +2086,22 @@ ZnGetBezierPoints(ZnPoint	*p1,
  **********************************************************************************
  *
  * ZnGetBezierPath --
- *	Compute in to_points a new set of points describing a Bezier path based
- *	on the control points given in from_points.
- *	If more than four points are given, the algorithm iterate over the
- *	set using the last point of a segment as the first point of the next.
- *	If 3 points are left, they are interpreted as a Bezier segment with
- *	coincident internal control points. If 2 points are left a straight
- *	is emitted.
+ *      Compute in to_points a new set of points describing a Bezier path based
+ *      on the control points given in from_points.
+ *      If more than four points are given, the algorithm iterate over the
+ *      set using the last point of a segment as the first point of the next.
+ *      If 3 points are left, they are interpreted as a Bezier segment with
+ *      coincident internal control points. If 2 points are left a straight
+ *      is emitted.
  *
  **********************************************************************************
  */
 void
-ZnGetBezierPath(ZnList	from_points,
-		ZnList	to_points)
+ZnGetBezierPath(ZnList  from_points,
+                ZnList  to_points)
 {
-  ZnPoint	*fp;
-  int		num_fp, i;
+  ZnPoint       *fp;
+  int           num_fp, i;
   
   fp = ZnListArray(from_points);
   num_fp = ZnListSize(from_points);
@@ -2123,11 +2116,11 @@ ZnGetBezierPath(ZnList	from_points,
     if (i < (num_fp-3)) {
       ZnGetBezierPoints(fp, fp+1, fp+2, fp+3, to_points, 1.0);
       if (i < (num_fp-4)) {
-	fp += 3;
-	i += 3;
+        fp += 3;
+        i += 3;
       }
       else {
-	break;
+        break;
       }
     }
     else if (i == (num_fp-3)) {
@@ -2146,24 +2139,24 @@ ZnGetBezierPath(ZnList	from_points,
  **********************************************************************************
  *
  * ZnGetCirclePoints --
- *	Return a pointer to an array of points describing a
- *	circle arc of radius 1.0. The arc is described by start_angle,
- *	end_angle and the type: 0 for arc, 1 for chord, 2 for pie slice,
- *	3 for a full circle (in which case start_angle and end_angle are
- *	not used.
- *	The number of points is returned in num_points. If type is not 3,
- *	point_list must not be NULL. If not NULL, it is filled with the
- *	computed points.
+ *      Return a pointer to an array of points describing a
+ *      circle arc of radius 1.0. The arc is described by start_angle,
+ *      end_angle and the type: 0 for arc, 1 for chord, 2 for pie slice,
+ *      3 for a full circle (in which case start_angle and end_angle are
+ *      not used.
+ *      The number of points is returned in num_points. If type is not 3,
+ *      point_list must not be NULL. If not NULL, it is filled with the
+ *      computed points.
  *
  **********************************************************************************
  */
 ZnPoint *
-ZnGetCirclePoints(int		type,
-		  int		quality,
-		  ZnReal	start_angle,
-		  ZnReal	angle_extent,
-		  unsigned int	*num_points,
-		  ZnList	point_list)
+ZnGetCirclePoints(int           type,
+                  int           quality,
+                  ZnReal        start_angle,
+                  ZnReal        angle_extent,
+                  unsigned int  *num_points,
+                  ZnList        point_list)
 {
   static ZnPoint genarc_finest[] = { /* 128 */
     {1.0, 0.0},
@@ -2442,11 +2435,11 @@ ZnGetCirclePoints(int		type,
     {0.809017043478, -0.587785184709},
     {1.0, 0.0}
   };
-  unsigned int	num_p, i;
-  ZnPoint	*p, *p_from;
-  ZnPoint	center_p = { 0.0, 0.0 };
-  ZnPoint	start_p, wp;
-  ZnReal	iangle, end_angle=0;
+  unsigned int  num_p, i;
+  ZnPoint       *p, *p_from;
+  ZnPoint       center_p = { 0.0, 0.0 };
+  ZnPoint       start_p, wp;
+  ZnReal        iangle, end_angle=0;
 
   switch (quality) {
   case ZN_CIRCLE_COARSE:
@@ -2505,7 +2498,7 @@ ZnGetCirclePoints(int		type,
       ZnListAssertSize(point_list, num_p);
       p = ZnListArray(point_list);
       for (i = 0; i < num_p; i++, p++, p_from++) {
-	*p = *p_from;
+        *p = *p_from;
       }
     }
     else {
@@ -2516,30 +2509,30 @@ ZnGetCirclePoints(int		type,
       ZnListAdd(point_list, &start_p, ZnListTail);
       i = (unsigned int) (start_angle / iangle);
       if ((i * iangle) < start_angle) {
-	i++;
+        i++;
       }
       while (1) {
-	if (start_angle + iangle <= end_angle) {
-	  if (i == num_p-1) {
-	    i = 0;
-	  }
-	  ZnListAdd(point_list, &p_from[i], ZnListTail);
-	  start_angle += iangle;
-	  i++;
-	}
-	else {
-	  wp.x = cos(end_angle);
-	  wp.y = sin(end_angle);
-	  ZnListAdd(point_list, &wp, ZnListTail);
-	  break;
-	}
+        if (start_angle + iangle <= end_angle) {
+          if (i == num_p-1) {
+            i = 0;
+          }
+          ZnListAdd(point_list, &p_from[i], ZnListTail);
+          start_angle += iangle;
+          i++;
+        }
+        else {
+          wp.x = cos(end_angle);
+          wp.y = sin(end_angle);
+          ZnListAdd(point_list, &wp, ZnListTail);
+          break;
+        }
       }
       if (type == 1) {
-	ZnListAdd(point_list, &start_p, ZnListTail);
+        ZnListAdd(point_list, &start_p, ZnListTail);
       }
       else if (type == 2) {
-	ZnListAdd(point_list, &center_p, ZnListTail);
-	ZnListAdd(point_list, &start_p, ZnListTail);
+        ZnListAdd(point_list, &center_p, ZnListTail);
+        ZnListAdd(point_list, &start_p, ZnListTail);
       }
     }
     p = ZnListArray(point_list);
@@ -2554,12 +2547,12 @@ ZnGetCirclePoints(int		type,
  **********************************************************************************
  *
  * ZnGetArcPath --
- *	Compute in to_points a set of Bezier control points describing an arc
- *	path given the start angle, the stop angle and the type: 0 for arc,
- *	1 for chord, 2 for pie slice.
- *	To obtain the actual polygonal shape, the client should use GetBezierPath
- *	on the returned controls (after applying transform). The returned arc
- *	is circular and centered on 0,0.
+ *      Compute in to_points a set of Bezier control points describing an arc
+ *      path given the start angle, the stop angle and the type: 0 for arc,
+ *      1 for chord, 2 for pie slice.
+ *      To obtain the actual polygonal shape, the client should use GetBezierPath
+ *      on the returned controls (after applying transform). The returned arc
+ *      is circular and centered on 0,0.
  *
  **********************************************************************************
  */
@@ -2568,14 +2561,14 @@ static ZnReal arc_nodes_y[4] = { 0.0, 1.0,  0.0, -1.0 };
 static ZnReal arc_controls_x[8] = { 1.0, 0.55197, -0.55197, -1.0, -1.0, -0.55197, 0.55197, 1.0 };
 static ZnReal arc_controls_y[8] = { 0.55197, 1.0, 1.0, 0.55197, -0.55197, -1.0, -1.0, -0.55197 };
 void
-ZnGetArcPath(ZnReal	start_angle,
-	     ZnReal	end_angle,
-	     int	type,
-	     ZnList	to_points)
+ZnGetArcPath(ZnReal     start_angle,
+             ZnReal     end_angle,
+             int        type,
+             ZnList     to_points)
 {
-  int		start_quad, end_quad, quadrant;
-  ZnPoint	center_p = { 0.0, 0.0 };
-  ZnPoint	start_p = center_p;
+  int           start_quad, end_quad, quadrant;
+  ZnPoint       center_p = { 0.0, 0.0 };
+  ZnPoint       start_p = center_p;
   
   /*
    * make sure the output vector is empty.
@@ -2620,7 +2613,7 @@ ZnGetArcPath(ZnReal	start_angle,
     controls[3].x = arc_nodes_x[(quadrant + 1) % 4];
     controls[3].y = arc_nodes_y[(quadrant + 1) % 4];
     
-    if (quadrant == start_quad)	{
+    if (quadrant == start_quad) {
       t = Arc2Param(controls, start_angle);
       BezierSubdivide(controls, t, False);
       /*
@@ -2633,7 +2626,7 @@ ZnGetArcPath(ZnReal	start_angle,
     if (quadrant == end_quad) {
       t = Arc2Param(controls, end_angle);
       if (!t) {
-	break;
+        break;
       }
       BezierSubdivide(controls, t, True);
     }
@@ -2662,19 +2655,19 @@ ZnGetArcPath(ZnReal	start_angle,
  **********************************************************************************
  *
  * SmoothPathWithBezier --
- *	Compute in to_points a new set of points describing a smoothed path based
- *	on the path given in from_points. The algorithm use Bezier cubic curves.
+ *      Compute in to_points a new set of points describing a smoothed path based
+ *      on the path given in from_points. The algorithm use Bezier cubic curves.
  *
  **********************************************************************************
  */
 void
-ZnSmoothPathWithBezier(ZnPoint		*fp,
-		       unsigned int	num_fp,
-		       ZnList		to_points)
+ZnSmoothPathWithBezier(ZnPoint          *fp,
+                       unsigned int     num_fp,
+                       ZnList           to_points)
 {
-  ZnBool	closed;
-  ZnPoint	s[4];
-  unsigned int	i;
+  ZnBool        closed;
+  ZnPoint       s[4];
+  unsigned int  i;
 
   /*
    * make sure the output vector is empty
@@ -2743,7 +2736,7 @@ ZnSmoothPathWithBezier(ZnPoint		*fp,
      * Bezier curve.
      */
     if (((fp[0].x == fp[1].x) && (fp[0].y == fp[1].y)) ||
-	((fp[1].x == fp[2].x) && (fp[1].y == fp[2].y))) {
+        ((fp[1].x == fp[2].x) && (fp[1].y == fp[2].y))) {
       ZnListAdd(to_points, &s[3], ZnListTail);
     }
     else {
@@ -2757,17 +2750,17 @@ ZnSmoothPathWithBezier(ZnPoint		*fp,
  **********************************************************************************
  *
  * FitBezier --
- *  	Fit a Bezier curve to a (sub)set of digitized points.
+ *      Fit a Bezier curve to a (sub)set of digitized points.
  *
- *	From: An Algorithm for Automatically Fitting Digitized Curves
- *	      by Philip J. Schneider in "Graphics Gems", Academic Press, 1990
+ *      From: An Algorithm for Automatically Fitting Digitized Curves
+ *            by Philip J. Schneider in "Graphics Gems", Academic Press, 1990
  *
  **********************************************************************************
  */
 
 static ZnReal
-V2DistanceBetween2Points(ZnPoint	*a,
-			 ZnPoint	*b)
+V2DistanceBetween2Points(ZnPoint        *a,
+                         ZnPoint        *b)
 {
   ZnReal dx = a->x - b->x;
   ZnReal dy = a->y - b->y;
@@ -2775,20 +2768,20 @@ V2DistanceBetween2Points(ZnPoint	*a,
 }
 
 static ZnReal
-V2SquaredLength(ZnPoint	*a)
-{	
+V2SquaredLength(ZnPoint *a)
+{       
   return (a->x * a->x)+(a->y * a->y);
 }
 
 static ZnReal
-V2Length(ZnPoint	*a)
+V2Length(ZnPoint        *a)
 {
   return sqrt(V2SquaredLength(a));
 }
-	
+        
 static ZnPoint *
-V2Scale(ZnPoint	*v,
-	ZnReal	newlen)
+V2Scale(ZnPoint *v,
+        ZnReal  newlen)
 {
   ZnReal len = V2Length(v);
   if (len != 0.0) {
@@ -2816,25 +2809,25 @@ V2Normalize(ZnPoint *v)
   return v;
 }
 static ZnPoint *
-V2Add(ZnPoint	*a,
-      ZnPoint	*b,
-      ZnPoint	*c)
+V2Add(ZnPoint   *a,
+      ZnPoint   *b,
+      ZnPoint   *c)
 {
   c->x = a->x + b->x;
   c->y = a->y + b->y;
   return c;
 }
-	
+        
 static ZnReal
-V2Dot(ZnPoint	*a,
-      ZnPoint	*b) 
+V2Dot(ZnPoint   *a,
+      ZnPoint   *b) 
 {
   return (a->x*b->x) + (a->y*b->y);
 }
 
 static ZnPoint
-V2AddII(ZnPoint	a,
-	ZnPoint	b)
+V2AddII(ZnPoint a,
+        ZnPoint b)
 {
   ZnPoint c;
   c.x = a.x + b.x;
@@ -2843,8 +2836,8 @@ V2AddII(ZnPoint	a,
 }
 
 static ZnPoint
-V2ScaleIII(ZnPoint	v,
-	   ZnReal	s)
+V2ScaleIII(ZnPoint      v,
+           ZnReal       s)
 {
   ZnPoint result;
   result.x = v.x * s;
@@ -2853,8 +2846,8 @@ V2ScaleIII(ZnPoint	v,
 }
 
 static ZnPoint
-V2SubII(ZnPoint	a,
-	ZnPoint	b)
+V2SubII(ZnPoint a,
+        ZnPoint b)
 {
   ZnPoint c;
   c.x = a.x - b.x;
@@ -2866,44 +2859,44 @@ V2SubII(ZnPoint	a,
  * B0, B1, B2, B3, Bezier multipliers.
  */
 static ZnReal
-B0(ZnReal	u)
+B0(ZnReal       u)
 {
   ZnReal tmp = 1.0 - u;
   return tmp * tmp * tmp;
 }
 
 static ZnReal
-B1(ZnReal	u)
+B1(ZnReal       u)
 {
   ZnReal tmp = 1.0 - u;
   return 3 * u * (tmp * tmp);
 }
 
 static ZnReal
-B2(ZnReal	u)
+B2(ZnReal       u)
 {
   ZnReal tmp = 1.0 - u;
   return 3 * u * u * tmp;
 }
 
 static ZnReal
-B3(ZnReal	u)
+B3(ZnReal       u)
 {
   return u * u * u;
 }
 
 /*
  * ChordLengthParameterize  --
- *	Assign parameter values to digitized points 
- *	using relative distances between points.
+ *      Assign parameter values to digitized points 
+ *      using relative distances between points.
  */
 static ZnReal *
-ChordLengthParameterize(ZnPoint		*d,
-			unsigned int	first,
-			unsigned int	last)
+ChordLengthParameterize(ZnPoint         *d,
+                        unsigned int    first,
+                        unsigned int    last)
 {
-  unsigned int	i;
-  ZnReal	*u;
+  unsigned int  i;
+  ZnReal        *u;
 
   u = (ZnReal *) ZnMalloc((unsigned) (last-first+1) * sizeof(ZnReal));
   
@@ -2921,26 +2914,26 @@ ChordLengthParameterize(ZnPoint		*d,
 
 /*
  * Bezier --
- *	Evaluate a Bezier curve at a particular parameter value
+ *      Evaluate a Bezier curve at a particular parameter value
  * 
  */
 static ZnPoint
-BezierII(int		degree,
-	 ZnPoint	*V,
-	 ZnReal		t)
+BezierII(int            degree,
+         ZnPoint        *V,
+         ZnReal         t)
 {
-  int		i, j;		
-  ZnPoint 	Q;	        /* Point on curve at parameter t	*/
-  ZnPoint 	*Vtemp;		/* Local copy of control points		*/
+  int           i, j;           
+  ZnPoint       Q;              /* Point on curve at parameter t        */
+  ZnPoint       *Vtemp;         /* Local copy of control points         */
   
-  /* Copy array	*/
+  /* Copy array */
   Vtemp = (ZnPoint *) ZnMalloc((unsigned)((degree+1) * sizeof (ZnPoint)));
   for (i = 0; i <= degree; i++) {
     Vtemp[i] = V[i];
   }
   
   /* Triangle computation */
-  for (i = 1; i <= degree; i++) {	
+  for (i = 1; i <= degree; i++) {       
     for (j = 0; j <= degree-i; j++) {
       Vtemp[j].x = (1.0 - t) * Vtemp[j].x + t * Vtemp[j+1].x;
       Vtemp[j].y = (1.0 - t) * Vtemp[j].y + t * Vtemp[j+1].y;
@@ -2954,23 +2947,23 @@ BezierII(int		degree,
 
 /*
  * NewtonRaphsonRootFind --
- *	Use Newton-Raphson iteration to find better root.
+ *      Use Newton-Raphson iteration to find better root.
  */
 static ZnReal
-NewtonRaphsonRootFind(ZnPoint	*Q,
-		      ZnPoint	P,
-		      ZnReal	u)
+NewtonRaphsonRootFind(ZnPoint   *Q,
+                      ZnPoint   P,
+                      ZnReal    u)
 {
-  ZnReal 	numerator, denominator;
-  ZnPoint 	Q1[3], Q2[2];		/*  Q' and Q''			*/
-  ZnPoint	Q_u, Q1_u, Q2_u;	/*u evaluated at Q, Q', & Q''	*/
-  ZnReal 	uPrime;			/*  Improved u			*/
-  unsigned int	i;
+  ZnReal        numerator, denominator;
+  ZnPoint       Q1[3], Q2[2];           /*  Q' and Q''                  */
+  ZnPoint       Q_u, Q1_u, Q2_u;        /*u evaluated at Q, Q', & Q''   */
+  ZnReal        uPrime;                 /*  Improved u                  */
+  unsigned int  i;
     
-  /* Compute Q(u)	*/
+  /* Compute Q(u)       */
   Q_u = BezierII(3, Q, u);
     
-  /* Generate control vertices for Q'	*/
+  /* Generate control vertices for Q'   */
   for (i = 0; i <= 2; i++) {
     Q1[i].x = (Q[i+1].x - Q[i].x) * 3.0;
     Q1[i].y = (Q[i+1].y - Q[i].y) * 3.0;
@@ -2982,7 +2975,7 @@ NewtonRaphsonRootFind(ZnPoint	*Q,
     Q2[i].y = (Q1[i+1].y - Q1[i].y) * 2.0;
   }
   
-  /* Compute Q'(u) and Q''(u)	*/
+  /* Compute Q'(u) and Q''(u)   */
   Q1_u = BezierII(2, Q1, u);
   Q2_u = BezierII(1, Q2, u);
     
@@ -2998,19 +2991,19 @@ NewtonRaphsonRootFind(ZnPoint	*Q,
 
 /*
  * Reparameterize --
- *	Given set of points and their parameterization, try to find
- *	a better parameterization.
+ *      Given set of points and their parameterization, try to find
+ *      a better parameterization.
  */
 static ZnReal *
-Reparameterize(ZnPoint		*d,
-	       unsigned int	first,
-	       unsigned int	last, 
-	       ZnReal		*u,
-	       ZnPoint		*bezCurve)
+Reparameterize(ZnPoint          *d,
+               unsigned int     first,
+               unsigned int     last, 
+               ZnReal           *u,
+               ZnPoint          *bezCurve)
 {
-  unsigned int	nPts = last-first+1;	
-  unsigned int	i;
-  ZnReal	*uPrime;	/*  New parameter values	*/
+  unsigned int  nPts = last-first+1;    
+  unsigned int  i;
+  ZnReal        *uPrime;        /*  New parameter values        */
 
   uPrime = (ZnReal *) ZnMalloc(nPts * sizeof(ZnReal));
   for (i = first; i <= last; i++) {
@@ -3021,36 +3014,36 @@ Reparameterize(ZnPoint		*d,
 
 /*
  * GenerateBezier --
- *	Use least-squares method to find Bezier control
- *	points for region.
+ *      Use least-squares method to find Bezier control
+ *      points for region.
  */
 static void
-GenerateBezier(ZnPoint		*d,
-	       unsigned int	first,
-	       unsigned int	last, 
-	       ZnReal		*uPrime, 
-	       ZnPoint		tHat1,
-	       ZnPoint		tHat2,
-	       ZnPoint		*bez_curve)
+GenerateBezier(ZnPoint          *d,
+               unsigned int     first,
+               unsigned int     last, 
+               ZnReal           *uPrime, 
+               ZnPoint          tHat1,
+               ZnPoint          tHat2,
+               ZnPoint          *bez_curve)
 {
-  unsigned int	i;
-  ZnPoint 	*A0, *A1;	/* Precomputed rhs for eqn	*/
-  unsigned int	num_points;	/* Number of pts in sub-curve */
-  ZnReal 	C[2][2];	/* Matrix C		*/
-  ZnReal 	X[2];		/* Matrix X			*/
-  ZnReal 	det_C0_C1;	/* Determinants of matrices	*/
-  ZnReal	det_C0_X, det_X_C1;
-  ZnReal 	alpha_l;	/* Alpha values, left and right	*/
-  ZnReal	alpha_r;
-  ZnPoint 	tmp;		/* Utility variable		*/
+  unsigned int  i;
+  ZnPoint       *A0, *A1;       /* Precomputed rhs for eqn      */
+  unsigned int  num_points;     /* Number of pts in sub-curve */
+  ZnReal        C[2][2];        /* Matrix C             */
+  ZnReal        X[2];           /* Matrix X                     */
+  ZnReal        det_C0_C1;      /* Determinants of matrices     */
+  ZnReal        det_C0_X, det_X_C1;
+  ZnReal        alpha_l;        /* Alpha values, left and right */
+  ZnReal        alpha_r;
+  ZnPoint       tmp;            /* Utility variable             */
   
   num_points = last - first + 1;
   A0 = (ZnPoint *) ZnMalloc(num_points * sizeof(ZnPoint));
   A1 = (ZnPoint *) ZnMalloc(num_points * sizeof(ZnPoint));
   
-  /* Compute the A's	*/
+  /* Compute the A's    */
   for (i = 0; i < num_points; i++) {
-    ZnPoint	v1, v2;
+    ZnPoint     v1, v2;
     v1 = tHat1;
     v2 = tHat2;
     V2Scale(&v1, B1(uPrime[i]));
@@ -3059,7 +3052,7 @@ GenerateBezier(ZnPoint		*d,
     A1[i] = v2;
   }
 
-  /* Create the C and X matrices	*/
+  /* Create the C and X matrices        */
   C[0][0] = 0.0;
   C[0][1] = 0.0;
   C[1][0] = 0.0;
@@ -3074,21 +3067,21 @@ GenerateBezier(ZnPoint		*d,
     C[1][1] += V2Dot(&A1[i], &A1[i]);
 
     tmp = V2SubII(d[first + i],
-		  V2AddII(V2ScaleIII(d[first], B0(uPrime[i])),
-			  V2AddII(V2ScaleIII(d[first], B1(uPrime[i])),
-				  V2AddII(V2ScaleIII(d[last], B2(uPrime[i])),
-					  V2ScaleIII(d[last], B3(uPrime[i]))))));
+                  V2AddII(V2ScaleIII(d[first], B0(uPrime[i])),
+                          V2AddII(V2ScaleIII(d[first], B1(uPrime[i])),
+                                  V2AddII(V2ScaleIII(d[last], B2(uPrime[i])),
+                                          V2ScaleIII(d[last], B3(uPrime[i]))))));
 
     X[0] += V2Dot(&A0[i], &tmp);
     X[1] += V2Dot(&A1[i], &tmp);
   }
 
-  /* Compute the determinants of C and X	*/
+  /* Compute the determinants of C and X        */
   det_C0_C1 = C[0][0] * C[1][1] - C[1][0] * C[0][1];
   det_C0_X  = C[0][0] * X[1]    - C[0][1] * X[0];
   det_X_C1  = X[0]    * C[1][1] - X[1]    * C[0][1];
 
-  /* Finally, derive alpha values	*/
+  /* Finally, derive alpha values       */
   if (det_C0_C1 == 0.0) {
     det_C0_C1 = (C[0][0] * C[1][1]) * 10e-12;
   }
@@ -3120,22 +3113,22 @@ GenerateBezier(ZnPoint		*d,
 
 /*
  * ComputeMaxError --
- *	Find the maximum squared distance of digitized points
- *	to fitted curve.
+ *      Find the maximum squared distance of digitized points
+ *      to fitted curve.
 */
 static ZnReal
-ComputeMaxError(ZnPoint		*d,
-		unsigned int	first,
-		unsigned int	last, 
-		ZnPoint		*bez_curve,
-		ZnReal		*u, 
-		unsigned int	*splitPoint)
+ComputeMaxError(ZnPoint         *d,
+                unsigned int    first,
+                unsigned int    last, 
+                ZnPoint         *bez_curve,
+                ZnReal          *u, 
+                unsigned int    *splitPoint)
 {
-  unsigned int	i;
-  ZnReal	maxDist;	/*  Maximum error		*/
-  ZnReal	dist;		/*  Current error		*/
-  ZnPoint	P;		/*  Point on curve		*/
-  ZnPoint	v;		/*  Vector from point to curve	*/
+  unsigned int  i;
+  ZnReal        maxDist;        /*  Maximum error               */
+  ZnReal        dist;           /*  Current error               */
+  ZnPoint       P;              /*  Point on curve              */
+  ZnPoint       v;              /*  Vector from point to curve  */
   
   *splitPoint = (last - first + 1)/2;
   maxDist = 0.0;
@@ -3155,12 +3148,12 @@ ComputeMaxError(ZnPoint		*d,
  * ComputeLeftTangent,
  * ComputeRightTangent,
  * ComputeCenterTangent --
- *	Approximate unit tangents at endpoints and
- *	center of digitized curve.
+ *      Approximate unit tangents at endpoints and
+ *      center of digitized curve.
  */
 static ZnPoint
-ComputeLeftTangent(ZnPoint	*d,
-		   unsigned int	end)
+ComputeLeftTangent(ZnPoint      *d,
+                   unsigned int end)
 {
   ZnPoint tHat1;
   tHat1 = V2SubII(d[end+1], d[end]);
@@ -3169,8 +3162,8 @@ ComputeLeftTangent(ZnPoint	*d,
 }
 
 static ZnPoint
-ComputeRightTangent(ZnPoint	 *d,
-		    unsigned int end)
+ComputeRightTangent(ZnPoint      *d,
+                    unsigned int end)
 {
   ZnPoint tHat2;
   tHat2 = V2SubII(d[end-1], d[end]);
@@ -3180,10 +3173,10 @@ ComputeRightTangent(ZnPoint	 *d,
 
 
 static ZnPoint
-ComputeCenterTangent(ZnPoint	  *d,
-		     unsigned int center)
+ComputeCenterTangent(ZnPoint      *d,
+                     unsigned int center)
 {
-  ZnPoint	V1, V2, tHatCenter;
+  ZnPoint       V1, V2, tHatCenter;
 
   V1 = V2SubII(d[center-1], d[center]);
   V2 = V2SubII(d[center], d[center+1]);
@@ -3194,24 +3187,24 @@ ComputeCenterTangent(ZnPoint	  *d,
 }
 
 static void
-FitCubic(ZnPoint	*d,
-	 unsigned int	first,
-	 unsigned int	last,
-	 ZnPoint	tHat1, 
-	 ZnPoint	tHat2,
-	 ZnReal		error,
-	 ZnList		controls)
+FitCubic(ZnPoint        *d,
+         unsigned int   first,
+         unsigned int   last,
+         ZnPoint        tHat1, 
+         ZnPoint        tHat2,
+         ZnReal         error,
+         ZnList         controls)
 {
-  ZnPoint	*bez_curve;	/* Control points of fitted Bezier curve*/
-  ZnReal	*u;		/* Parameter values for point  */
-  ZnReal	*uPrime;	/* Improved parameter values */
-  ZnReal	max_err;	/* Maximum fitting error	 */
-  unsigned int	splitPoint;	/* Point to split point set at	 */
-  unsigned int	num_points;	/* Number of points in subset  */
-  ZnReal	iteration_err;	/* Error below which you try iterating  */
-  unsigned int	max_iter = 4;	/* Max times to try iterating  */
-  ZnPoint	tHatCenter;   	/* Unit tangent vector at splitPoint */
-  unsigned int	i;		
+  ZnPoint       *bez_curve;     /* Control points of fitted Bezier curve*/
+  ZnReal        *u;             /* Parameter values for point  */
+  ZnReal        *uPrime;        /* Improved parameter values */
+  ZnReal        max_err;        /* Maximum fitting error         */
+  unsigned int  splitPoint;     /* Point to split point set at   */
+  unsigned int  num_points;     /* Number of points in subset  */
+  ZnReal        iteration_err;  /* Error below which you try iterating  */
+  unsigned int  max_iter = 4;   /* Max times to try iterating  */
+  ZnPoint       tHatCenter;     /* Unit tangent vector at splitPoint */
+  unsigned int  i;              
 
   iteration_err = error * error;
   num_points = last - first + 1;
@@ -3249,10 +3242,10 @@ FitCubic(ZnPoint	*d,
       uPrime = Reparameterize(d, first, last, u, bez_curve);
       GenerateBezier(d, first, last, uPrime, tHat1, tHat2, bez_curve);
       max_err = ComputeMaxError(d, first, last,
-				bez_curve, uPrime, &splitPoint);
+                                bez_curve, uPrime, &splitPoint);
       if (max_err < error) {
-	ZnFree(u);
-	return;
+        ZnFree(u);
+        return;
       }
       ZnFree(u);
       u = uPrime;
@@ -3269,12 +3262,12 @@ FitCubic(ZnPoint	*d,
 }
 
 void
-ZnFitBezier(ZnPoint		*pts,
-	    unsigned int	num_points,
-	    ZnReal		error,
-	    ZnList		controls)
+ZnFitBezier(ZnPoint             *pts,
+            unsigned int        num_points,
+            ZnReal              error,
+            ZnList              controls)
 {
-  ZnPoint	tHat1, tHat2;	/*  Unit tangent vectors at endpoints */
+  ZnPoint       tHat1, tHat2;   /*  Unit tangent vectors at endpoints */
 
   tHat1 = ComputeLeftTangent(pts, 0);
   tHat2 = ComputeRightTangent(pts, num_points-1);

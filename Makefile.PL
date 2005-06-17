@@ -1,4 +1,3 @@
-# Generated automatically from Makefile.PL.in by configure.
 use 5.006;
 use Tk;
 use Config;
@@ -9,7 +8,7 @@ use strict;
 my $TkLibDir = $Tk::library;
 my $platform = $Tk::platform;
 
-my $VERSION = '3.30';
+my $VERSION = 3.302;
 
 
 if (!$TkLibDir)
@@ -25,15 +24,12 @@ if (!$TkLibDir)
 print "Configuring version $VERSION for $platform platform...\n";
 print "Using $TkLibDir as Tk library...\n";
 
-my @GENERIC_C = ('Track.c', 'Tabular.c', 'Reticle.c', 'Map.c', 'Rectangle.c', 'Arc.c', 'Curve.c',
-		 'Item.c', 'PostScript.c', 'MapInfo.c', 'Attrs.c', 'Draw.c', 'Geo.c', 'List.c',
+my @GENERIC_C = ('Tabular.c', 'Rectangle.c', 'Arc.c', 'Curve.c',
+		 'Item.c', 'PostScript.c', 'Attrs.c', 'Draw.c', 'Geo.c', 'List.c',
 		 'perfos.c', 'Transfo.c', 'Group.c', 'Icon.c', 'Text.c', 'Image.c', 'Color.c',
 		 'Field.c', 'Triangles.c', 'Window.c', 'tkZinc.c');
 
-my @LIBTESS_C = ('dict.c', 'geom.c', 'memalloc.c', 'mesh.c', 'normal.c', 'priorityq.c',
-		 'render.c', 'sweep.c', 'tess.c', 'tessmono.c');
-
-my @OM_C = ('OverlapMan.c');
+my @ATC_C = ('OverlapMan.c', 'Track.c', 'Reticle.c', 'Map.c', 'MapInfo.c');
 
 my @WIN_C = ('WinPort.c');
 
@@ -41,13 +37,13 @@ my @C;
 
 my $WIN = ($platform =~ /win/i);
 
-push @C, @LIBTESS_C, @GENERIC_C ;
+push @C, @GENERIC_C ;
 
-my $NeededLibs = ['-L/usr/X11R6/lib -lXext -lX11 -lGL -L.'];
+my $NeededLibs = ['-L/usr/X11R6/lib -lXext -lX11 -lGLU -lGL -L.'];
 
 if ($WIN) {
     push @C, @WIN_C;
-    $NeededLibs = ['-lopengl32']
+    $NeededLibs = ['-lglu32 -lopengl32']
 }
 my $ZincObj = "Zinc" . $Config{"_o"};
 
@@ -55,6 +51,26 @@ my $INC = "-I. -I$TkLibDir -I$TkLibDir/pTk -I$TkLibDir/X11";
 
 unless ($WIN) {
   $INC .= " -I/usr/X11R6/include";
+}
+
+#For some reason which the author of ExtUtils::MM_Unix forget, Unix machines like to have
+#PERL_DL_NONLAZY set for tests. This is FALSE for TkZinc.
+
+if ($] >= 5.008000) {
+  *ExtUtils::MM_Unix::test_via_harness = sub {
+    my($self, $perl, $tests) = @_;
+#    return $self->SUPER::test_via_harness("PERL_DL_NONLAZY=1 $perl", $tests);
+    # I should use the SUPER method, but this needs some import tunning...
+    return ExtUtils::MM_Any::test_via_harness($self, $perl, $tests);
+  };
+
+#Again, the PERL_DL_NONLAZY thing.
+  *ExtUtils::MM_Unix::test_via_script = sub {
+    my($self, $perl, $script) = @_;
+#    return $self->SUPER::test_via_script("PERL_DL_NONLAZY=1 $perl", $script);
+    # I should use the SUPER method, but this needs some import tunning...
+    return ExtUtils::MM_Any::test_via_script($self, $perl, $script);
+  };
 }
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
@@ -80,7 +96,7 @@ sub get_flags {
     my %DEF_FLAGS = ('GL'        => 1,
 		     'SHAPE'     => 1,
 		     'GL_DAMAGE' => 1,
-		     'OM'        => 1
+		     'ATC'        => 1
 		     );
     
     foreach my $arg (@ARGV) {
@@ -92,9 +108,9 @@ sub get_flags {
 		$DEF_FLAGS{'GL_DAMAGE'} = 0;
 	    }
 	}
-	elsif ($name =~ /(with-om)/i) {
+	elsif ($name =~ /(with-atc)/i) {
 	    if ($value =~ /no/i) {
-		$DEF_FLAGS{'OM'} = 0;
+		$DEF_FLAGS{'ATC'} = 0;
 	    }
 	}
 	elsif ($name =~ /(with-shape)/i) {
@@ -120,8 +136,8 @@ sub get_flags {
 	print "$flag=", $DEF_FLAGS{$flag} ? 'ok' : 'no', " ";
 	if ($DEF_FLAGS{$flag}) {	    
 	    $defines = $defines . " " . "-D$flag";
-	    if ($flag eq 'OM') {
-		push @C, @OM_C
+	    if ($flag eq 'ATC') {
+		push @C, @ATC_C
 	    }
 	}
     }
@@ -139,3 +155,4 @@ sub get_flags {
 # For the demo
 #
 # perl -Mblib demos/zinc-demos
+

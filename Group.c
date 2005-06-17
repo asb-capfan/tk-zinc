@@ -1,28 +1,17 @@
 /*
  * Group.c -- Implementation of Group item.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Wed Jun 23 10:09:20 1999
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Wed Jun 23 10:09:20 1999
  *
- * $Id: Group.c,v 1.49 2004/09/09 07:58:08 lecoanet Exp $
+ * $Id: Group.c,v 1.55 2005/05/10 07:59:48 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1999 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1999 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -39,7 +28,7 @@
 #endif
 
 
-static const char rcsid[] = "$Id: Group.c,v 1.49 2004/09/09 07:58:08 lecoanet Exp $";
+static const char rcsid[] = "$Id: Group.c,v 1.55 2005/05/10 07:59:48 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -47,27 +36,27 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  * Group item special record.
  */
 typedef struct _GroupItemStruct {
-  ZnItemStruct		header;
+  ZnItemStruct          header;
 
   /* Public data */
-  ZnItem		clip;
-  unsigned char		alpha;
+  ZnItem                clip;
+  unsigned char         alpha;
 
   /* Private data */
-  ZnItem		head;		/* Doubly linked list of all items.	*/
-  ZnItem		tail;
-  ZnList		dependents;	/* List of dependent items.		*/
-#ifdef OM
+  ZnItem                head;           /* Doubly linked list of all items.     */
+  ZnItem                tail;
+  ZnList                dependents;     /* List of dependent items.             */
+#ifdef ATC
   /* Overlap manager variables.
    * These variables are valid *only* if the overlap
    * manager is active. */
-  ZnBool		call_om;	/* Tell if there is a need to call the	*/
-					/* overlap manager.			*/
+  ZnBool                call_om;        /* Tell if there is a need to call the  */
+                                        /* overlap manager.                     */
 #endif
 } GroupItemStruct, *GroupItem;
 
 
-#define ATOMIC_BIT	(1<<ZN_PRIVATE_FLAGS_OFFSET)
+#define ATOMIC_BIT      (1<<ZN_PRIVATE_FLAGS_OFFSET)
 
 
 /*
@@ -77,7 +66,7 @@ typedef struct _GroupItemStruct {
  *
  **********************************************************************************
  */
-static ZnAttrConfig	group_attrs[] = {
+static ZnAttrConfig     group_attrs[] = {
   { ZN_CONFIG_ALPHA, "-alpha", NULL,
     Tk_Offset(GroupItemStruct, alpha), 0, ZN_DRAW_FLAG, False },
   { ZN_CONFIG_BOOL, "-atomic", NULL,
@@ -119,11 +108,11 @@ static ZnAttrConfig	group_attrs[] = {
  **********************************************************************************
  */
 static int
-Init(ZnItem		item,
-     int		*argc __unused,
-     Tcl_Obj *CONST	*args[] __unused)
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])
 {
-  GroupItem	group = (GroupItem) item;
+  GroupItem     group = (GroupItem) item;
   
   group->head = ZN_NO_ITEM;
   group->tail = ZN_NO_ITEM;
@@ -137,7 +126,7 @@ Init(ZnItem		item,
   SET(item->flags, ZN_COMPOSE_SCALE_BIT);
   CLEAR(item->flags, ATOMIC_BIT);
   item->priority = 1;
-#ifdef OM
+#ifdef ATC
   group->call_om = False;
 #endif
   
@@ -153,15 +142,15 @@ Init(ZnItem		item,
  **********************************************************************************
  */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  GroupItem	group = (GroupItem) item;  
-  ZnList	dependents;
-  ZnItem	connected, current_item, new_item;
-  ZnItem	*items;
-  Tcl_HashTable	mapping;
-  Tcl_HashEntry	*entry;
-  int		new, num_items, i;
+  GroupItem     group = (GroupItem) item;  
+  ZnList        dependents;
+  ZnItem        connected, current_item, new_item;
+  ZnItem        *items;
+  Tcl_HashTable mapping;
+  Tcl_HashEntry *entry;
+  int           new, num_items, i;
 
   if (item == item->wi->top_group) {
     /* Do not try to clone the top group */
@@ -170,7 +159,7 @@ Clone(ZnItem	item)
 
   current_item = group->tail;
   group->head = group->tail = ZN_NO_ITEM;
-#ifdef OM
+#ifdef ATC
   group->call_om = False;
 #endif
   dependents = group->dependents;
@@ -210,22 +199,22 @@ Clone(ZnItem	item)
     for (i = 0; i < num_items; i++, items++) {
       entry = Tcl_FindHashEntry(&mapping, (char *) *items);
       if (entry == NULL) {
-	ZnWarning("Can't find item correspondance in Group Clone\n");
-	abort();
+        ZnWarning("Can't find item correspondance in Group Clone\n");
+        abort();
       }
       else {
-	current_item = (ZnItem) Tcl_GetHashValue(entry);
+        current_item = (ZnItem) Tcl_GetHashValue(entry);
       }
       entry = Tcl_FindHashEntry(&mapping, (char *) current_item->connected_item);
       if (entry == NULL) {
-	ZnWarning("Can't found item correspondance in Group Clone\n");
-	abort();
+        ZnWarning("Can't found item correspondance in Group Clone\n");
+        abort();
       }
       else {
-	/*printf("item %d correspond to ", current_item->connected_item->id);*/
-	current_item->connected_item = (ZnItem) Tcl_GetHashValue(entry);
-	/*printf("%d\n", current_item->connected_item->id);*/
-	ZnInsertDependentItem(current_item);
+        /*printf("item %d correspond to ", current_item->connected_item->id);*/
+        current_item->connected_item = (ZnItem) Tcl_GetHashValue(entry);
+        /*printf("%d\n", current_item->connected_item->id);*/
+        ZnInsertDependentItem(current_item);
       }
     }
     Tcl_DeleteHashTable(&mapping);
@@ -241,10 +230,10 @@ Clone(ZnItem	item)
  **********************************************************************************
  */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
-  GroupItem	group = (GroupItem) item;
-  ZnItem	current_item, next_item;
+  GroupItem     group = (GroupItem) item;
+  ZnItem        current_item, next_item;
 
   current_item = group->head;
   while (current_item != ZN_NO_ITEM) {
@@ -267,18 +256,18 @@ Destroy(ZnItem	item)
  */
 #if defined(SHAPE) && !defined(_WIN32)
 static void
-SetXShape(ZnItem	grp)
+SetXShape(ZnItem        grp)
 {
-  ZnWInfo	*wi = grp->wi;
-  ZnItem	clip = ((GroupItem) grp)->clip;
-  unsigned int	i, j, num_pts, max_num_pts;
-  ZnPos		min_x, min_y, max_x, max_y;
-  ZnTriStrip	tristrip;
-  ZnPoint	*p;
-  ZnBool	simple;
-  ZnDim		width, height;
-  XPoint	xpts[3], *xp2, *xpts2;
-  TkRegion	reg, reg_op, reg_to;
+  ZnWInfo       *wi = grp->wi;
+  ZnItem        clip = ((GroupItem) grp)->clip;
+  unsigned int  i, j, num_pts, max_num_pts;
+  ZnPos         min_x, min_y, max_x, max_y;
+  ZnTriStrip    tristrip;
+  ZnPoint       *p;
+  ZnBool        simple;
+  ZnDim         width, height;
+  XPoint        xpts[3], *xp2, *xpts2;
+  TkRegion      reg, reg_op, reg_to;
   
   if (ISCLEAR(wi->flags, ZN_HAS_X_SHAPE)) {
     return;
@@ -290,9 +279,9 @@ SetXShape(ZnItem	grp)
      * changed wi->full_reshape while resetting wi->reshape).
      */
     XShapeCombineMask(wi->dpy, Tk_WindowId(wi->win), ShapeBounding,
-		      0, 0, None, ShapeSet);
+                      0, 0, None, ShapeSet);
     XShapeCombineMask(wi->dpy, wi->real_top, ShapeBounding,
-		      0, 0, None, ShapeSet);
+                      0, 0, None, ShapeSet);
   }
   else {
     /*
@@ -307,9 +296,9 @@ SetXShape(ZnItem	grp)
        * active and reset the mask only in this case (need a flag in wi).
        */
       XShapeCombineMask(wi->dpy, Tk_WindowId(wi->win), ShapeBounding,
-			0, 0, None, ShapeSet);
+                        0, 0, None, ShapeSet);
       XShapeCombineMask(wi->dpy, wi->real_top, ShapeBounding,
-			0, 0, None, ShapeSet);
+                        0, 0, None, ShapeSet);
     }
     else {
       /*
@@ -323,30 +312,30 @@ SetXShape(ZnItem	grp)
       max_y = min_y = tristrip.strips[0].points[0].y;
       max_num_pts = tristrip.strips[0].num_points;
       for (j = 0; j < tristrip.num_strips; j++) {
-	p = tristrip.strips[j].points;
-	num_pts = tristrip.strips[j].num_points;
-	if (num_pts > max_num_pts) {
-	  max_num_pts = num_pts;
-	}
-	for (i = 0; i < num_pts; p++, i++) {
-	  if (p->x < min_x) {
-	    min_x = p->x;
-	  }
-	  if (p->y < min_y) {
-	    min_y = p->y;
-	  }
-	  if (p->x > max_x) {
-	    max_x = p->x;
-	  }
-	  if (p->y > max_y) {
-	    max_y = p->y;
-	  }
-	}
+        p = tristrip.strips[j].points;
+        num_pts = tristrip.strips[j].num_points;
+        if (num_pts > max_num_pts) {
+          max_num_pts = num_pts;
+        }
+        for (i = 0; i < num_pts; p++, i++) {
+          if (p->x < min_x) {
+            min_x = p->x;
+          }
+          if (p->y < min_y) {
+            min_y = p->y;
+          }
+          if (p->x > max_x) {
+            max_x = p->x;
+          }
+          if (p->y > max_y) {
+            max_y = p->y;
+          }
+        }
       }
       max_x -= min_x;
       max_y -= min_y;
       XShapeCombineMask(wi->dpy, wi->full_reshape?Tk_WindowId(wi->win):wi->real_top,
-			ShapeBounding, 0, 0, None, ShapeSet);
+                        ShapeBounding, 0, 0, None, ShapeSet);
       reg = TkCreateRegion();
       
       /*
@@ -357,62 +346,62 @@ SetXShape(ZnItem	grp)
       width = wi->width;
       height = wi->height;
       for (j = 0; j < tristrip.num_strips; j++) {
-	p = tristrip.strips[j].points;
-	num_pts = tristrip.strips[j].num_points;
+        p = tristrip.strips[j].points;
+        num_pts = tristrip.strips[j].num_points;
 
-	/*
-	 * In case of a fan we benefit from the fact that
-	 * ALL the contour vertices are included in
-	 * the tristrip, so we can use the corresponding
-	 * polygon instead of going through all the triangles.
-	 */
-	if (tristrip.strips[j].fan) {
-	  /* Skip the center */
-	  p++;
-	  num_pts--;
-	  xp2 = xpts2 = ZnMalloc(num_pts*sizeof(XPoint));
-	  for (i = 0 ; i < num_pts; i++, p++, xp2++) {
-	    xp2->x = (short) ((p->x - min_x) * width / max_x);
-	    xp2->y = (short) ((p->y - min_y) * height / max_y);
-	  }
-	  reg_op = ZnPolygonRegion(xpts2, num_pts, EvenOddRule);
-	  reg_to = TkCreateRegion();
-	  ZnUnionRegion(reg, reg_op, reg_to);
-	  TkDestroyRegion(reg);
-	  TkDestroyRegion(reg_op);
-	  reg = reg_to;
-	  ZnFree(xpts2);
-	}
-	else {
-	  xpts[0].x = (short) ((p->x - min_x) * width / max_x);
-	  xpts[0].y = (short) ((p->y - min_y) * height / max_y);
-	  p++;
-	  xpts[1].x = (short) ((p->x - min_x) * width / max_x);
-	  xpts[1].y = (short) ((p->y - min_y) * height / max_y);
-	  p++;
-	  for (i = 2 ; i < num_pts; i++, p++) {
-	    xpts[2].x = (short) ((p->x - min_x) * width / max_x);
-	    xpts[2].y = (short) ((p->y - min_y) * height / max_y);
-	    reg_op = ZnPolygonRegion(xpts, 3, EvenOddRule);
-	    reg_to = TkCreateRegion();
-	    ZnUnionRegion(reg, reg_op, reg_to);
-	    TkDestroyRegion(reg);
-	    TkDestroyRegion(reg_op);
-	    reg = reg_to;
-	    xpts[0] = xpts[1];
-	    xpts[1] = xpts[2];
-	  }
-	}
+        /*
+         * In case of a fan we benefit from the fact that
+         * ALL the contour vertices are included in
+         * the tristrip, so we can use the corresponding
+         * polygon instead of going through all the triangles.
+         */
+        if (tristrip.strips[j].fan) {
+          /* Skip the center */
+          p++;
+          num_pts--;
+          xp2 = xpts2 = ZnMalloc(num_pts*sizeof(XPoint));
+          for (i = 0 ; i < num_pts; i++, p++, xp2++) {
+            xp2->x = (short) ((p->x - min_x) * width / max_x);
+            xp2->y = (short) ((p->y - min_y) * height / max_y);
+          }
+          reg_op = ZnPolygonRegion(xpts2, num_pts, EvenOddRule);
+          reg_to = TkCreateRegion();
+          ZnUnionRegion(reg, reg_op, reg_to);
+          TkDestroyRegion(reg);
+          TkDestroyRegion(reg_op);
+          reg = reg_to;
+          ZnFree(xpts2);
+        }
+        else {
+          xpts[0].x = (short) ((p->x - min_x) * width / max_x);
+          xpts[0].y = (short) ((p->y - min_y) * height / max_y);
+          p++;
+          xpts[1].x = (short) ((p->x - min_x) * width / max_x);
+          xpts[1].y = (short) ((p->y - min_y) * height / max_y);
+          p++;
+          for (i = 2 ; i < num_pts; i++, p++) {
+            xpts[2].x = (short) ((p->x - min_x) * width / max_x);
+            xpts[2].y = (short) ((p->y - min_y) * height / max_y);
+            reg_op = ZnPolygonRegion(xpts, 3, EvenOddRule);
+            reg_to = TkCreateRegion();
+            ZnUnionRegion(reg, reg_op, reg_to);
+            TkDestroyRegion(reg);
+            TkDestroyRegion(reg_op);
+            reg = reg_to;
+            xpts[0] = xpts[1];
+            xpts[1] = xpts[2];
+          }
+        }
       }
       XShapeCombineRegion(wi->dpy, wi->full_reshape?wi->real_top:Tk_WindowId(wi->win),
-			  ShapeBounding, 0, 0, (Region) reg, ShapeSet);
+                          ShapeBounding, 0, 0, (Region) reg, ShapeSet);
       TkDestroyRegion(reg);
     }
   }
 }
 #else
 static void
-SetXShape(ZnItem	grp __unused)
+SetXShape(ZnItem        grp)
 {
 }
 #endif
@@ -426,13 +415,13 @@ SetXShape(ZnItem	grp __unused)
  **********************************************************************************
  */
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
-  GroupItem	group = (GroupItem) item;
-  ZnWInfo	*wi = item->wi;
+  GroupItem     group = (GroupItem) item;
+  ZnWInfo       *wi = item->wi;
   
   if (ZnConfigureAttributes(wi, item, item, group_attrs, argc, argv, flags) == TCL_ERROR) {
     return TCL_ERROR;
@@ -444,10 +433,10 @@ Configure(ZnItem	item,
    */
   if (ISSET(*flags, ZN_ITEM_FLAG)) {
     if (group->clip &&
-	(!group->clip->class->GetClipVertices || (group->clip->parent != item))) {
+        (!group->clip->class->GetClipVertices || (group->clip->parent != item))) {
       group->clip = ZN_NO_ITEM;
       Tcl_AppendResult(wi->interp,
-		       " clip item must be a child of the group", NULL);
+                       " clip item must be a child of the group", NULL);
       return TCL_ERROR;
     }
     if (!group->clip && (item == wi->top_group)) {
@@ -467,9 +456,9 @@ Configure(ZnItem	item,
  **********************************************************************************
  */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, group_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -483,20 +472,20 @@ Query(ZnItem		item,
  **********************************************************************************
  *
  * PushClip --
- *	Save the current clip shape and current clipbox if needed.
- *	Intersect the previous shape and the local to obtain the
- *	new current shape. Use this shape to compute the current
- *	clipbox and if set_gc is True compute the current region.
+ *      Save the current clip shape and current clipbox if needed.
+ *      Intersect the previous shape and the local to obtain the
+ *      new current shape. Use this shape to compute the current
+ *      clipbox and if set_gc is True compute the current region.
  *
  **********************************************************************************
  */
 static void
-PushClip(GroupItem	group,
-	 ZnBool		set_gc)
+PushClip(GroupItem      group,
+         ZnBool         set_gc)
 {
-  ZnWInfo	*wi = ((ZnItem) group)->wi;
-  ZnTriStrip	tristrip;
-  ZnBool	simple;
+  ZnWInfo       *wi = ((ZnItem) group)->wi;
+  ZnTriStrip    tristrip;
+  ZnBool        simple;
 
   if ((group->clip != ZN_NO_ITEM) &&
       ((((ZnItem) group) != wi->top_group)
@@ -517,15 +506,15 @@ PushClip(GroupItem	group,
  **********************************************************************************
  *
  * PopClip --
- *	Re-install the previous clip shape if any (stack can be empty).
+ *      Re-install the previous clip shape if any (stack can be empty).
  *
  **********************************************************************************
  */
 static void
-PopClip(GroupItem	group,
-	ZnBool		set_gc)
+PopClip(GroupItem       group,
+        ZnBool          set_gc)
 {
-  ZnWInfo	*wi = ((ZnItem) group)->wi;
+  ZnWInfo       *wi = ((ZnItem) group)->wi;
 
   if ((group->clip != ZN_NO_ITEM) &&
       ((((ZnItem) group) != wi->top_group)
@@ -543,13 +532,13 @@ PopClip(GroupItem	group,
  **********************************************************************************
  *
  * PushTransform --
- *	Save the current transform then concatenate the item transform to
- *	form the new current transform.
+ *      Save the current transform then concatenate the item transform to
+ *      form the new current transform.
  *
  **********************************************************************************
  */
 static void
-PushTransform(ZnItem	item)
+PushTransform(ZnItem    item)
 {
   ZnPoint *pos;
   
@@ -568,8 +557,8 @@ PushTransform(ZnItem	item)
   }
 
   ZnPushTransform(item->wi, item->transfo, pos,
-		  ISSET(item->flags, ZN_COMPOSE_SCALE_BIT),
-		  ISSET(item->flags, ZN_COMPOSE_ROTATION_BIT));
+                  ISSET(item->flags, ZN_COMPOSE_SCALE_BIT),
+                  ISSET(item->flags, ZN_COMPOSE_ROTATION_BIT));
   /*printf("Pushing transfo for item: %d\n;", item->id);
     ZnPrintTransfo(wi->current_transfo);*/
 }
@@ -579,12 +568,12 @@ PushTransform(ZnItem	item)
  **********************************************************************************
  *
  * PopTransform --
- *	Restore the previously saved transform from the stack.
+ *      Restore the previously saved transform from the stack.
  *
  **********************************************************************************
  */
 static void
-PopTransform(ZnItem	item)
+PopTransform(ZnItem     item)
 {
   ZnPoint *pos;
   
@@ -612,19 +601,19 @@ PopTransform(ZnItem	item)
  **********************************************************************************
  *
  * ComputeCoordinates --
- *	Compute the geometrical elements of a group. First of all save the current
- *	transform and combine it with the item transform. Then call the item
- *	ComputeCoordinates method.
- *	For regular child items (not groups) some of the code of the item
- *	itself is factored out in CallRegularCC.
+ *      Compute the geometrical elements of a group. First of all save the current
+ *      transform and combine it with the item transform. Then call the item
+ *      ComputeCoordinates method.
+ *      For regular child items (not groups) some of the code of the item
+ *      itself is factored out in CallRegularCC.
  *
  **********************************************************************************
  */
 static void
-CallRegularCC(ZnItem	item)
+CallRegularCC(ZnItem    item)
 {
-  ZnWInfo	*wi = item->wi;
-  /*ZnBBox	*clip_box;*/
+  ZnWInfo       *wi = item->wi;
+  /*ZnBBox      *clip_box;*/
   
   /*
    * Do some generic pre-work in behalf of the (regular) children.
@@ -694,14 +683,14 @@ CallRegularCC(ZnItem	item)
 }
 
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  GroupItem	group = (GroupItem) item;
-  ZnItem	current_item;
-  ZnItem	*deps;
-  int		num_deps, i;
-  ZnBBox	*clip_box;
+  GroupItem     group = (GroupItem) item;
+  ZnItem        current_item;
+  ZnItem        *deps;
+  int           num_deps, i;
+  ZnBBox        *clip_box;
 
   PushTransform(item);
   /*  printf("Group.c\n");
@@ -727,13 +716,13 @@ ComputeCoordinates(ZnItem	item,
      * clipbox (i.e the clipbox of the group's parent).
      */
     if (force ||
-	ISSET(group->clip->inv_flags, ZN_COORDS_FLAG) ||
-	ISSET(group->clip->inv_flags, ZN_TRANSFO_FLAG)) {
+        ISSET(group->clip->inv_flags, ZN_COORDS_FLAG) ||
+        ISSET(group->clip->inv_flags, ZN_TRANSFO_FLAG)) {
       /*printf("calling cc on clip item %d for group %d\n",
-	group->clip->id, item->id);*/
+        group->clip->id, item->id);*/
       CallRegularCC(group->clip);
       if (item == item->wi->top_group) {
-	SetXShape(item);
+        SetXShape(item);
       }
       /*
        * If the clip item has changed we need to compute
@@ -753,19 +742,19 @@ ComputeCoordinates(ZnItem	item,
      * be updated later.
      */
     if ((current_item == group->clip) ||
-	(current_item->connected_item != ZN_NO_ITEM)) {
+        (current_item->connected_item != ZN_NO_ITEM)) {
       continue;
     }
     if (force ||
-	ISSET(current_item->inv_flags, ZN_COORDS_FLAG) ||
-	ISSET(current_item->inv_flags, ZN_TRANSFO_FLAG)) {
+        ISSET(current_item->inv_flags, ZN_COORDS_FLAG) ||
+        ISSET(current_item->inv_flags, ZN_TRANSFO_FLAG)) {
       if (current_item->class != ZnGroup) {
-	/*printf("calling cc on item %d\n", current_item->id);*/
-	CallRegularCC(current_item);
+        /*printf("calling cc on item %d\n", current_item->id);*/
+        CallRegularCC(current_item);
       }
       else {
-	/*printf("calling cc on group %d\n", current_item->id);*/
-	current_item->class->ComputeCoordinates(current_item, force);
+        /*printf("calling cc on group %d\n", current_item->id);*/
+        current_item->class->ComputeCoordinates(current_item, force);
       }
     }
   }
@@ -780,11 +769,11 @@ ComputeCoordinates(ZnItem	item,
     for (i = 0; i < num_deps; i++) {
       current_item = deps[i];
       if (force ||
-	  ISSET(current_item->inv_flags, ZN_COORDS_FLAG) ||
-	  ISSET(current_item->inv_flags, ZN_TRANSFO_FLAG) ||
-	  ISSET(current_item->connected_item->flags, ZN_UPDATE_DEPENDENT_BIT)) {	
-        /*printf("Updating dependent: %d\n", current_item->id);*/	
-	CallRegularCC(current_item);
+          ISSET(current_item->inv_flags, ZN_COORDS_FLAG) ||
+          ISSET(current_item->inv_flags, ZN_TRANSFO_FLAG) ||
+          ISSET(current_item->connected_item->flags, ZN_UPDATE_DEPENDENT_BIT)) {        
+        /*printf("Updating dependent: %d\n", current_item->id);*/       
+        CallRegularCC(current_item);
       }
     }
     /*
@@ -823,21 +812,21 @@ ComputeCoordinates(ZnItem	item,
  **********************************************************************************
  *
  * ToArea --
- *	Tell if the object is entirely outside (-1),
- *	entirely inside (1) or in between (0).
+ *      Tell if the object is entirely outside (-1),
+ *      entirely inside (1) or in between (0).
  *
  **********************************************************************************
  */
 static int
-ToArea(ZnItem	item,
-       ZnToArea	ta)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
-  GroupItem	group = (GroupItem) item;
-  ZnItem	current_item;
-  ZnBBox	enclosing, inter;
-  int		result = -1;
-  ZnBool	outside, inside;
-  ZnBool	atomic, report, empty = True;
+  GroupItem     group = (GroupItem) item;
+  ZnItem        current_item;
+  ZnBBox        enclosing, inter;
+  int           result = -1;
+  ZnBool        outside, inside;
+  ZnBool        atomic, report, empty = True;
   
 
   PushTransform(item);
@@ -849,15 +838,15 @@ ToArea(ZnItem	item,
   if ((ta->in_group != ZN_NO_ITEM) && (ta->in_group != item)) {
     /* No, try the subgroups. */
     for (current_item = group->head;
-	 current_item != ZN_NO_ITEM;
-	 current_item = current_item->next) {
+         current_item != ZN_NO_ITEM;
+         current_item = current_item->next) {
       if (current_item->class != ZnGroup) {
-	continue;
+        continue;
       }
       result = current_item->class->ToArea(current_item, ta);
       if (ta->in_group == ZN_NO_ITEM) {
-	/* The target group has been found, return its result. */
-	goto out;
+        /* The target group has been found, return its result. */
+        goto out;
       }
     }
     /* No group found in this subtree. */
@@ -902,7 +891,7 @@ ToArea(ZnItem	item,
        current_item != ZN_NO_ITEM;
        current_item = current_item->next) {
     if (ISCLEAR(current_item->flags, ZN_VISIBLE_BIT) &&
-	ISCLEAR(current_item->flags, ZN_SENSITIVE_BIT)) {
+        ISCLEAR(current_item->flags, ZN_SENSITIVE_BIT)) {
       continue;
     }
     /*printf("visible&sensitive %d\n", current_item?current_item->id:0);*/
@@ -913,13 +902,13 @@ ToArea(ZnItem	item,
     /*printf("bbox test passed %d\n", current_item?current_item->id:0);*/
     if ((current_item->class != ZnGroup) || atomic || ta->recursive || ISSET(current_item->flags, ATOMIC_BIT)) {
       if (current_item->class != ZnGroup) {
-	/*printf("testing %d\n", current_item?current_item->id:0);*/
-	PushTransform(current_item);
-	result = current_item->class->ToArea(current_item, ta);
-	PopTransform(current_item);
+        /*printf("testing %d\n", current_item?current_item->id:0);*/
+        PushTransform(current_item);
+        result = current_item->class->ToArea(current_item, ta);
+        PopTransform(current_item);
       }
       else {
-	result = current_item->class->ToArea(current_item, ta);
+        result = current_item->class->ToArea(current_item, ta);
       }
       outside &= (result == -1);
       inside &= (result == 1);
@@ -934,16 +923,16 @@ ToArea(ZnItem	item,
        * the most stringent conditions are met.
        */
       if (atomic) {
-	if (!ta->enclosed && (result >= 0)) {
-	  result = 0;
-	  goto out;
-	} else if (ta->enclosed && (result == 0)) {
-	  goto out;
-	}
+        if (!ta->enclosed && (result >= 0)) {
+          result = 0;
+          goto out;
+        } else if (ta->enclosed && (result == 0)) {
+          goto out;
+        }
       }
       if (!ta->report && (result >= ta->enclosed)) {
-	/*printf("Doing %d\n", current_item?current_item->id:0);*/
-	ZnDoItem(item->wi->interp, current_item, ZN_NO_PART, ta->tag_uid);
+        /*printf("Doing %d\n", current_item?current_item->id:0);*/
+        ZnDoItem(item->wi->interp, current_item, ZN_NO_PART, ta->tag_uid);
       }
     }
   }
@@ -961,10 +950,10 @@ ToArea(ZnItem	item,
     }
     else if (ta->report) { /* Need to report matching children to ancestor */
       if (outside && inside) {
-	result = 0;
+        result = 0;
       }
       else {
-	result = outside ? -1 : 1;
+        result = outside ? -1 : 1;
       }
     }
     else {
@@ -987,12 +976,12 @@ ToArea(ZnItem	item,
  **********************************************************************************
  */
 static void
-Draw(ZnItem 	item)
+Draw(ZnItem     item)
 {
-  GroupItem	group = (GroupItem) item;
-  ZnWInfo	*wi = item->wi;
-  ZnItem	current_item;
-  ZnBBox	bbox, old_damaged_area, *clip_box;
+  GroupItem     group = (GroupItem) item;
+  ZnWInfo       *wi = item->wi;
+  ZnItem        current_item;
+  ZnBBox        bbox, old_damaged_area, *clip_box;
   
   PushTransform(item);
   PushClip(group, True);
@@ -1009,29 +998,29 @@ Draw(ZnItem 	item)
     if (ISSET(current_item->flags, ZN_VISIBLE_BIT)) {
       ZnIntersectBBox(&wi->damaged_area, &current_item->item_bounding_box, &bbox);
       if (!ZnIsEmptyBBox(&bbox)) {
-	if (current_item->class != ZnGroup) {
-	  PushTransform(current_item);
-	}
-	current_item->class->Draw(current_item);
-	if (wi->draw_bboxes) {
-	  XGCValues  	values;
-	  values.foreground = ZnGetGradientPixel(wi->bbox_color, 0.0);
-	  values.fill_style = FillSolid;
-	  values.line_width = 1;
-	  values.line_style = (current_item->class==ZnGroup)?LineOnOffDash:LineSolid;
-	  XChangeGC(wi->dpy, wi->gc, GCForeground|GCLineStyle|GCLineWidth|GCFillStyle,
-		    &values);
-	  XDrawRectangle(wi->dpy, wi->draw_buffer, wi->gc,
-			 (int) current_item->item_bounding_box.orig.x,
-			 (int) current_item->item_bounding_box.orig.y,
-			 (unsigned int) (current_item->item_bounding_box.corner.x -
-					 current_item->item_bounding_box.orig.x),
-			 (unsigned int) (current_item->item_bounding_box.corner.y -
-					 current_item->item_bounding_box.orig.y));
-	}
-	if (current_item->class != ZnGroup) {
-	  PopTransform(current_item);
-	}
+        if (current_item->class != ZnGroup) {
+          PushTransform(current_item);
+        }
+        current_item->class->Draw(current_item);
+        if (wi->draw_bboxes) {
+          XGCValues     values;
+          values.foreground = ZnGetGradientPixel(wi->bbox_color, 0.0);
+          values.fill_style = FillSolid;
+          values.line_width = 1;
+          values.line_style = (current_item->class==ZnGroup)?LineOnOffDash:LineSolid;
+          XChangeGC(wi->dpy, wi->gc, GCForeground|GCLineStyle|GCLineWidth|GCFillStyle,
+                    &values);
+          XDrawRectangle(wi->dpy, wi->draw_buffer, wi->gc,
+                         (int) current_item->item_bounding_box.orig.x,
+                         (int) current_item->item_bounding_box.orig.y,
+                         (unsigned int) (current_item->item_bounding_box.corner.x -
+                                         current_item->item_bounding_box.orig.x),
+                         (unsigned int) (current_item->item_bounding_box.corner.y -
+                                         current_item->item_bounding_box.orig.y));
+        }
+        if (current_item->class != ZnGroup) {
+          PopTransform(current_item);
+        }
       }
     }
     current_item = current_item->previous;
@@ -1054,17 +1043,17 @@ Draw(ZnItem 	item)
  */
 #ifdef GL
 static void
-Render(ZnItem 	item)
+Render(ZnItem   item)
 {
-  GroupItem	group = (GroupItem) item;
-  ZnItem	current_item;
-  ZnWInfo	*wi = item->wi;
+  GroupItem     group = (GroupItem) item;
+  ZnItem        current_item;
+  ZnWInfo       *wi = item->wi;
 #ifdef GL_DAMAGE
-  ZnBBox	*clip_box;
-  ZnBBox	bbox, old_damaged_area;
+  ZnBBox        *clip_box;
+  ZnBBox        bbox, old_damaged_area;
 #endif
-  unsigned char	save_alpha = wi->alpha;
-  unsigned char	save_alpha2;
+  unsigned char save_alpha = wi->alpha;
+  unsigned char save_alpha2;
 
   if (ISSET(item->flags, ZN_COMPOSE_ALPHA_BIT)) {
     wi->alpha = wi->alpha * group->alpha / 100;
@@ -1093,17 +1082,17 @@ Render(ZnItem 	item)
       ZnIntersectBBox(&wi->damaged_area, &current_item->item_bounding_box, &bbox);
       if (!ZnIsEmptyBBox(&bbox) || ISSET(wi->flags, ZN_CONFIGURE_EVENT)) {
 #endif
-	if (current_item->class != ZnGroup) {
-	  PushTransform(current_item);
-	  if (ISCLEAR(current_item->flags, ZN_COMPOSE_ALPHA_BIT)) {
-	    wi->alpha = 100;
-	  }
-	}
-	current_item->class->Render(current_item);
-	if (current_item->class != ZnGroup) {
-	  PopTransform(current_item);
-	  wi->alpha = save_alpha2;
-	}
+        if (current_item->class != ZnGroup) {
+          PushTransform(current_item);
+          if (ISCLEAR(current_item->flags, ZN_COMPOSE_ALPHA_BIT)) {
+            wi->alpha = 100;
+          }
+        }
+        current_item->class->Render(current_item);
+        if (current_item->class != ZnGroup) {
+          PopTransform(current_item);
+          wi->alpha = save_alpha2;
+        }
 #ifdef GL_DAMAGE
       }
 #endif
@@ -1124,7 +1113,7 @@ Render(ZnItem 	item)
 }
 #else
 static void
-Render(ZnItem 	item __unused)
+Render(ZnItem   item)
 {
 }
 #endif
@@ -1138,11 +1127,11 @@ Render(ZnItem 	item __unused)
  **********************************************************************************
  */
 static ZnBool
-IsSensitive(ZnItem	item,
-	    int		item_part __unused)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
-  ZnBool	sensitive = ISSET(item->flags, ZN_SENSITIVE_BIT);
-  ZnItem	parent = item->parent;
+  ZnBool        sensitive = ISSET(item->flags, ZN_SENSITIVE_BIT);
+  ZnItem        parent = item->parent;
   
   while (sensitive && (parent != ZN_NO_ITEM)) {
     sensitive &= ISSET(parent->flags, ZN_SENSITIVE_BIT);
@@ -1156,36 +1145,36 @@ IsSensitive(ZnItem	item,
  **********************************************************************************
  *
  * Pick --
- *	Given a point an an aperture, find the topmost group item/part
- *	that is (a) within the pick_aperture
- *		(b) the top most
- *		(c) has either its sensibility or its visibility set.
+ *      Given a point an an aperture, find the topmost group item/part
+ *      that is (a) within the pick_aperture
+ *              (b) the top most
+ *              (c) has either its sensibility or its visibility set.
  *
  * Results:
- *	The return value is the distance of the picked item/part if one
- *	has been found or a really big distance if not. a_item and a_part
- *	are set to point the picked item/part or to ZN_NO_ITEM/ZN_NO_PART.
- *	If the group is ATOMIC, a_item points the group instead of the
- *	actual item.
+ *      The return value is the distance of the picked item/part if one
+ *      has been found or a really big distance if not. a_item and a_part
+ *      are set to point the picked item/part or to ZN_NO_ITEM/ZN_NO_PART.
+ *      If the group is ATOMIC, a_item points the group instead of the
+ *      actual item.
  *
  * Side effects:
- *	None.
+ *      None.
  *
  **********************************************************************************
  */
 static double
-Pick(ZnItem	item,
-     ZnPick	ps)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
-  GroupItem	group = (GroupItem) item;
-  ZnItem	p_item=ZN_NO_ITEM, current_item;
-  ZnWInfo	*wi = item->wi;
-  int		p_part=0, aperture = ps->aperture;
-  double	dist, best = 1e10;
-  ZnBBox	bbox, inter, *clip_box;
-  ZnPoint	*p = ps->point;
-  ZnBool	atomic;
-  TkRegion	reg;
+  GroupItem     group = (GroupItem) item;
+  ZnItem        p_item=ZN_NO_ITEM, current_item;
+  ZnWInfo       *wi = item->wi;
+  int           p_part=0, aperture = ps->aperture;
+  double        dist, best = 1e10;
+  ZnBBox        bbox, inter, *clip_box;
+  ZnPoint       *p = ps->point;
+  ZnBool        atomic;
+  TkRegion      reg;
 
   ps->a_item= ZN_NO_ITEM;
   ps->a_part = ZN_NO_PART;
@@ -1203,15 +1192,15 @@ Pick(ZnItem	item,
   if ((ps->in_group != ZN_NO_ITEM) && (ps->in_group != item)) {
     /* No, try the subgroups. */
     for (current_item = group->head;
-	 current_item != ZN_NO_ITEM;
-	 current_item = current_item->next) {
+         current_item != ZN_NO_ITEM;
+         current_item = current_item->next) {
       if (current_item->class != ZnGroup) {
-	continue;
+        continue;
       }
       best = current_item->class->Pick(current_item, ps);
       if (ps->in_group == ZN_NO_ITEM) {
-	/* The target group has been found, return its result. */
-	goto out;
+        /* The target group has been found, return its result. */
+        goto out;
       }
     }
     /* No group found in this subtree. */
@@ -1238,7 +1227,7 @@ Pick(ZnItem	item,
     if (ZnIsEmptyBBox(&inter)) {
       goto out;
     }
-    if (reg && !ZnPointInRegion(reg, p->x, p->y)) {
+    if (reg && !ZnPointInRegion(reg, (int) p->x, (int) p->y)) {
       goto out;
     }
   }
@@ -1253,7 +1242,7 @@ Pick(ZnItem	item,
      * This is _not_ a bug do _not_ modify the test below.
      */
     if (ISCLEAR(current_item->flags, ZN_SENSITIVE_BIT) &&
-	ISCLEAR(current_item->flags, ZN_VISIBLE_BIT)) {
+        ISCLEAR(current_item->flags, ZN_VISIBLE_BIT)) {
       continue;
     }
     ZnIntersectBBox(&bbox, &current_item->item_bounding_box, &inter);
@@ -1312,29 +1301,29 @@ Pick(ZnItem	item,
  **********************************************************************************
  *
  * Coords --
- *	Return or edit the group translation (can be also interpreted as the
- *	position of the group origin in the group's parent).
+ *      Return or edit the group translation (can be also interpreted as the
+ *      position of the group origin in the group's parent).
  *
  **********************************************************************************
  */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index __unused,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp,
-		     " can't add or remove vertices in groups", NULL);
+                     " can't add or remove vertices in groups", NULL);
     return TCL_ERROR;
   }
   else if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
     if (*num_pts == 0) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need 1 point on groups", NULL);
+                       " coords command need 1 point on groups", NULL);
       return TCL_ERROR;
     }
     if (!item->transfo && ((*pts)[0].x == 0.0) && ((*pts)[0].y == 0.0)) {
@@ -1347,7 +1336,7 @@ Coords(ZnItem		item,
     ZnITEM.Invalidate(item, ZN_TRANSFO_FLAG);
   }
   else if ((cmd == ZN_COORDS_READ) || (cmd == ZN_COORDS_READ_ALL)) {
-    ZnPoint	*p;
+    ZnPoint     *p;
     
     ZnListAssertSize(ZnWorkPoints, 1);
     p = (ZnPoint *) ZnListArray(ZnWorkPoints);
@@ -1366,16 +1355,76 @@ Coords(ZnItem		item,
  *
  **********************************************************************************
  */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
 {
+  GroupItem group = (GroupItem) item;
+  ZnWInfo   *wi = item->wi;
+  ZnItem    current_item;
+  ZnBBox    bbox;
+  int       result = TCL_OK;
+  char      msg[500];
+
+  PushTransform(item);
+  PushClip(group, True);
+
+  for (current_item = group->tail; current_item != ZN_NO_ITEM;
+       current_item = current_item->previous) {
+    if (ISCLEAR(current_item->flags, ZN_VISIBLE_BIT)) {
+      continue;
+    }
+    //printf("area %g %g %g %g\n", area->orig.x, area->orig.y,
+    //       area->corner.x, area->corner.y);
+    ZnIntersectBBox(area, &current_item->item_bounding_box, &bbox);
+    if (ZnIsEmptyBBox(&bbox)) {
+      continue;
+    }
+    if (current_item->class->PostScript == NULL) {
+      continue;
+    }
+
+    if (current_item->class != ZnGroup) {
+      PushTransform(current_item);
+      if (!prepass) {
+        Tcl_AppendResult(wi->interp, "gsave\n", NULL);
+      }
+      ZnPostscriptTrace(current_item, 1);
+    }
+    result = current_item->class->PostScript(current_item, prepass, area);
+    if (current_item->class != ZnGroup) {
+      ZnPostscriptTrace(current_item, 0);
+      if (!prepass && (result == TCL_OK)) {
+        Tcl_AppendResult(wi->interp, "grestore\n", NULL);
+      }
+      PopTransform(current_item);
+    }
+    if (result == TCL_ERROR) {
+      if (!prepass) {
+        /*
+         * Add some trace to ease the error lookup.
+         */
+        sprintf(msg, "\n    (generating Postscript for item %d)", current_item->id);
+        Tcl_AddErrorInfo(wi->interp, msg);
+        break;
+      }
+    }
+  }
+
+  PopClip(group, True);
+  PopTransform(item);
+
+  if (!prepass && (result == TCL_OK)) {
+    ZnFlushPsChan(wi->interp, wi->ps_info);
+  }
+  return result;
 }
 
 
 
 ZnItem
-ZnGroupHead(ZnItem	group)
+ZnGroupHead(ZnItem      group)
 {
   if (group->class != ZnGroup) {
     return ZN_NO_ITEM;
@@ -1384,7 +1433,7 @@ ZnGroupHead(ZnItem	group)
 }
 
 ZnItem
-ZnGroupTail(ZnItem	group)
+ZnGroupTail(ZnItem      group)
 {
   if (group->class != ZnGroup) {
     return ZN_NO_ITEM;
@@ -1392,9 +1441,9 @@ ZnGroupTail(ZnItem	group)
   return ((GroupItem) group)->tail;
 }
 
-#ifdef OM
+#ifdef ATC
 ZnBool
-ZnGroupCallOm(ZnItem	group)
+ZnGroupCallOm(ZnItem    group)
 {
   if (group->class != ZnGroup) {
     return False;
@@ -1403,8 +1452,8 @@ ZnGroupCallOm(ZnItem	group)
 }
 
 void
-ZnGroupSetCallOm(ZnItem	group,
-		 ZnBool	set)
+ZnGroupSetCallOm(ZnItem group,
+                 ZnBool set)
 {
   if (group->class != ZnGroup) {
     return;
@@ -1413,21 +1462,21 @@ ZnGroupSetCallOm(ZnItem	group,
 }
 #else
 ZnBool
-ZnGroupCallOm(ZnItem	group __unused)
+ZnGroupCallOm(ZnItem    group)
 {
   return False;
 }
 
 void
-ZnGroupSetCallOm(ZnItem	group __unused,
-		 ZnBool	set __unused)
+ZnGroupSetCallOm(ZnItem group,
+                 ZnBool set)
 {
   return;
 }
 #endif
 
 ZnBool
-ZnGroupAtomic(ZnItem	group)
+ZnGroupAtomic(ZnItem    group)
 {
   if (group->class != ZnGroup) {
     return True;
@@ -1436,8 +1485,8 @@ ZnGroupAtomic(ZnItem	group)
 }
 
 void
-ZnGroupRemoveClip(ZnItem	group,
-		  ZnItem	clip)
+ZnGroupRemoveClip(ZnItem        group,
+                  ZnItem        clip)
 {
   GroupItem grp = (GroupItem) group;
 
@@ -1456,9 +1505,9 @@ ZnGroupRemoveClip(ZnItem	group,
  **********************************************************************************
  */
 void
-ZnInsertDependentItem(ZnItem	item)
+ZnInsertDependentItem(ZnItem    item)
 {
-  GroupItem	group = (GroupItem) item->parent;
+  GroupItem     group = (GroupItem) item->parent;
 
   if (!group) {
     return;
@@ -1478,11 +1527,11 @@ ZnInsertDependentItem(ZnItem	item)
  **********************************************************************************
  */
 void
-ZnExtractDependentItem(ZnItem	item)
+ZnExtractDependentItem(ZnItem   item)
 {
-  GroupItem	group = (GroupItem) item->parent;
-  unsigned int	index, num_items;
-  ZnItem	*deps;
+  GroupItem     group = (GroupItem) item->parent;
+  unsigned int  index, num_items;
+  ZnItem        *deps;
   
   if (!group || !group->dependents) {
     return;
@@ -1493,9 +1542,9 @@ ZnExtractDependentItem(ZnItem	item)
     if (deps[index]->id == item->id) {
       ZnListDelete(group->dependents, index);
       if (ZnListSize(group->dependents) == 0) {
-	ZnListFree(group->dependents);
-	group->dependents = NULL;
-	break;
+        ZnListFree(group->dependents);
+        group->dependents = NULL;
+        break;
       }
     }
   }
@@ -1506,18 +1555,18 @@ ZnExtractDependentItem(ZnItem	item)
  **********************************************************************************
  *
  * ZnDisconnectDependentItems --
- *	
+ *      
  *
  **********************************************************************************
  */
 void
-ZnDisconnectDependentItems(ZnItem	item)
+ZnDisconnectDependentItems(ZnItem       item)
 {
-  ZnItem	current_item;
-  GroupItem	group = (GroupItem) item->parent;
-  ZnItem	*deps;
-  unsigned int	num_deps;
-  int		i;
+  ZnItem        current_item;
+  GroupItem     group = (GroupItem) item->parent;
+  ZnItem        *deps;
+  unsigned int  num_deps;
+  int           i;
   
   if (!group || !group->dependents) {
     return;
@@ -1548,9 +1597,9 @@ ZnDisconnectDependentItems(ZnItem	item)
  **********************************************************************************
  */
 void
-ZnGroupExtractItem(ZnItem	item)
+ZnGroupExtractItem(ZnItem       item)
 {
-  GroupItem	group;
+  GroupItem     group;
   
   if (!item->parent) {
     return;
@@ -1587,12 +1636,12 @@ ZnGroupExtractItem(ZnItem	item)
  **********************************************************************************
  */
 void
-ZnGroupInsertItem(ZnItem	group,
-		  ZnItem	item,
-		  ZnItem	mark_item,
-		  ZnBool	before)
+ZnGroupInsertItem(ZnItem        group,
+                  ZnItem        item,
+                  ZnItem        mark_item,
+                  ZnBool        before)
 {
-  GroupItem	grp = (GroupItem) group;
+  GroupItem     grp = (GroupItem) group;
 
   /*
    * Empty list, add the first item.
@@ -1620,7 +1669,7 @@ ZnGroupInsertItem(ZnItem	group,
   else {
     mark_item = grp->head;
     while ((mark_item != ZN_NO_ITEM) &&
-	   (mark_item->priority > item->priority)) {
+           (mark_item->priority > item->priority)) {
       mark_item = mark_item->next;
     }
     before = True;
@@ -1655,10 +1704,10 @@ ZnGroupInsertItem(ZnItem	group,
       item->previous = mark_item;
       item->next = mark_item->next;
       if (item->next == ZN_NO_ITEM) {
-	grp->tail = item;
+        grp->tail = item;
       }
       else {
-	item->next->previous = item;
+        item->next->previous = item;
       }
       mark_item->next = item;
     }
@@ -1675,16 +1724,16 @@ ZnGroupInsertItem(ZnItem	group,
  **********************************************************************************
  */
 static void
-GetAnchor(ZnItem	item,
-	  Tk_Anchor	anchor,
-	  ZnPoint	*p)
+GetAnchor(ZnItem        item,
+          Tk_Anchor     anchor,
+          ZnPoint       *p)
 {
   ZnBBox *bbox = &item->item_bounding_box;
 
   ZnOrigin2Anchor(&bbox->orig,
-		  bbox->corner.x - bbox->orig.x,
-		  bbox->corner.y - bbox->orig.y,
-		  anchor, p);
+                  bbox->corner.x - bbox->orig.x,
+                  bbox->corner.y - bbox->orig.y,
+                  anchor, p);
 }
 
 
@@ -1699,33 +1748,33 @@ static ZnItemClassStruct GROUP_ITEM_CLASS = {
   "group",
   sizeof(GroupItemStruct),
   group_attrs,
-  0,			/* num_parts */
-  ZN_CLASS_ONE_COORD,	/* flags */
+  0,                    /* num_parts */
+  ZN_CLASS_ONE_COORD,   /* flags */
   -1,
   Init,
   Clone,
   Destroy,
   Configure,
   Query,
-  NULL,			/* GetFieldSet */
+  NULL,                 /* GetFieldSet */
   GetAnchor,
-  NULL,			/* GetClipVertices */
-  NULL,			/* GetContours */
+  NULL,                 /* GetClipVertices */
+  NULL,                 /* GetContours */
   Coords,
-  NULL,			/* InsertChars */
-  NULL,			/* DeleteChars */
-  NULL,			/* Cursor */
-  NULL,			/* Index */
-  NULL,			/* Part */
-  NULL,			/* Selection */
-  NULL,			/* Contour */
+  NULL,                 /* InsertChars */
+  NULL,                 /* DeleteChars */
+  NULL,                 /* Cursor */
+  NULL,                 /* Index */
+  NULL,                 /* Part */
+  NULL,                 /* Selection */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 

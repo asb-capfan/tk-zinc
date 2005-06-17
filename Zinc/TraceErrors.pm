@@ -18,7 +18,7 @@
 # module name, the line number and the complete error messages are reported
 # for each error.
 #
-# $Id: TraceErrors.pm,v 1.7 2004/04/29 08:26:25 etienne Exp $
+# $Id: TraceErrors.pm,v 1.8 2005/05/16 07:22:20 lecoanet Exp $
 #
 # When you have no idea where this happens in your code or when your
 # application segfaults, use the Tk::Zinc::Trace package which traces every
@@ -30,7 +30,7 @@
 package Tk::Zinc::TraceErrors;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use strict;
@@ -139,7 +139,7 @@ This module cannot be used when Tk::Zinc::Trace is already in use.
 
 =head1 COPYRIGHT
 
-See Tk::Zinc copyright; LGPL
+See Tk::Zinc copyright; BSD
 
 =head1 SEE ALSO
 

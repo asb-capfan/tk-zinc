@@ -1,28 +1,17 @@
 /*
  * tkZinc.c -- Zinc widget for the Tk Toolkit. Main module.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Mon Feb  1 12:13:24 1999
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Mon Feb  1 12:13:24 1999
  *
- * $Id: tkZinc.c,v 1.105 2004/09/21 08:40:25 lecoanet Exp $
+ * $Id: tkZinc.c,v 1.116 2005/05/25 08:27:27 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -36,7 +25,7 @@
  *
  */
 
-static const char rcs_id[]="$Id: tkZinc.c,v 1.105 2004/09/21 08:40:25 lecoanet Exp $";
+static const char rcs_id[]="$Id: tkZinc.c,v 1.116 2005/05/25 08:27:27 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 static const char * const zinc_version = "zinc-version-" VERSION;
 
@@ -48,10 +37,10 @@ static const char * const zinc_version = "zinc-version-" VERSION;
 #include "WidgetInfo.h"
 #include "tkZinc.h"
 #include "MapInfo.h"
-#ifdef OM
+#ifdef ATC
 #include "OverlapMan.h"
-#endif
 #include "Track.h"
+#endif
 #include "Transfo.h"
 #include "Image.h"
 #include "Draw.h"
@@ -59,8 +48,8 @@ static const char * const zinc_version = "zinc-version-" VERSION;
 #ifndef _WIN32
 #include "perfos.h"
 #endif
-#include "glu.h"
 
+#include <GL/glu.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -74,12 +63,12 @@ static const char * const zinc_version = "zinc-version-" VERSION;
 
 typedef struct _TagSearchExpr {
   struct _TagSearchExpr *next; /* for linked lists of expressions - used in bindings */
-  Tk_Uid		uid;	/* the uid of the whole expression */
-  Tk_Uid		*uids;	/* expresion compiled to an array of uids */
-  int			allocated; /* available space for array of uids */
-  int			length;	/* length of expression */
-  int			index;	/* current position in expression evaluation */
-  int			match;	/* this expression matches event's item's tags*/
+  Tk_Uid                uid;    /* the uid of the whole expression */
+  Tk_Uid                *uids;  /* expresion compiled to an array of uids */
+  int                   allocated; /* available space for array of uids */
+  int                   length; /* length of expression */
+  int                   index;  /* current position in expression evaluation */
+  int                   match;  /* this expression matches event's item's tags*/
 } TagSearchExpr;
 
 
@@ -119,24 +108,24 @@ static unsigned char dither4x4[4][4] = {
 
 static unsigned char bitmaps[ZN_NUM_ALPHA_STEPS][32][4];
 
-static	Tk_Uid	all_uid;
-static	Tk_Uid	current_uid;
-static	Tk_Uid	and_uid;
-static	Tk_Uid	or_uid;
-static	Tk_Uid	xor_uid;
-static	Tk_Uid	paren_uid;
-static	Tk_Uid	end_paren_uid;
-static	Tk_Uid	neg_paren_uid;
-static	Tk_Uid	tag_val_uid;
-static	Tk_Uid	neg_tag_val_uid;
-static	Tk_Uid	dot_uid;
-static	Tk_Uid	star_uid;
+static  Tk_Uid  all_uid;
+static  Tk_Uid  current_uid;
+static  Tk_Uid  and_uid;
+static  Tk_Uid  or_uid;
+static  Tk_Uid  xor_uid;
+static  Tk_Uid  paren_uid;
+static  Tk_Uid  end_paren_uid;
+static  Tk_Uid  neg_paren_uid;
+static  Tk_Uid  tag_val_uid;
+static  Tk_Uid  neg_tag_val_uid;
+static  Tk_Uid  dot_uid;
+static  Tk_Uid  star_uid;
 
 #ifdef GL
-static	ZnGLContextEntry *gl_contexts = NULL;
+static  ZnGLContextEntry *gl_contexts = NULL;
 #ifndef _WIN32
-static  int		ZnMajorGlx, ZnMinorGlx;
-static  int		ZnGLAttribs[] = {
+static  int             ZnMajorGlx, ZnMinorGlx;
+static  int             ZnGLAttribs[] = {
   GLX_RGBA,
   GLX_DOUBLEBUFFER,
   GLX_RED_SIZE, 8,
@@ -153,77 +142,77 @@ static  int		ZnGLAttribs[] = {
 /*
  * Temporary object lists
  */
-	ZnList		ZnWorkPoints;
-	ZnList		ZnWorkXPoints;
-	ZnList		ZnWorkStrings;
+        ZnList          ZnWorkPoints;
+        ZnList          ZnWorkXPoints;
+        ZnList          ZnWorkStrings;
   
 /*
  * Tesselator
  */
-	ZnTess		ZnTesselator;
+        ZnTess          ZnTesselator;
 
 
 static  void PickCurrentItem _ANSI_ARGS_((ZnWInfo *wi, XEvent *event));
 #ifdef PTK_800
-static	int ZnReliefParse _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
-				       Tk_Window tkwin, Tcl_Obj *ovalue,
-				       char *widget_rec, int offset));
-static	Tcl_Obj *ZnReliefPrint _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
-					    char *widget_rec, int offset,
-					    Tcl_FreeProc **free_proc));
-static	int ZnGradientParse _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
-					 Tk_Window tkwin, Tcl_Obj *ovalue,
-					 char *widget_rec, int offset));
-static	Tcl_Obj *ZnGradientPrint _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
-					      char *widget_rec, int offset,
-					      Tcl_FreeProc **free_proc));
-static	int ZnImageParse _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
-				      Tk_Window tkwin, Tcl_Obj *ovalue,
-				      char *widget_rec, int offset));
-static	int ZnBitmapParse _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
-				       Tk_Window tkwin, Tcl_Obj *ovalue,
-				       char *widget_rec, int offset));
-static	Tcl_Obj *ZnImagePrint _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
-					   char *widget_rec, int offset,
-					   Tcl_FreeProc **free_proc));
-static	Tk_CustomOption reliefOption = {
+static  int ZnReliefParse _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
+                                       Tk_Window tkwin, Tcl_Obj *ovalue,
+                                       char *widget_rec, int offset));
+static  Tcl_Obj *ZnReliefPrint _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
+                                            char *widget_rec, int offset,
+                                            Tcl_FreeProc **free_proc));
+static  int ZnGradientParse _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
+                                         Tk_Window tkwin, Tcl_Obj *ovalue,
+                                         char *widget_rec, int offset));
+static  Tcl_Obj *ZnGradientPrint _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
+                                              char *widget_rec, int offset,
+                                              Tcl_FreeProc **free_proc));
+static  int ZnImageParse _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
+                                      Tk_Window tkwin, Tcl_Obj *ovalue,
+                                      char *widget_rec, int offset));
+static  int ZnBitmapParse _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
+                                       Tk_Window tkwin, Tcl_Obj *ovalue,
+                                       char *widget_rec, int offset));
+static  Tcl_Obj *ZnImagePrint _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
+                                           char *widget_rec, int offset,
+                                           Tcl_FreeProc **free_proc));
+static  Tk_CustomOption reliefOption = {
   (Tk_OptionParseProc *) ZnReliefParse,
   (Tk_OptionPrintProc *) ZnReliefPrint,
   NULL
 };
-static	Tk_CustomOption gradientOption = {
+static  Tk_CustomOption gradientOption = {
   (Tk_OptionParseProc *) ZnGradientParse,
   (Tk_OptionPrintProc *) ZnGradientPrint,
   NULL
 };
-static	Tk_CustomOption imageOption = {
+static  Tk_CustomOption imageOption = {
   (Tk_OptionParseProc *) ZnImageParse,
   (Tk_OptionPrintProc *) ZnImagePrint,
   NULL
 };
-static	Tk_CustomOption bitmapOption = {
+static  Tk_CustomOption bitmapOption = {
   (Tk_OptionParseProc *) ZnBitmapParse,
   (Tk_OptionPrintProc *) ZnImagePrint,
   NULL
 };
 #else
-static	int ZnSetReliefOpt _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
-					Tk_Window tkwin, Tcl_Obj **ovalue,
-					char *widget_rec, int offset, char *old_val_ptr, int flags));
-static	Tcl_Obj *ZnGetReliefOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
-					     char *widget_rec, int offset));
+static  int ZnSetReliefOpt _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
+                                        Tk_Window tkwin, Tcl_Obj **ovalue,
+                                        char *widget_rec, int offset, char *old_val_ptr, int flags));
+static  Tcl_Obj *ZnGetReliefOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
+                                             char *widget_rec, int offset));
 static void ZnRestoreReliefOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
-					    char *val_ptr, char *old_val_ptr));
-static	int ZnSetGradientOpt _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
-					  Tk_Window tkwin, Tcl_Obj **ovalue,
-					  char *widget_rec, int offset, char *old_val_ptr, int flags));
-static	Tcl_Obj *ZnGetGradientOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
-					       char *widget_rec, int offset));
-static	void ZnRestoreGradientOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
-					       char *val_ptr, char *old_val_ptr));
-static	void ZnFreeGradientOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin, char *val_ptr));
+                                            char *val_ptr, char *old_val_ptr));
+static  int ZnSetGradientOpt _ANSI_ARGS_((ClientData client_data, Tcl_Interp *interp,
+                                          Tk_Window tkwin, Tcl_Obj **ovalue,
+                                          char *widget_rec, int offset, char *old_val_ptr, int flags));
+static  Tcl_Obj *ZnGetGradientOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
+                                               char *widget_rec, int offset));
+static  void ZnRestoreGradientOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin,
+                                               char *val_ptr, char *old_val_ptr));
+static  void ZnFreeGradientOpt _ANSI_ARGS_((ClientData client_data, Tk_Window tkwin, char *val_ptr));
 
-static	Tk_ObjCustomOption reliefOption = {
+static  Tk_ObjCustomOption reliefOption = {
   "znrelief",
   ZnSetReliefOpt,
   ZnGetReliefOpt,
@@ -231,7 +220,7 @@ static	Tk_ObjCustomOption reliefOption = {
   NULL,
   0
 };
-static	Tk_ObjCustomOption gradientOption = {
+static  Tk_ObjCustomOption gradientOption = {
   "zngradient",
   ZnSetGradientOpt,
   ZnGetGradientOpt,
@@ -242,64 +231,65 @@ static	Tk_ObjCustomOption gradientOption = {
 #endif
 
 #ifdef PTK_800
-#define BORDER_WIDTH_SPEC		0
-#define BACK_COLOR_SPEC			1
-#define CONFINE_SPEC			2
-#define CURSOR_SPEC			3
-#define FONT_SPEC			4
-#define FORE_COLOR_SPEC			5
-#define FULL_RESHAPE_SPEC		6
-#define HEIGHT_SPEC			7
-#define HIGHLIGHT_BACK_COLOR_SPEC	8
-#define HIGHLIGHT_COLOR_SPEC		9
-#define HIGHLIGHT_THICKNESS_SPEC	10
-#define INSERT_COLOR_SPEC		11
-#define INSERT_OFF_TIME_SPEC		12
-#define INSERT_ON_TIME_SPEC		13
-#define INSERT_WIDTH_SPEC		14
-#define MAP_DISTANCE_SYMBOL_SPEC	15
-#define MAP_TEXT_FONT_SPEC		16
-#define OVERLAP_MANAGER_SPEC		17
-#define PICK_APERTURE_SPEC		18
-#define RELIEF_SPEC			19
-#define RENDER_SPEC			20
-#define RESHAPE_SPEC			21
-#define SCROLL_REGION_SPEC		22
-#define SELECT_COLOR_SPEC		23
-#define SPEED_VECTOR_LENGTH_SPEC	24
-#define TAKE_FOCUS_SPEC			25
-#define TILE_SPEC			26
-#define VISIBLE_HISTORY_SIZE_SPEC	27
-#define MANAGED_HISTORY_SIZE_SPEC	28
-#define TRACK_SYMBOL_SPEC		29
-#define WIDTH_SPEC			30
-#define X_SCROLL_CMD_SPEC		31
-#define X_SCROLL_INCREMENT_SPEC		32
-#define Y_SCROLL_CMD_SPEC		33
-#define Y_SCROLL_INCREMENT_SPEC		34
-#define BBOXES_SPEC			35
-#define BBOXES_COLOR_SPEC		36
-#define LIGHT_ANGLE_SPEC		37
-#define FOLLOW_POINTER_SPEC		38
+#define BORDER_WIDTH_SPEC               0
+#define BACK_COLOR_SPEC                 1
+#define CONFINE_SPEC                    2
+#define CURSOR_SPEC                     3
+#define FONT_SPEC                       4
+#define FORE_COLOR_SPEC                 5
+#define FULL_RESHAPE_SPEC               6
+#define HEIGHT_SPEC                     7
+#define HIGHLIGHT_BACK_COLOR_SPEC       8
+#define HIGHLIGHT_COLOR_SPEC            9
+#define HIGHLIGHT_THICKNESS_SPEC        10
+#define INSERT_COLOR_SPEC               11
+#define INSERT_OFF_TIME_SPEC            12
+#define INSERT_ON_TIME_SPEC             13
+#define INSERT_WIDTH_SPEC               14
+#define MAP_DISTANCE_SYMBOL_SPEC        15
+#define MAP_TEXT_FONT_SPEC              16
+#define OVERLAP_MANAGER_SPEC            17
+#define PICK_APERTURE_SPEC              18
+#define RELIEF_SPEC                     19
+#define RENDER_SPEC                     20
+#define RESHAPE_SPEC                    21
+#define SCROLL_REGION_SPEC              22
+#define SELECT_COLOR_SPEC               23
+#define SPEED_VECTOR_LENGTH_SPEC        24
+#define TAKE_FOCUS_SPEC                 25
+#define TILE_SPEC                       26
+#define VISIBLE_HISTORY_SIZE_SPEC       27
+#define MANAGED_HISTORY_SIZE_SPEC       28
+#define TRACK_SYMBOL_SPEC               29
+#define WIDTH_SPEC                      30
+#define X_SCROLL_CMD_SPEC               31
+#define X_SCROLL_INCREMENT_SPEC         32
+#define Y_SCROLL_CMD_SPEC               33
+#define Y_SCROLL_INCREMENT_SPEC         34
+#define BBOXES_SPEC                     35
+#define BBOXES_COLOR_SPEC               36
+#define LIGHT_ANGLE_SPEC                37
+#define FOLLOW_POINTER_SPEC             38
 #else
-#define CONFIG_FONT			1<<0
-#define CONFIG_MAP_FONT			1<<1
-#define CONFIG_BACK_COLOR		1<<2
-#define CONFIG_REDISPLAY		1<<3
-#define CONFIG_DAMAGE_ALL		1<<4
-#define CONFIG_INVALIDATE_TRACKS	1<<5
-#define CONFIG_INVALIDATE_WPS		1<<6
-#define CONFIG_INVALIDATE_MAPS		1<<7
-#define CONFIG_REQUEST_GEOM		1<<8
-#define CONFIG_OM			1<<9
-#define CONFIG_FOCUS			1<<10
-#define CONFIG_FOCUS_ITEM		1<<11
-#define CONFIG_SCROLL_REGION		1<<12
-#define CONFIG_SET_ORIGIN		1<<13
-#define CONFIG_FOLLOW_POINTER		1<<14
-#define CONFIG_MAP_SYMBOL		1<<15
-#define CONFIG_TRACK_SYMBOL		1<<16
-#define CONFIG_TILE			1<<17
+#define CONFIG_FONT                     1<<0
+#define CONFIG_MAP_FONT                 1<<1
+#define CONFIG_BACK_COLOR               1<<2
+#define CONFIG_REDISPLAY                1<<3
+#define CONFIG_DAMAGE_ALL               1<<4
+#define CONFIG_INVALIDATE_TRACKS        1<<5
+#define CONFIG_INVALIDATE_WPS           1<<6
+#define CONFIG_INVALIDATE_MAPS          1<<7
+#define CONFIG_REQUEST_GEOM             1<<8
+#define CONFIG_OM                       1<<9
+#define CONFIG_FOCUS                    1<<10
+#define CONFIG_FOCUS_ITEM               1<<11
+#define CONFIG_SCROLL_REGION            1<<12
+#define CONFIG_SET_ORIGIN               1<<13
+#define CONFIG_FOLLOW_POINTER           1<<14
+#define CONFIG_MAP_SYMBOL               1<<15
+#define CONFIG_TRACK_SYMBOL             1<<16
+#define CONFIG_TILE                     1<<17
+#define CONFIG_DEBUG            1<<18
 #endif
 
 /*
@@ -338,6 +328,7 @@ static Tk_ConfigSpec config_specs[] = {
    "600", Tk_Offset(ZnWInfo, insert_on_time), 0, NULL},
   {TK_CONFIG_PIXELS, "-insertwidth", "insertWidth", "InsertWidth",
    "2", Tk_Offset(ZnWInfo, text_info.insert_width), 0, NULL},
+#ifdef ATC
   {TK_CONFIG_CUSTOM, "-mapdistancesymbol", "mapDistanceSymbol", "MapDistanceSymbol",
    "AtcSymbol19", Tk_Offset(ZnWInfo, map_distance_symbol),
    TK_CONFIG_NULL_OK, &bitmapOption},
@@ -346,6 +337,7 @@ static Tk_ConfigSpec config_specs[] = {
    Tk_Offset(ZnWInfo, map_text_font), 0, NULL},
   {TK_CONFIG_INT, "-overlapmanager", "overlapManager", "OverlapManager", "1",
    Tk_Offset(ZnWInfo, om_group_id), 0, NULL},
+#endif
   {TK_CONFIG_INT, "-pickaperture", "pickAperture", "PickAperture",
    "1", Tk_Offset(ZnWInfo, pick_aperture), 0, NULL},
   {TK_CONFIG_CUSTOM, "-relief", "relief", "Relief",
@@ -358,18 +350,22 @@ static Tk_ConfigSpec config_specs[] = {
    "", Tk_Offset(ZnWInfo, region), TK_CONFIG_NULL_OK, NULL},
   {TK_CONFIG_CUSTOM, "-selectbackground", "selectBackground", "Foreground",
    "#a0a0a0", Tk_Offset(ZnWInfo, text_info.sel_color), 0, &gradientOption},
+#ifdef ATC
   {TK_CONFIG_DOUBLE, "-speedvectorlength", "speedVectorLength",
    "SpeedVectorLength", "3", Tk_Offset(ZnWInfo, speed_vector_length), 0, NULL},
+#endif
   {TK_CONFIG_STRING, "-takefocus", "takeFocus", "TakeFocus",
    NULL, Tk_Offset(ZnWInfo, take_focus), TK_CONFIG_NULL_OK, NULL},
   {TK_CONFIG_CUSTOM, "-tile", "tile", "Tile",
    "", Tk_Offset(ZnWInfo, tile), 0, &imageOption},
+#ifdef ATC
   {TK_CONFIG_INT, "-trackvisiblehistorysize", "trackVisibleHistorySize", "TrackVisibleHistorySize",
    "6", Tk_Offset(ZnWInfo, track_visible_history_size), 0, NULL},
   {TK_CONFIG_INT, "-trackmanagedhistorysize", "trackManagedHistorySize",
    "TrackManagedHistorySize", "6", Tk_Offset(ZnWInfo, track_managed_history_size), 0, NULL},
   {TK_CONFIG_CUSTOM, "-tracksymbol", "trackSymbol", "TrackSymbol",
    "AtcSymbol15", Tk_Offset(ZnWInfo, track_symbol), TK_CONFIG_NULL_OK, &bitmapOption},
+#endif
   {TK_CONFIG_PIXELS, "-width", "width", "Width",
    "10c", Tk_Offset(ZnWInfo, opt_width), 0, NULL},
   {TK_CONFIG_CALLBACK, "-xscrollcommand", "xScrollCommand", "ScrollCommand",
@@ -405,6 +401,8 @@ static Tk_OptionSpec option_specs[] = {
      "1", -1, Tk_Offset(ZnWInfo, confine), 0, NULL, CONFIG_SET_ORIGIN},
   {TK_OPTION_CURSOR, "-cursor", "cursor", "Cursor",
      "", -1, Tk_Offset(ZnWInfo, cursor), TK_CONFIG_NULL_OK, NULL, 0},
+  {TK_OPTION_INT, "-debug", "debug", "Debug",
+     "0", -1, Tk_Offset(ZnWInfo, debug), 0, NULL, 0},
   {TK_OPTION_FONT, "-font", "font", "Font",
      "-adobe-helvetica-bold-r-normal--*-120-*-*-*-*-*-*",
      -1, Tk_Offset(ZnWInfo, font), 0, NULL, CONFIG_FONT},
@@ -429,6 +427,7 @@ static Tk_OptionSpec option_specs[] = {
      "600", -1, Tk_Offset(ZnWInfo, insert_on_time), 0, NULL, CONFIG_FOCUS},
   {TK_OPTION_PIXELS, "-insertwidth", "insertWidth", "InsertWidth",
      "2", -1, Tk_Offset(ZnWInfo, text_info.insert_width), 0, NULL, CONFIG_FOCUS_ITEM},
+#ifdef ATC
   {TK_OPTION_STRING, "-mapdistancesymbol", "mapDistanceSymbol", "MapDistanceSymbol",
      "AtcSymbol19", Tk_Offset(ZnWInfo, map_symbol_obj), -1,
      TK_CONFIG_NULL_OK, NULL, CONFIG_MAP_SYMBOL|CONFIG_INVALIDATE_MAPS},
@@ -437,6 +436,7 @@ static Tk_OptionSpec option_specs[] = {
      -1, Tk_Offset(ZnWInfo, map_text_font), 0, NULL, CONFIG_MAP_FONT},
   {TK_OPTION_INT, "-overlapmanager", "overlapManager", "OverlapManager", "1",
      -1, Tk_Offset(ZnWInfo, om_group_id), 0, NULL, CONFIG_OM},
+#endif
   {TK_OPTION_INT, "-pickaperture", "pickAperture", "PickAperture",
      "1", -1, Tk_Offset(ZnWInfo, pick_aperture), 0, NULL, 0},
   {TK_OPTION_CUSTOM, "-relief", "relief", "Relief",
@@ -450,13 +450,16 @@ static Tk_OptionSpec option_specs[] = {
      TK_CONFIG_NULL_OK, NULL, CONFIG_SET_ORIGIN|CONFIG_SCROLL_REGION},
   {TK_OPTION_CUSTOM, "-selectbackground", "selectBackground", "Foreground",
      "#a0a0a0", -1, Tk_Offset(ZnWInfo, text_info.sel_color), 0, &gradientOption, 0},
+#ifdef ATC
   {TK_OPTION_DOUBLE, "-speedvectorlength", "speedVectorLength",
      "SpeedVectorLength", "3", -1, Tk_Offset(ZnWInfo, speed_vector_length),
      0, NULL, CONFIG_INVALIDATE_TRACKS},
+#endif
   {TK_OPTION_STRING, "-takefocus", "takeFocus", "TakeFocus",
      NULL, Tk_Offset(ZnWInfo, take_focus), -1, TK_CONFIG_NULL_OK, NULL, 0},
   {TK_OPTION_STRING, "-tile", "tile", "Tile",
      "", Tk_Offset(ZnWInfo, tile_obj), -1, TK_CONFIG_NULL_OK, NULL, CONFIG_TILE|CONFIG_DAMAGE_ALL},
+#ifdef ATC
   {TK_OPTION_INT, "-trackvisiblehistorysize", "trackVisibleHistorySize", "TrackVisibleHistorySize",
      "6", -1, Tk_Offset(ZnWInfo, track_visible_history_size), 0, NULL, CONFIG_INVALIDATE_TRACKS},
   {TK_OPTION_INT, "-trackmanagedhistorysize", "trackManagedHistorySize",
@@ -465,6 +468,7 @@ static Tk_OptionSpec option_specs[] = {
   {TK_OPTION_STRING, "-tracksymbol", "trackSymbol", "TrackSymbol",
      "AtcSymbol15", Tk_Offset(ZnWInfo, track_symbol_obj), -1,
      0, NULL, CONFIG_TRACK_SYMBOL|CONFIG_INVALIDATE_TRACKS|CONFIG_INVALIDATE_WPS},
+#endif
   {TK_OPTION_PIXELS, "-width", "width", "Width",
      "10c", -1, Tk_Offset(ZnWInfo, opt_width), 0, NULL, CONFIG_DAMAGE_ALL|CONFIG_REQUEST_GEOM},
 #ifdef PTK
@@ -501,27 +505,27 @@ static Tk_OptionSpec option_specs[] = {
 };
 #endif
 
-static void	CmdDeleted _ANSI_ARGS_((ClientData client_data));
-static void	Event _ANSI_ARGS_((ClientData client_data, XEvent *eventPtr));
-static void	Bind _ANSI_ARGS_((ClientData client_data, XEvent *eventPtr));
-static int	FetchSelection _ANSI_ARGS_((ClientData clientData, int offset,
-					    char *buffer, int maxBytes));
-static void	SelectTo _ANSI_ARGS_((ZnItem item, int field, int index));
-static int	WidgetObjCmd _ANSI_ARGS_((ClientData client_data,
-					  Tcl_Interp *, int argc, Tcl_Obj *CONST args[]));
+static void     CmdDeleted _ANSI_ARGS_((ClientData client_data));
+static void     Event _ANSI_ARGS_((ClientData client_data, XEvent *eventPtr));
+static void     Bind _ANSI_ARGS_((ClientData client_data, XEvent *eventPtr));
+static int      FetchSelection _ANSI_ARGS_((ClientData clientData, int offset,
+                                            char *buffer, int maxBytes));
+static void     SelectTo _ANSI_ARGS_((ZnItem item, int field, int index));
+static int      WidgetObjCmd _ANSI_ARGS_((ClientData client_data,
+                                          Tcl_Interp *, int argc, Tcl_Obj *CONST args[]));
 #ifdef PTK_800
-static int	Configure _ANSI_ARGS_((Tcl_Interp *interp, ZnWInfo *wi,
-				       int argc, Tcl_Obj *CONST args[], int flags));
+static int      Configure _ANSI_ARGS_((Tcl_Interp *interp, ZnWInfo *wi,
+                                       int argc, Tcl_Obj *CONST args[], int flags));
 #else
-static int	Configure _ANSI_ARGS_((Tcl_Interp *interp, ZnWInfo *wi,
-				       int argc, Tcl_Obj *CONST args[]));
+static int      Configure _ANSI_ARGS_((Tcl_Interp *interp, ZnWInfo *wi,
+                                       int argc, Tcl_Obj *CONST args[]));
 #endif
-static void	Redisplay _ANSI_ARGS_((ClientData client_data));
-static void	Destroy _ANSI_ARGS_((char *mem_ptr));
-static void	InitZinc _ANSI_ARGS_((Tcl_Interp *interp));
-static void	Focus _ANSI_ARGS_((ZnWInfo *wi, ZnBool got_focus));
-static void	Update _ANSI_ARGS_((ZnWInfo	*wi));
-static void	Repair _ANSI_ARGS_((ZnWInfo	*wi));
+static void     Redisplay _ANSI_ARGS_((ClientData client_data));
+static void     Destroy _ANSI_ARGS_((char *mem_ptr));
+static void     InitZinc _ANSI_ARGS_((Tcl_Interp *interp));
+static void     Focus _ANSI_ARGS_((ZnWInfo *wi, ZnBool got_focus));
+static void     Update _ANSI_ARGS_((ZnWInfo     *wi));
+static void     Repair _ANSI_ARGS_((ZnWInfo     *wi));
 
 
 #ifdef PTK_800
@@ -530,22 +534,22 @@ static void	Repair _ANSI_ARGS_((ZnWInfo	*wi));
  *
  * ZnReliefParse
  * ZnReliefPrint --
- *	Converter for the -relief option.
+ *      Converter for the -relief option.
  *
  *----------------------------------------------------------------------
  */
 static int
-ZnReliefParse(ClientData	client_data __unused,
-	      Tcl_Interp	*interp __unused,
-	      Tk_Window		tkwin __unused,
-	      Tcl_Obj		*ovalue,
-	      char		*widget_rec,
-	      int		offset)
+ZnReliefParse(ClientData        client_data,
+              Tcl_Interp        *interp,
+              Tk_Window         tkwin,
+              Tcl_Obj           *ovalue,
+              char              *widget_rec,
+              int               offset)
 {
   ZnReliefStyle *relief_ptr = (ZnReliefStyle *) (widget_rec + offset);
   ZnReliefStyle relief;
-  char	      *value = Tcl_GetString(ovalue);
-  int	      result = TCL_OK;
+  char        *value = Tcl_GetString(ovalue);
+  int         result = TCL_OK;
 
   if (value != NULL) {
     result = ZnGetRelief((ZnWInfo *) widget_rec, value, &relief);
@@ -557,11 +561,11 @@ ZnReliefParse(ClientData	client_data __unused,
 }
 
 static Tcl_Obj *
-ZnReliefPrint(ClientData	client_data __unused,
-	      Tk_Window		tkwin __unused,
-	      char		*widget_rec,
-	      int		offset,
-	      Tcl_FreeProc	**free_proc __unused)
+ZnReliefPrint(ClientData        client_data,
+              Tk_Window         tkwin,
+              char              *widget_rec,
+              int               offset,
+              Tcl_FreeProc      **free_proc)
 {
   ZnReliefStyle relief = *(ZnReliefStyle *) (widget_rec + offset);
   return Tcl_NewStringObj(ZnNameOfRelief(relief), -1);
@@ -573,21 +577,21 @@ ZnReliefPrint(ClientData	client_data __unused,
  *
  * ZnGradientParse
  * ZnGradientPrint --
- *	Converter for the -*color* options.
+ *      Converter for the -*color* options.
  *
  *----------------------------------------------------------------------
  */
 static int
-ZnGradientParse(ClientData	client_data __unused,
-		Tcl_Interp	*interp,
-		Tk_Window	tkwin,
-		Tcl_Obj		*ovalue,
-		char		*widget_rec,
-		int		offset)
+ZnGradientParse(ClientData      client_data,
+                Tcl_Interp      *interp,
+                Tk_Window       tkwin,
+                Tcl_Obj         *ovalue,
+                char            *widget_rec,
+                int             offset)
 {
-  ZnGradient	**grad_ptr = (ZnGradient **) (widget_rec + offset);
-  ZnGradient	*grad, *prev_grad;
-  char		*value = Tcl_GetString(ovalue);
+  ZnGradient    **grad_ptr = (ZnGradient **) (widget_rec + offset);
+  ZnGradient    *grad, *prev_grad;
+  char          *value = Tcl_GetString(ovalue);
 
   prev_grad = *grad_ptr;
   if ((value != NULL) && (*value != '\0')) {
@@ -604,11 +608,11 @@ ZnGradientParse(ClientData	client_data __unused,
 }
 
 static Tcl_Obj *
-ZnGradientPrint(ClientData	client_data __unused,
-		Tk_Window	tkwin __unused,
-		char		*widget_rec,
-		int		offset,
-		Tcl_FreeProc	**free_proc __unused)
+ZnGradientPrint(ClientData      client_data,
+                Tk_Window       tkwin,
+                char            *widget_rec,
+                int             offset,
+                Tcl_FreeProc    **free_proc)
 {
   ZnGradient *gradient = *(ZnGradient **) (widget_rec + offset);
   return Tcl_NewStringObj(ZnNameOfGradient(gradient), -1);
@@ -621,31 +625,31 @@ ZnGradientPrint(ClientData	client_data __unused,
  * ZnBitmapParse
  * ZnImageParse
  * ZnImagePrint --
- *	Converter for the -*image* options.
+ *      Converter for the -*image* options.
  *
  *----------------------------------------------------------------------
  */
 static int
-ZnBitmapParse(ClientData	client_data __unused,
-	      Tcl_Interp	*interp __unused,
-	      Tk_Window		tkwin __unused,
-	      Tcl_Obj		*ovalue,
-	      char		*widget_rec,
-	      int		offset)
+ZnBitmapParse(ClientData        client_data,
+              Tcl_Interp        *interp,
+              Tk_Window         tkwin,
+              Tcl_Obj           *ovalue,
+              char              *widget_rec,
+              int               offset)
 {
-  ZnImage	*image_ptr = (ZnImage *) (widget_rec + offset);
-  ZnImage	image, prev_image;
-  char		*value = Tcl_GetString(ovalue);
-  ZnWInfo	*wi = (ZnWInfo*) widget_rec;
-  ZnBool	is_bmap = True;
+  ZnImage       *image_ptr = (ZnImage *) (widget_rec + offset);
+  ZnImage       image, prev_image;
+  char          *value = Tcl_GetString(ovalue);
+  ZnWInfo       *wi = (ZnWInfo*) widget_rec;
+  ZnBool        is_bmap = True;
 
   prev_image = *image_ptr;
   if ((value != NULL) && (*value != '\0')) {
     image = ZnGetImage(wi, value, NULL, NULL);
     if ((image == ZnUnspecifiedImage) ||
-	! (is_bmap = ZnImageIsBitmap(image))) {
+        ! (is_bmap = ZnImageIsBitmap(image))) {
       if (!is_bmap) {
-	ZnFreeImage(image, NULL, NULL);
+        ZnFreeImage(image, NULL, NULL);
       }
       return TCL_ERROR;
     }
@@ -671,17 +675,17 @@ ZnImageUpdate(void *client_data)
 }
 
 static int
-ZnImageParse(ClientData	client_data __unused,
-	     Tcl_Interp	*interp __unused,
-	     Tk_Window	tkwin __unused,
-	     Tcl_Obj	*ovalue,
-	     char	*widget_rec,
-	     int	offset)
+ZnImageParse(ClientData client_data,
+             Tcl_Interp *interp,
+             Tk_Window  tkwin,
+             Tcl_Obj    *ovalue,
+             char       *widget_rec,
+             int        offset)
 {
-  ZnImage	*image_ptr = (ZnImage *) (widget_rec + offset);
-  ZnImage	image, prev_image;
-  char		*value = Tcl_GetString(ovalue);
-  ZnWInfo	*wi = (ZnWInfo*) widget_rec;
+  ZnImage       *image_ptr = (ZnImage *) (widget_rec + offset);
+  ZnImage       image, prev_image;
+  char          *value = Tcl_GetString(ovalue);
+  ZnWInfo       *wi = (ZnWInfo*) widget_rec;
 
   prev_image = *image_ptr;
   if ((value != NULL) && (*value != '\0')) {
@@ -702,11 +706,11 @@ ZnImageParse(ClientData	client_data __unused,
 }
 
 static Tcl_Obj *
-ZnImagePrint(ClientData		client_data __unused,
-	     Tk_Window		tkwin __unused,
-	     char		*widget_rec,
-	     int		offset,
-	     Tcl_FreeProc	**free_proc __unused)
+ZnImagePrint(ClientData         client_data,
+             Tk_Window          tkwin,
+             char               *widget_rec,
+             int                offset,
+             Tcl_FreeProc       **free_proc)
 {
   ZnImage image = *(ZnImage *) (widget_rec + offset);
   return Tcl_NewStringObj(image?ZnNameOfImage(image):"", -1);
@@ -718,23 +722,23 @@ ZnImagePrint(ClientData		client_data __unused,
  * ZnSetReliefOpt
  * ZnGetReliefOpt
  * ZnRestoreReliefOpt --
- *	Converter for the -relief option.
+ *      Converter for the -relief option.
  *
  *----------------------------------------------------------------------
  */
 static int
-ZnSetReliefOpt(ClientData	client_data __unused,
-	       Tcl_Interp	*interp __unused,
-	       Tk_Window	tkwin __unused,
-	       Tcl_Obj		**ovalue,
-	       char		*widget_rec,
-	       int		offset,
-	       char		*old_val_ptr,
-	       int		flags __unused)
+ZnSetReliefOpt(ClientData       client_data,
+               Tcl_Interp       *interp,
+               Tk_Window        tkwin,
+               Tcl_Obj          **ovalue,
+               char             *widget_rec,
+               int              offset,
+               char             *old_val_ptr,
+               int              flags)
 {
   ZnReliefStyle *relief_ptr;
   ZnReliefStyle relief;
-  char	        *value = Tcl_GetString(*ovalue);
+  char          *value = Tcl_GetString(*ovalue);
   
   if (ZnGetRelief((ZnWInfo *) widget_rec, value, &relief) == TCL_ERROR) {
     return TCL_ERROR;
@@ -748,20 +752,20 @@ ZnSetReliefOpt(ClientData	client_data __unused,
 }
 
 static Tcl_Obj *
-ZnGetReliefOpt(ClientData	client_data __unused,
-	       Tk_Window	tkwin __unused,
-	       char		*widget_rec,
-	       int		offset)
+ZnGetReliefOpt(ClientData       client_data,
+               Tk_Window        tkwin,
+               char             *widget_rec,
+               int              offset)
 {
   ZnReliefStyle relief = *(ZnReliefStyle *) (widget_rec + offset);
   return Tcl_NewStringObj(ZnNameOfRelief(relief), -1);
 }
 
 static void
-ZnRestoreReliefOpt(ClientData	client_data __unused,
-		   Tk_Window	tkwin __unused,
-		   char		*val_ptr,
-		   char		*old_val_ptr)
+ZnRestoreReliefOpt(ClientData   client_data,
+                   Tk_Window    tkwin,
+                   char         *val_ptr,
+                   char         *old_val_ptr)
 {
   *(ZnReliefStyle *) val_ptr = *(ZnReliefStyle *) old_val_ptr;
 }
@@ -772,23 +776,23 @@ ZnRestoreReliefOpt(ClientData	client_data __unused,
  * ZnSetGradientOpt
  * ZnGetGradientOpt
  * ZnRestoreGradientOpt --
- *	Converter for the -*color* options.
+ *      Converter for the -*color* options.
  *
  *----------------------------------------------------------------------
  */
 static int
-ZnSetGradientOpt(ClientData	client_data __unused,
-		 Tcl_Interp	*interp,
-		 Tk_Window	tkwin,
-		 Tcl_Obj	**ovalue,
-		 char		*widget_rec,
-		 int		offset,
-		 char		*old_val_ptr,
-		 int		flags __unused)
+ZnSetGradientOpt(ClientData     client_data,
+                 Tcl_Interp     *interp,
+                 Tk_Window      tkwin,
+                 Tcl_Obj        **ovalue,
+                 char           *widget_rec,
+                 int            offset,
+                 char           *old_val_ptr,
+                 int            flags)
 {
-  ZnGradient	**grad_ptr;
-  ZnGradient	*grad;
-  char		*value = Tcl_GetString(*ovalue);
+  ZnGradient    **grad_ptr;
+  ZnGradient    *grad;
+  char          *value = Tcl_GetString(*ovalue);
 
   if (offset >= 0) {
     if (*value == '\0') {
@@ -797,7 +801,7 @@ ZnSetGradientOpt(ClientData	client_data __unused,
     else {
       grad = ZnGetGradient(interp, tkwin, value);
       if (grad == NULL) {
-	return TCL_ERROR;
+        return TCL_ERROR;
       }
     }
     grad_ptr = (ZnGradient **) (widget_rec + offset);
@@ -808,20 +812,20 @@ ZnSetGradientOpt(ClientData	client_data __unused,
 }
 
 static Tcl_Obj *
-ZnGetGradientOpt(ClientData	client_data __unused,
-		 Tk_Window	tkwin __unused,
-		 char		*widget_rec,
-		 int		offset)
+ZnGetGradientOpt(ClientData     client_data,
+                 Tk_Window      tkwin,
+                 char           *widget_rec,
+                 int            offset)
 {
   ZnGradient *gradient = *(ZnGradient **) (widget_rec + offset);
   return Tcl_NewStringObj(ZnNameOfGradient(gradient), -1);
 }
 
 static void
-ZnRestoreGradientOpt(ClientData	client_data __unused,
-		     Tk_Window	tkwin __unused,
-		     char	*val_ptr,
-		     char	*old_val_ptr)
+ZnRestoreGradientOpt(ClientData client_data,
+                     Tk_Window  tkwin,
+                     char       *val_ptr,
+                     char       *old_val_ptr)
 {
   if (*(ZnGradient **) val_ptr != NULL) {
     ZnFreeGradient(*(ZnGradient **) val_ptr);
@@ -830,9 +834,9 @@ ZnRestoreGradientOpt(ClientData	client_data __unused,
 }
 
 static void
-ZnFreeGradientOpt(ClientData	client_data __unused,
-		  Tk_Window	tkwin __unused,
-		  char		*val_ptr)
+ZnFreeGradientOpt(ClientData    client_data,
+                  Tk_Window     tkwin,
+                  char          *val_ptr)
 {
   if (*(ZnGradient **) val_ptr != NULL) {
     ZnFreeGradient(*(ZnGradient **) val_ptr);
@@ -845,14 +849,14 @@ ZnFreeGradientOpt(ClientData	client_data __unused,
  *----------------------------------------------------------------------
  *
  * ZnGetAlphaStipple --
- *	Need to be handled per screen/dpy toolkit wide, not on a
- *	widget basis.
+ *      Need to be handled per screen/dpy toolkit wide, not on a
+ *      widget basis.
  *
  *----------------------------------------------------------------------
  */
 static Pixmap
-ZnGetAlphaStipple(ZnWInfo	*wi,
-		  unsigned int	val)
+ZnGetAlphaStipple(ZnWInfo       *wi,
+                  unsigned int  val)
 {
   if (val >= 255)
     return None;
@@ -868,7 +872,7 @@ ZnGetAlphaStipple(ZnWInfo	*wi,
  *----------------------------------------------------------------------
  */
 Pixmap
-ZnGetInactiveStipple(ZnWInfo	*wi)
+ZnGetInactiveStipple(ZnWInfo    *wi)
 {
   return ZnGetAlphaStipple(wi, 128);
 }
@@ -882,7 +886,7 @@ ZnGetInactiveStipple(ZnWInfo	*wi)
  *----------------------------------------------------------------------
  */
 void
-ZnNeedRedisplay(ZnWInfo	*wi)
+ZnNeedRedisplay(ZnWInfo *wi)
 {
   if (ISCLEAR(wi->flags, ZN_UPDATE_PENDING) && ISSET(wi->flags, ZN_REALIZED)) {
     /*printf("scheduling an update\n");*/
@@ -912,8 +916,8 @@ ZnGetGLContext(Display *dpy)
 }
 
 ZnGLContextEntry *
-ZnGLMakeCurrent(Display	*dpy,
-		ZnWInfo	*wi)
+ZnGLMakeCurrent(Display *dpy,
+                ZnWInfo *wi)
 {
   ZnGLContextEntry *ce;
 
@@ -930,12 +934,12 @@ ZnGLMakeCurrent(Display	*dpy,
      * textures.
      */
     ZnWInfo **wip = ZnListArray(ce->widgets);
-    int	    i, num = ZnListSize(ce->widgets);
+    int     i, num = ZnListSize(ce->widgets);
 
     for (i = 0; i <num; i++, wip++) {
       if ((*wip)->win != NULL) {
-	wi = *wip;
-	break;
+        wi = *wip;
+        break;
       }
     }
     if (!wi) {
@@ -971,7 +975,7 @@ ZnGLReleaseContext(ZnGLContextEntry *ce)
 
 static void
 ZnGLSwapBuffers(ZnGLContextEntry *ce,
-		ZnWInfo		 *wi)
+                ZnWInfo          *wi)
 {
   if (ce) {
 #ifdef _WIN32
@@ -986,15 +990,15 @@ ZnGLSwapBuffers(ZnGLContextEntry *ce,
 
 #ifdef GL
 static void
-InitRendering1(ZnWInfo	*wi)
+InitRendering1(ZnWInfo  *wi)
 {
-  ZnGLContextEntry	*ce;
-  ZnGLContext		gl_context;
 
   if (wi->render) {
 #  ifndef _WIN32
+        ZnGLContextEntry *ce;
+    ZnGLContext gl_context;
     XVisualInfo *gl_visual = NULL;
-    Colormap	colormap = 0;
+    Colormap    colormap = 0;
 
     ASSIGN(wi->flags, ZN_PRINT_CONFIG, (getenv("ZINC_GLX_INFO") != NULL));
 
@@ -1016,56 +1020,56 @@ InitRendering1(ZnWInfo	*wi)
       int val;
       
       gl_visual = glXChooseVisual(wi->dpy,
-				  XScreenNumberOfScreen(wi->screen),
-				  ZnGLAttribs);
+                                  XScreenNumberOfScreen(wi->screen),
+                                  ZnGLAttribs);
       if (!gl_visual) {
-	fprintf(stderr, "No glx visual\n");
+        fprintf(stderr, "No glx visual\n");
       }
       else {
-	gl_context = glXCreateContext(wi->dpy, gl_visual,
-				      NULL, wi->render==1);
-	if (!gl_context) {
-	  fprintf(stderr, "No glx context\n");
-	}
-	else {
-	  colormap = XCreateColormap(wi->dpy, RootWindowOfScreen(wi->screen),
-				     gl_visual->visual, AllocNone);
-	  ce = ZnMalloc(sizeof(ZnGLContextEntry));
-	  ce->context = gl_context;
-	  ce->visual = gl_visual;
-	  ce->colormap = colormap;
-	  ce->dpy = wi->dpy;
-	  ce->max_tex_size = 64; /* Minimum value is always valid */
-	  ce->max_line_width = 1;
-	  ce->max_point_width = 1;
-	  ce->next = gl_contexts;
-	  gl_contexts = ce;
-	  ce->widgets = ZnListNew(1, sizeof(ZnWInfo *));
-	  ZnListAdd(ce->widgets, &wi, ZnListTail);
-	  
-	  if (ISSET(wi->flags, ZN_PRINT_CONFIG)) {
-	    fprintf(stderr, "  Visual : 0x%x, ",
-		    (int) gl_visual->visualid);
-	    glXGetConfig(wi->dpy, gl_visual, GLX_RGBA, &val);
-	    fprintf(stderr, "RGBA : %d, ", val);
-	    glXGetConfig(wi->dpy, gl_visual, GLX_DOUBLEBUFFER, &val);
-	    fprintf(stderr, "Double Buffer : %d, ", val);
-	    glXGetConfig(wi->dpy, gl_visual, GLX_STENCIL_SIZE, &val);
-	    fprintf(stderr, "Stencil : %d, ", val);
-	    glXGetConfig(wi->dpy, gl_visual, GLX_BUFFER_SIZE, &val);
-	    fprintf(stderr, "depth : %d, ", val);
-	    glXGetConfig(wi->dpy, gl_visual, GLX_RED_SIZE, &val);
-	    fprintf(stderr, "red : %d, ", val);
-	    glXGetConfig(wi->dpy, gl_visual, GLX_GREEN_SIZE, &val);
-	    fprintf(stderr, "green : %d, ", val);
-	    glXGetConfig(wi->dpy, gl_visual, GLX_BLUE_SIZE, &val);
-	    fprintf(stderr, "blue : %d, ", val);
-	    glXGetConfig(wi->dpy, gl_visual, GLX_ALPHA_SIZE, &val);
-	    fprintf(stderr, "alpha : %d\n", val);
-	    fprintf(stderr, "  Direct Rendering: %d\n",
-		    glXIsDirect(wi->dpy, gl_context));
-	  }
-	}
+        gl_context = glXCreateContext(wi->dpy, gl_visual,
+                                      NULL, wi->render==1);
+        if (!gl_context) {
+          fprintf(stderr, "No glx context\n");
+        }
+        else {
+          colormap = XCreateColormap(wi->dpy, RootWindowOfScreen(wi->screen),
+                                     gl_visual->visual, AllocNone);
+          ce = ZnMalloc(sizeof(ZnGLContextEntry));
+          ce->context = gl_context;
+          ce->visual = gl_visual;
+          ce->colormap = colormap;
+          ce->dpy = wi->dpy;
+          ce->max_tex_size = 64; /* Minimum value is always valid */
+          ce->max_line_width = 1;
+          ce->max_point_width = 1;
+          ce->next = gl_contexts;
+          gl_contexts = ce;
+          ce->widgets = ZnListNew(1, sizeof(ZnWInfo *));
+          ZnListAdd(ce->widgets, &wi, ZnListTail);
+          
+          if (ISSET(wi->flags, ZN_PRINT_CONFIG)) {
+            fprintf(stderr, "  Visual : 0x%x, ",
+                    (int) gl_visual->visualid);
+            glXGetConfig(wi->dpy, gl_visual, GLX_RGBA, &val);
+            fprintf(stderr, "RGBA : %d, ", val);
+            glXGetConfig(wi->dpy, gl_visual, GLX_DOUBLEBUFFER, &val);
+            fprintf(stderr, "Double Buffer : %d, ", val);
+            glXGetConfig(wi->dpy, gl_visual, GLX_STENCIL_SIZE, &val);
+            fprintf(stderr, "Stencil : %d, ", val);
+            glXGetConfig(wi->dpy, gl_visual, GLX_BUFFER_SIZE, &val);
+            fprintf(stderr, "depth : %d, ", val);
+            glXGetConfig(wi->dpy, gl_visual, GLX_RED_SIZE, &val);
+            fprintf(stderr, "red : %d, ", val);
+            glXGetConfig(wi->dpy, gl_visual, GLX_GREEN_SIZE, &val);
+            fprintf(stderr, "green : %d, ", val);
+            glXGetConfig(wi->dpy, gl_visual, GLX_BLUE_SIZE, &val);
+            fprintf(stderr, "blue : %d, ", val);
+            glXGetConfig(wi->dpy, gl_visual, GLX_ALPHA_SIZE, &val);
+            fprintf(stderr, "alpha : %d\n", val);
+            fprintf(stderr, "  Direct Rendering: %d\n",
+                    glXIsDirect(wi->dpy, gl_context));
+          }
+        }
       }
     }
     if (gl_visual && colormap) {
@@ -1076,12 +1080,12 @@ InitRendering1(ZnWInfo	*wi)
 }
 
 static void
-InitRendering2(ZnWInfo	*wi)
+InitRendering2(ZnWInfo  *wi)
 {
-  ZnGLContextEntry	*ce;
-  ZnGLContext		gl_context;
-  GLfloat		r[2]; /* Min, Max */
-  GLint			i[1];
+  ZnGLContextEntry      *ce;
+  ZnGLContext           gl_context;
+  GLfloat               r[2]; /* Min, Max */
+  GLint                 i[1];
 
   if (wi->render) {
 #  ifdef _WIN32
@@ -1116,34 +1120,34 @@ InitRendering2(ZnWInfo	*wi)
       ce->pfd.iLayerType = PFD_MAIN_PLANE;
       ce->ipixel = ChoosePixelFormat(ce->hdc, &ce->pfd);
       /*printf("ipixel=%d dwFlags=0x%x req=0x%x iPixelType=%d hdc=%d\n",
-	ce->ipixel,	ce->pfd.dwFlags,
-	PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER,	      
-	ce->pfd.iPixelType==PFD_TYPE_RGBA,
-	ce->hdc);*/
+        ce->ipixel,     ce->pfd.dwFlags,
+        PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER,       
+        ce->pfd.iPixelType==PFD_TYPE_RGBA,
+        ce->hdc);*/
       if (!ce->ipixel ||
-	  (ce->pfd.cRedBits != 8) || (ce->pfd.cGreenBits != 8) || (ce->pfd.cBlueBits != 8) ||
-	  (ce->pfd.cStencilBits != 8)) {
-	fprintf(stderr, "ChoosePixelFormat failed\n");
+          (ce->pfd.cRedBits != 8) || (ce->pfd.cGreenBits != 8) || (ce->pfd.cBlueBits != 8) ||
+          (ce->pfd.cStencilBits != 8)) {
+        fprintf(stderr, "ChoosePixelFormat failed\n");
       }
       
       if (SetPixelFormat(ce->hdc, ce->ipixel, &ce->pfd) == TRUE) {
-	gl_context = wglCreateContext(ce->hdc);
-	if (gl_context) {
-	  ce->context = gl_context;
-	  ce->dpy = wi->dpy;
-	  ce->max_tex_size = 64; /* Minimum value is always valid */
-	  ce->max_line_width = 1;
-	  ce->max_point_width = 1;
-	  ce->next = gl_contexts;
-	  gl_contexts = ce;
-	}
-	else {
-	  fprintf(stderr, "wglCreateContext failed\n");
-	  ZnFree(ce);
-	}
+        gl_context = wglCreateContext(ce->hdc);
+        if (gl_context) {
+          ce->context = gl_context;
+          ce->dpy = wi->dpy;
+          ce->max_tex_size = 64; /* Minimum value is always valid */
+          ce->max_line_width = 1;
+          ce->max_point_width = 1;
+          ce->next = gl_contexts;
+          gl_contexts = ce;
+        }
+        else {
+          fprintf(stderr, "wglCreateContext failed\n");
+          ZnFree(ce);
+        }
       }
       else {
-	ZnFree(ce);
+        ZnFree(ce);
       }
     }
     ReleaseDC(ce->hwnd, ce->hdc);
@@ -1159,19 +1163,19 @@ InitRendering2(ZnWInfo	*wi)
     
     if (ISSET(wi->flags, ZN_PRINT_CONFIG)) {
       fprintf(stderr, "OpenGL version %s\n",
-	      (char *) glGetString(GL_VERSION));
+              (char *) glGetString(GL_VERSION));
       fprintf(stderr, "  Rendering engine: %s, ",
-	      (char *) glGetString(GL_RENDERER));
+              (char *) glGetString(GL_RENDERER));
       fprintf(stderr, "  Vendor: %s\n",
-	      (char *) glGetString(GL_VENDOR));
+              (char *) glGetString(GL_VENDOR));
       fprintf(stderr, "  Available extensions: %s\n",
-	      (char *) glGetString(GL_EXTENSIONS));
+              (char *) glGetString(GL_EXTENSIONS));
       fprintf(stderr, "Max antialiased line width: %g\n",
-	      ce->max_line_width);
+              ce->max_line_width);
       fprintf(stderr, "Max antialiased point size: %g\n",
-	      ce->max_point_width);
+              ce->max_point_width);
       fprintf(stderr, "Max texture size: %d\n",
-	      ce->max_tex_size);
+              ce->max_tex_size);
     }
     
     ZnGLReleaseContext(ce);
@@ -1185,33 +1189,33 @@ InitRendering2(ZnWInfo	*wi)
  *
  * ZincObjCmd --
  *
- *	This procedure is invoked to process the "zinc" Tcl
- *	command.  It creates a new "zinc" widget.
+ *      This procedure is invoked to process the "zinc" Tcl
+ *      command.  It creates a new "zinc" widget.
  *
  *----------------------------------------------------------------------
  */
-int
-ZincObjCmd(ClientData		client_data,	/* Main window associated with
-						 * interpreter. */
-	   Tcl_Interp		*interp,	/* Current interpreter. */
-	   int			argc,		/* Number of arguments. */
-	   Tcl_Obj	*CONST	args[])		/* Argument strings. */
+EXTERN int
+ZincObjCmd(ClientData           client_data,    /* Main window associated with
+                                                 * interpreter. */
+           Tcl_Interp           *interp,        /* Current interpreter. */
+           int                  argc,           /* Number of arguments. */
+           Tcl_Obj      *CONST  args[])         /* Argument strings. */
 {
-  Tk_Window	top_w = (Tk_Window) client_data;
-  ZnWInfo	*wi;
-  Tk_Window	tkwin;
+  Tk_Window     top_w = (Tk_Window) client_data;
+  ZnWInfo       *wi;
+  Tk_Window     tkwin;
 #ifndef PTK_800
   Tk_OptionTable opt_table;
 #endif
-  unsigned int	num;
-  ZnBool	has_gl = False;
+  unsigned int  num;
+  ZnBool        has_gl = False;
 #ifndef _WIN32
 #  if defined(GL) || defined(SHAPE)
-  int		major_op, first_err, first_evt;
+  int           major_op, first_err, first_evt;
 #  endif
 #  ifdef GL
-  Display	*dpy = Tk_Display(top_w);
-  Screen	*screen = Tk_Screen(top_w);
+  Display       *dpy = Tk_Display(top_w);
+  Screen        *screen = Tk_Screen(top_w);
 #  endif
 #endif
 
@@ -1224,16 +1228,16 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
   if (XQueryExtension(dpy, "GLX", &major_op, &first_evt, &first_err)) {
     if (glXQueryExtension(dpy, &first_err, &first_evt)) {
       if (glXQueryVersion(dpy, &ZnMajorGlx, &ZnMinorGlx)) {
-	if ((ZnMajorGlx == 1) && (ZnMinorGlx >= 1)) {
-	  has_gl = True;
-	}
+        if ((ZnMajorGlx == 1) && (ZnMinorGlx >= 1)) {
+          has_gl = True;
+        }
       }
     }
   }
   if (has_gl) {
     XVisualInfo *visual = glXChooseVisual(dpy,
-					  XScreenNumberOfScreen(screen),
-					  ZnGLAttribs);
+                                          XScreenNumberOfScreen(screen),
+                                          ZnGLAttribs);
     if (visual) {
       XFree(visual);
     }
@@ -1285,7 +1289,7 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
   ASSIGN(wi->flags, ZN_HAS_GL, has_gl);
 #if defined(SHAPE) && !defined(_WIN32)
   ASSIGN(wi->flags, ZN_HAS_X_SHAPE,
-	 XQueryExtension(wi->dpy, "SHAPE", &major_op, &first_evt, &first_err));
+         XQueryExtension(wi->dpy, "SHAPE", &major_op, &first_evt, &first_err));
   wi->reshape = wi->full_reshape = True;
 #else
   CLEAR(wi->flags, ZN_HAS_X_SHAPE);
@@ -1295,13 +1299,13 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
 #ifdef PTK
 #ifdef PTK_800
   wi->cmd = Lang_CreateWidget(interp, tkwin, (Tcl_CmdProc *) WidgetObjCmd,
-			      (ClientData) wi, CmdDeleted);
+                              (ClientData) wi, CmdDeleted);
 #else
   wi->cmd = Lang_CreateWidget(interp, tkwin, WidgetObjCmd, (ClientData) wi, CmdDeleted);
 #endif
 #else
   wi->cmd = Tcl_CreateObjCommand(interp, Tk_PathName(tkwin), WidgetObjCmd,
-				 (ClientData) wi, CmdDeleted);
+                                 (ClientData) wi, CmdDeleted);
 #endif
 #ifndef PTK_800
   wi->opt_table = opt_table;
@@ -1319,25 +1323,29 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
   wi->opt_width = None;
   wi->opt_height = None;
   wi->font = 0;
+#ifdef ATC
+  wi->track_visible_history_size = 0;
+  wi->track_managed_history_size = 0;
+  wi->speed_vector_length = 0;
   wi->map_text_font = 0;
-#ifdef GL
+#  ifdef GL
   wi->font_tfi = NULL;
   wi->map_font_tfi = NULL;
-#endif
+#  endif
   wi->map_distance_symbol = ZnUnspecifiedImage;
   wi->track_symbol = ZnUnspecifiedImage;
-  wi->tile = ZnUnspecifiedImage;
-#ifndef PTK_800
+#  ifndef PTK_800
   wi->map_symbol_obj = NULL;
   wi->track_symbol_obj = NULL;
+#  endif
+#endif
+  wi->tile = ZnUnspecifiedImage;
+#ifndef PTK_800
   wi->tile_obj = NULL;
 #endif
   wi->cursor = None;
   wi->hot_item = ZN_NO_ITEM;
   wi->hot_prev = ZN_NO_ITEM;
-  wi->track_visible_history_size = 0;
-  wi->track_managed_history_size = 0;
-  wi->speed_vector_length = 0;
   wi->confine = 0;
   wi->origin.x = wi->origin.y = 0;
   wi->scroll_xo = wi->scroll_yo = 0;
@@ -1356,7 +1364,7 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
 
   wi->top_group = ZnCreateItem(wi, ZnGroup, 0, NULL);
 
-#ifdef OM
+#ifdef ATC
   wi->om_group_id = 0;
   wi->om_group = wi->top_group;
   OmRegister((void *) wi, ZnSendTrackToOm, ZnSetLabelAngleFromOm, ZnQueryLabelPosition);
@@ -1406,21 +1414,21 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
   ZnInitTransformStack(wi);
 
   for (num = 0; num < ZN_NUM_ALPHA_STEPS; num++) {
-    char	name[TCL_INTEGER_SPACE+12];
+    char        name[TCL_INTEGER_SPACE+12];
 
     sprintf(name, "AlphaStipple%d", num);
     wi->alpha_stipples[num] = Tk_GetBitmap(interp, tkwin, Tk_GetUid(name));
   }
 
   Tk_CreateEventHandler(tkwin,
-			ExposureMask|StructureNotifyMask|FocusChangeMask,
-			Event, (ClientData) wi);
+                        ExposureMask|StructureNotifyMask|FocusChangeMask,
+                        Event, (ClientData) wi);
   Tk_CreateEventHandler(tkwin, KeyPressMask|KeyReleaseMask|
-			ButtonPressMask|ButtonReleaseMask|EnterWindowMask|
-			LeaveWindowMask|PointerMotionMask|VirtualEventMask,
-			Bind, (ClientData) wi);
+                        ButtonPressMask|ButtonReleaseMask|EnterWindowMask|
+                        LeaveWindowMask|PointerMotionMask|VirtualEventMask,
+                        Bind, (ClientData) wi);
   Tk_CreateSelHandler(tkwin, XA_PRIMARY, XA_STRING,
-		      FetchSelection, (ClientData) wi, XA_STRING);
+                      FetchSelection, (ClientData) wi, XA_STRING);
 
 #ifdef PTK_800
   if (Configure(interp, wi, argc-2, args+2, 0) != TCL_OK) {
@@ -1448,11 +1456,13 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
    * Allocate double buffer pixmap/image.
    */
     wi->draw_buffer = Tk_GetPixmap(wi->dpy, RootWindowOfScreen(wi->screen),
-				   wi->width, wi->height, Tk_Depth(wi->win));
+                                   wi->width, wi->height, Tk_Depth(wi->win));
   }
+#ifdef GL
   else {
     InitRendering1(wi);
   }
+#endif
 
 #ifdef PTK
   Tcl_SetObjResult(interp, LangWidgetObj(interp, tkwin));
@@ -1468,14 +1478,14 @@ ZincObjCmd(ClientData		client_data,	/* Main window associated with
  *
  * EncodeItemPart --
  *
- *	Form a ClientData value from an item/part that is suitable
- *	as a key in a binding table.
+ *      Form a ClientData value from an item/part that is suitable
+ *      as a key in a binding table.
  *
  *----------------------------------------------------------------------
  */
 ClientData
-EncodeItemPart(ZnItem	item,
-	       int	part)
+EncodeItemPart(ZnItem   item,
+               int      part)
 {
   if (part >= 0) {
     ZnFieldSet fs;
@@ -1507,12 +1517,12 @@ EncodeItemPart(ZnItem	item,
  * TagSearchExprInit --
  *
  *      This procedure allocates and initializes one
- *	TagSearchExpr struct.
+ *      TagSearchExpr struct.
  *
  *--------------------------------------------------------------
  */
 static void
-TagSearchExprInit(TagSearchExpr	**expr_var)
+TagSearchExprInit(TagSearchExpr **expr_var)
 {
   TagSearchExpr* expr = *expr_var;
 
@@ -1539,7 +1549,7 @@ TagSearchExprInit(TagSearchExpr	**expr_var)
  *--------------------------------------------------------------
  */
 static void
-TagSearchExprDestroy(TagSearchExpr	*expr)
+TagSearchExprDestroy(TagSearchExpr      *expr)
 {
   if (expr) {
     if (expr->uids) {
@@ -1571,17 +1581,17 @@ TagSearchExprDestroy(TagSearchExpr	*expr)
  *--------------------------------------------------------------
  */
 static int
-TagSearchScanExpr(Tcl_Interp	*interp,	/* Current interpreter. */
-		  ZnTagSearch	*search,	/* Search data */
-		  TagSearchExpr *expr)		/* Compiled expression result */
+TagSearchScanExpr(Tcl_Interp    *interp,        /* Current interpreter. */
+                  ZnTagSearch   *search,        /* Search data */
+                  TagSearchExpr *expr)          /* Compiled expression result */
 {
-  int	looking_for_tag; /* When true, scanner expects next char(s)
-			  * to be a tag, else operand expected */
-  int	found_tag;	/* One or more tags found */
-  int	found_endquote;	/* For quoted tag string parsing */
-  int	negate_result;	/* Pending negation of next tag value */
-  char	*tag;		/* tag from tag expression string */
-  char	c;
+  int   looking_for_tag; /* When true, scanner expects next char(s)
+                          * to be a tag, else operand expected */
+  int   found_tag;      /* One or more tags found */
+  int   found_endquote; /* For quoted tag string parsing */
+  int   negate_result;  /* Pending negation of next tag value */
+  char  *tag;           /* tag from tag expression string */
+  char  c;
 
   negate_result = 0;
   found_tag = 0;
@@ -1592,165 +1602,165 @@ TagSearchScanExpr(Tcl_Interp	*interp,	/* Current interpreter. */
     if (expr->allocated == expr->index) {
       expr->allocated += 15;
       if (expr->uids) {
-	expr->uids = (Tk_Uid *) ZnRealloc((char *) expr->uids,
-					  expr->allocated * sizeof(Tk_Uid));
+        expr->uids = (Tk_Uid *) ZnRealloc((char *) expr->uids,
+                                          expr->allocated * sizeof(Tk_Uid));
       }
       else {
-	expr->uids = (Tk_Uid *) ZnMalloc(expr->allocated * sizeof(Tk_Uid));
+        expr->uids = (Tk_Uid *) ZnMalloc(expr->allocated * sizeof(Tk_Uid));
       }
     }
     
     if (looking_for_tag) {
       switch (c) {
-      case ' ':	/* ignore unquoted whitespace */
+      case ' ': /* ignore unquoted whitespace */
       case '\t':
       case '\n':
       case '\r':
-	break;
-      case '!':	/* negate next tag or subexpr */
-	if (looking_for_tag > 1) {
-	  Tcl_AppendResult(interp, "Too many '!' in tag search expression",
-			   (char *) NULL);
-	  return TCL_ERROR;
-	}
-	looking_for_tag++;
-	negate_result = 1;
-	break;
-      case '(':	/* scan (negated) subexpr recursively */
-	if (negate_result) {
-	  expr->uids[expr->index++] = neg_paren_uid;
-	  negate_result = 0;
-	}
-	else {
-	  expr->uids[expr->index++] = paren_uid;
-	}
-	if (TagSearchScanExpr(interp, search, expr) != TCL_OK) {
-	  /* Result string should be already set
-	   * by nested call to tag_expr_scan() */
-	  return TCL_ERROR;
-	}
-	looking_for_tag = 0;
-	found_tag = 1;
-	break;
-      case '"':	/* quoted tag string */
-	if (negate_result) {
-	  expr->uids[expr->index++] = neg_tag_val_uid;
-	  negate_result = 0;
-	}
-	else {
-	  expr->uids[expr->index++] = tag_val_uid;
-	}
-	tag = search->rewrite_buf;
-	found_endquote = 0;
-	while (search->tag_index < search->tag_len) {
-	  c = search->tag[search->tag_index++];
-	  if (c == '\\') {
-	    c = search->tag[search->tag_index++];
-	  }
-	  if (c == '"') {
-	    found_endquote = 1;
-	    break;
-	  }
-	  *tag++ = c;
-	}
-	if (! found_endquote) {
-	  Tcl_AppendResult(interp, "Missing endquote in tag search expression",
-			   (char *) NULL);
-	  return TCL_ERROR;
-	}
-	if (! (tag - search->rewrite_buf)) {
-	  Tcl_AppendResult(interp,
-			   "Null quoted tag string in tag search expression",
-			   (char *) NULL);
-	  return TCL_ERROR;
-	}
-	*tag++ = '\0';
-	expr->uids[expr->index++] = Tk_GetUid(search->rewrite_buf);
-	looking_for_tag = 0;
-	found_tag = 1;
-	break;
-      case '&':	/* illegal chars when looking for tag */
+        break;
+      case '!': /* negate next tag or subexpr */
+        if (looking_for_tag > 1) {
+          Tcl_AppendResult(interp, "Too many '!' in tag search expression",
+                           (char *) NULL);
+          return TCL_ERROR;
+        }
+        looking_for_tag++;
+        negate_result = 1;
+        break;
+      case '(': /* scan (negated) subexpr recursively */
+        if (negate_result) {
+          expr->uids[expr->index++] = neg_paren_uid;
+          negate_result = 0;
+        }
+        else {
+          expr->uids[expr->index++] = paren_uid;
+        }
+        if (TagSearchScanExpr(interp, search, expr) != TCL_OK) {
+          /* Result string should be already set
+           * by nested call to tag_expr_scan() */
+          return TCL_ERROR;
+        }
+        looking_for_tag = 0;
+        found_tag = 1;
+        break;
+      case '"': /* quoted tag string */
+        if (negate_result) {
+          expr->uids[expr->index++] = neg_tag_val_uid;
+          negate_result = 0;
+        }
+        else {
+          expr->uids[expr->index++] = tag_val_uid;
+        }
+        tag = search->rewrite_buf;
+        found_endquote = 0;
+        while (search->tag_index < search->tag_len) {
+          c = search->tag[search->tag_index++];
+          if (c == '\\') {
+            c = search->tag[search->tag_index++];
+          }
+          if (c == '"') {
+            found_endquote = 1;
+            break;
+          }
+          *tag++ = c;
+        }
+        if (! found_endquote) {
+          Tcl_AppendResult(interp, "Missing endquote in tag search expression",
+                           (char *) NULL);
+          return TCL_ERROR;
+        }
+        if (! (tag - search->rewrite_buf)) {
+          Tcl_AppendResult(interp,
+                           "Null quoted tag string in tag search expression",
+                           (char *) NULL);
+          return TCL_ERROR;
+        }
+        *tag++ = '\0';
+        expr->uids[expr->index++] = Tk_GetUid(search->rewrite_buf);
+        looking_for_tag = 0;
+        found_tag = 1;
+        break;
+      case '&': /* illegal chars when looking for tag */
       case '|':
       case '^':
       case ')':
-	Tcl_AppendResult(interp, "Unexpected operator in tag search expression",
-			 (char *) NULL);
-	return TCL_ERROR;
-      default:	/* unquoted tag string */
-	if (negate_result) {
-	  expr->uids[expr->index++] = neg_tag_val_uid;
-	  negate_result = 0;
-	}
-	else {
-	  expr->uids[expr->index++] = tag_val_uid;
-	}
-	tag = search->rewrite_buf;
-	*tag++ = c;
-	/* copy rest of tag, including any embedded whitespace */
-	while (search->tag_index < search->tag_len) {
-	  c = search->tag[search->tag_index];
-	  if ((c == '!') || (c == '&') || (c == '|') || (c == '^') ||
-	      (c == '(') || (c == ')') || (c == '"')) {
-	    break;
-	  }
-	  *tag++ = c;
-	  search->tag_index++;
-	}
-	/* remove trailing whitespace */
-	while (1) {
-	  c = *--tag;
-	  /* there must have been one non-whitespace char,
-	   *  so this will terminate */
-	  if ((c != ' ') && (c != '\t') && (c != '\n') && (c != '\r')) {
-	    break;
-	  }
-	}
-	*++tag = '\0';
-	expr->uids[expr->index++] = Tk_GetUid(search->rewrite_buf);
-	looking_for_tag = 0;
-	found_tag = 1;
+        Tcl_AppendResult(interp, "Unexpected operator in tag search expression",
+                         (char *) NULL);
+        return TCL_ERROR;
+      default:  /* unquoted tag string */
+        if (negate_result) {
+          expr->uids[expr->index++] = neg_tag_val_uid;
+          negate_result = 0;
+        }
+        else {
+          expr->uids[expr->index++] = tag_val_uid;
+        }
+        tag = search->rewrite_buf;
+        *tag++ = c;
+        /* copy rest of tag, including any embedded whitespace */
+        while (search->tag_index < search->tag_len) {
+          c = search->tag[search->tag_index];
+          if ((c == '!') || (c == '&') || (c == '|') || (c == '^') ||
+              (c == '(') || (c == ')') || (c == '"')) {
+            break;
+          }
+          *tag++ = c;
+          search->tag_index++;
+        }
+        /* remove trailing whitespace */
+        while (1) {
+          c = *--tag;
+          /* there must have been one non-whitespace char,
+           *  so this will terminate */
+          if ((c != ' ') && (c != '\t') && (c != '\n') && (c != '\r')) {
+            break;
+          }
+        }
+        *++tag = '\0';
+        expr->uids[expr->index++] = Tk_GetUid(search->rewrite_buf);
+        looking_for_tag = 0;
+        found_tag = 1;
       }
       
     }
     else {    /* ! looking_for_tag */  
       switch (c) {
-      case ' '  :	/* ignore whitespace */
+      case ' '  :       /* ignore whitespace */
       case '\t' :
       case '\n' :
       case '\r' :
-	break;
-      case '&'  :	/* AND operator */
-	c = search->tag[search->tag_index++];
-	if (c != '&') {
-	  Tcl_AppendResult(interp, "Singleton '&' in tag search expression",
-			   (char *) NULL);
-	  return TCL_ERROR;
-	}
-	expr->uids[expr->index++] = and_uid;
-	looking_for_tag = 1;
-	break;
-      case '|'  :	/* OR operator */
-	c = search->tag[search->tag_index++];
-	if (c != '|') {
-	  Tcl_AppendResult(interp, "Singleton '|' in tag search expression",
-			   (char *) NULL);
-	  return TCL_ERROR;
-	}
-	expr->uids[expr->index++] = or_uid;
-	looking_for_tag = 1;
-	break;
-      case '^'  :	/* XOR operator */
-	expr->uids[expr->index++] = xor_uid;
-	looking_for_tag = 1;
-	break;
-      case ')'  :	/* end subexpression */
-	expr->uids[expr->index++] = end_paren_uid;
-	goto breakwhile;
-      default   :	/* syntax error */
-	Tcl_AppendResult(interp,
-			 "Invalid boolean operator in tag search expression",
-			 (char *) NULL);
-	return TCL_ERROR;
+        break;
+      case '&'  :       /* AND operator */
+        c = search->tag[search->tag_index++];
+        if (c != '&') {
+          Tcl_AppendResult(interp, "Singleton '&' in tag search expression",
+                           (char *) NULL);
+          return TCL_ERROR;
+        }
+        expr->uids[expr->index++] = and_uid;
+        looking_for_tag = 1;
+        break;
+      case '|'  :       /* OR operator */
+        c = search->tag[search->tag_index++];
+        if (c != '|') {
+          Tcl_AppendResult(interp, "Singleton '|' in tag search expression",
+                           (char *) NULL);
+          return TCL_ERROR;
+        }
+        expr->uids[expr->index++] = or_uid;
+        looking_for_tag = 1;
+        break;
+      case '^'  :       /* XOR operator */
+        expr->uids[expr->index++] = xor_uid;
+        looking_for_tag = 1;
+        break;
+      case ')'  :       /* end subexpression */
+        expr->uids[expr->index++] = end_paren_uid;
+        goto breakwhile;
+      default   :       /* syntax error */
+        Tcl_AppendResult(interp,
+                         "Invalid boolean operator in tag search expression",
+                         (char *) NULL);
+        return TCL_ERROR;
       }
     }
   }
@@ -1759,7 +1769,7 @@ TagSearchScanExpr(Tcl_Interp	*interp,	/* Current interpreter. */
     return TCL_OK;
   }
   Tcl_AppendResult(interp, "Missing tag in tag search expression",
-		   (char *) NULL);
+                   (char *) NULL);
   return TCL_ERROR;
 }
 
@@ -1780,15 +1790,15 @@ TagSearchScanExpr(Tcl_Interp	*interp,	/* Current interpreter. */
  *--------------------------------------------------------------
  */
 static int
-TagSearchEvalExpr(TagSearchExpr	*expr,	/* Search expression */
-		  ZnItem	item)	/* Item being test for match */
+TagSearchEvalExpr(TagSearchExpr *expr,  /* Search expression */
+                  ZnItem        item)   /* Item being test for match */
 {
-  int		looking_for_tag; /* When true, scanner expects next char(s)
-				  * to be a tag, else operand expected */
-  int		negate_result;	/* Pending negation of next tag value */
-  Tk_Uid	uid;
-  int		result=0;	/* Value of expr so far */
-  int		paren_depth;
+  int           looking_for_tag; /* When true, scanner expects next char(s)
+                                  * to be a tag, else operand expected */
+  int           negate_result;  /* Pending negation of next tag value */
+  Tk_Uid        uid;
+  int           result=0;       /* Value of expr so far */
+  int           paren_depth;
   
   negate_result = 0;
   looking_for_tag = 1;
@@ -1796,90 +1806,90 @@ TagSearchEvalExpr(TagSearchExpr	*expr,	/* Search expression */
     uid = expr->uids[expr->index++];
     if (looking_for_tag) {
       if (uid == tag_val_uid) {
-	/*
-	 * assert(expr->index < expr->length);
-	 */
-	uid = expr->uids[expr->index++];
-	/*
-	 * set result 1 if tag is found in item's tags
-	 */
-	result = ZnITEM.HasTag(item, uid) ? 1 : 0;
+        /*
+         * assert(expr->index < expr->length);
+         */
+        uid = expr->uids[expr->index++];
+        /*
+         * set result 1 if tag is found in item's tags
+         */
+        result = ZnITEM.HasTag(item, uid) ? 1 : 0;
       }
       else if (uid == neg_tag_val_uid) {
-	negate_result = ! negate_result;
-	/*
-	 * assert(expr->index < expr->length);
-	 */
-	uid = expr->uids[expr->index++];
-	/*
-	 * set result 1 if tag is found in item's tags
-	 */
-	result = ZnITEM.HasTag(item, uid) ? 1 : 0;
+        negate_result = ! negate_result;
+        /*
+         * assert(expr->index < expr->length);
+         */
+        uid = expr->uids[expr->index++];
+        /*
+         * set result 1 if tag is found in item's tags
+         */
+        result = ZnITEM.HasTag(item, uid) ? 1 : 0;
       }
       else if (uid == paren_uid) {
-	/*
-	 * evaluate subexpressions with recursion
-	 */
-	result = TagSearchEvalExpr(expr, item);
+        /*
+         * evaluate subexpressions with recursion
+         */
+        result = TagSearchEvalExpr(expr, item);
       }
       else if (uid == neg_paren_uid) {
-	negate_result = ! negate_result;
-	/*
-	 * evaluate subexpressions with recursion
-	 */
-	result = TagSearchEvalExpr(expr, item);
-	/*
-	 * } else {
-	 *  assert(0);
-	 */
+        negate_result = ! negate_result;
+        /*
+         * evaluate subexpressions with recursion
+         */
+        result = TagSearchEvalExpr(expr, item);
+        /*
+         * } else {
+         *  assert(0);
+         */
       }
       if (negate_result) {
-	result = ! result;
-	negate_result = 0;
+        result = ! result;
+        negate_result = 0;
       }
       looking_for_tag = 0;
     }
     else {    /* ! looking_for_tag */
       if (((uid == and_uid) && (!result)) || ((uid == or_uid) && result)) {
-	/*
-	 * short circuit expression evaluation
-	 *
-	 * if result before && is 0, or result before || is 1, then
-	 * the expression is decided and no further evaluation is needed.
-	 */
-	paren_depth = 0;
-	while (expr->index < expr->length) {
-	  uid = expr->uids[expr->index++];
-	  if ((uid == tag_val_uid) || (uid == neg_tag_val_uid)) {
-	    expr->index++;
-	    continue;
-	  }
-	  if ((uid == paren_uid) || (uid == neg_paren_uid)) {
-	    paren_depth++;
-	    continue;
-	  } 
-	  if (uid == end_paren_uid) {
-	    paren_depth--;
-	    if (paren_depth < 0) {
-	      break;
-	    }
-	  }
-	}
-	return result;
-	
+        /*
+         * short circuit expression evaluation
+         *
+         * if result before && is 0, or result before || is 1, then
+         * the expression is decided and no further evaluation is needed.
+         */
+        paren_depth = 0;
+        while (expr->index < expr->length) {
+          uid = expr->uids[expr->index++];
+          if ((uid == tag_val_uid) || (uid == neg_tag_val_uid)) {
+            expr->index++;
+            continue;
+          }
+          if ((uid == paren_uid) || (uid == neg_paren_uid)) {
+            paren_depth++;
+            continue;
+          } 
+          if (uid == end_paren_uid) {
+            paren_depth--;
+            if (paren_depth < 0) {
+              break;
+            }
+          }
+        }
+        return result;
+        
       }
       else if (uid == xor_uid) {
-	/*
-	 * if the previous result was 1 then negate the next result.
-	 */
-	negate_result = result;
+        /*
+         * if the previous result was 1 then negate the next result.
+         */
+        negate_result = result;
       }
       else if (uid == end_paren_uid) {
-	return result;
-	/*
-	 * } else {
-	 *  assert(0);
-	 */
+        return result;
+        /*
+         * } else {
+         *  assert(0);
+         */
       }
       looking_for_tag = 1;
     }
@@ -1892,14 +1902,14 @@ TagSearchEvalExpr(TagSearchExpr	*expr,	/* Search expression */
 
 
 static ZnItem
-LookupGroupFromPath(ZnItem	 start,
-		    Tk_Uid	 *names,
-		    unsigned int num_names)
+LookupGroupFromPath(ZnItem       start,
+                    Tk_Uid       *names,
+                    unsigned int num_names)
 {
-  Tk_Uid	name, *tags;
-  unsigned int	count;
-  ZnBool	recursive;
-  ZnItem	result, current = ZnGroupHead(start);
+  Tk_Uid        name, *tags;
+  unsigned int  count;
+  ZnBool        recursive;
+  ZnItem        result, current = ZnGroupHead(start);
 
   if (num_names == 0) {
     return start;
@@ -1914,24 +1924,24 @@ LookupGroupFromPath(ZnItem	 start,
       tags = ZnListArray(current->tags);
       count = ZnListSize(current->tags);
       for (; count > 0; tags++, count--) {
-	if (name == *tags) {
-	  if (num_names > 2) {
-	    result = LookupGroupFromPath(current, names+2, num_names-2);
-	    return result;
-	  }
-	  else {
-	    return current;
-	  }
-	}
+        if (name == *tags) {
+          if (num_names > 2) {
+            result = LookupGroupFromPath(current, names+2, num_names-2);
+            return result;
+          }
+          else {
+            return current;
+          }
+        }
       }
       /*
        * This group doesn't match try to search depth first.
        */
       if (recursive) {
-	result = LookupGroupFromPath(current, names, num_names);
-	if (result != ZN_NO_ITEM) {
-	  return result;
-	}
+        result = LookupGroupFromPath(current, names, num_names);
+        if (result != ZN_NO_ITEM) {
+          return result;
+        }
       }
     }
     current = current->next;
@@ -1954,28 +1964,28 @@ LookupGroupFromPath(ZnItem	 start,
  *      The return value indicates if the tagOrId expression
  *      was successfully scanned (syntax).
  *      The information at *search is initialized such that a
- *	call to ZnTagSearchFirst, followed by successive calls
- *	to ZnTagSearchNext will return items that match tag.
+ *      call to ZnTagSearchFirst, followed by successive calls
+ *      to ZnTagSearchNext will return items that match tag.
  *
  * Side effects:
  *      search is linked into a list of searches in progress
  *      in zinc, so that elements can safely be deleted while
- *	the search is in progress.
+ *      the search is in progress.
  *
  *--------------------------------------------------------------
  */
 static int
-ZnTagSearchScan(ZnWInfo	  *wi,
-		Tcl_Obj	  *tag_obj,	  /* Object giving tag value, NULL
-					   * is the same as 'all'. */
-		ZnTagSearch **search_var) /* Record describing tag search;
-					   * will be initialized here. */
+ZnTagSearchScan(ZnWInfo   *wi,
+                Tcl_Obj   *tag_obj,       /* Object giving tag value, NULL
+                                           * is the same as 'all'. */
+                ZnTagSearch **search_var) /* Record describing tag search;
+                                           * will be initialized here. */
 {
-  Tk_Uid	tag;
-  int		i;
-  ZnTagSearch	*search;
-  ZnItem	group = wi->top_group;
-  ZnBool	recursive = True;
+  Tk_Uid        tag;
+  int           i;
+  ZnTagSearch   *search;
+  ZnItem        group = wi->top_group;
+  ZnBool        recursive = True;
 
   if (tag_obj) {
     tag = Tcl_GetString(tag_obj);
@@ -2024,7 +2034,7 @@ ZnTagSearchScan(ZnWInfo	  *wi,
    */
   if (strpbrk(tag, ".*")) {
     Tk_Uid path;
-    char	 c, *next;
+    char         c, *next;
     unsigned int id;
     Tcl_HashEntry *entry;
 
@@ -2037,55 +2047,55 @@ ZnTagSearchScan(ZnWInfo	  *wi,
     path = tag;
     while ((next = strpbrk(path, ".*"))) {
       if (isdigit(*path)) {
-	if (path == tag) { /* Group id is ok only in first section. */
-	  c = *next;
-	  *next = '\0';
-	  id = strtoul(path, NULL, 10);
-	  *next = c;
-	  group = wi->hot_item;
-	  if ((group == ZN_NO_ITEM) || (group->id != id)) {
-	    entry = Tcl_FindHashEntry(wi->id_table, (char *) id);
-	    if (entry != NULL) {
-	      group = (ZnItem) Tcl_GetHashValue(entry);
-	    }
-	    else {
-	      Tcl_AppendResult(wi->interp, "unknown group in path \"",
-			       tag, "\"", NULL);
-	      return TCL_ERROR;
-	    }
-	  }
-	  if (group->class != ZnGroup) {
-	    Tcl_AppendResult(wi->interp, "item is not a group in path \"",
-			     tag, "\"", NULL);
-	    return TCL_ERROR;
-	  }
-	}
-	else {
-	  Tcl_AppendResult(wi->interp, "misplaced group id in path \"",
-			   tag, "\"", NULL);
-	  return TCL_ERROR;
-	}
+        if (path == tag) { /* Group id is ok only in first section. */
+          c = *next;
+          *next = '\0';
+          id = strtoul(path, NULL, 10);
+          *next = c;
+          group = wi->hot_item;
+          if ((group == ZN_NO_ITEM) || (group->id != id)) {
+            entry = Tcl_FindHashEntry(wi->id_table, (char *) id);
+            if (entry != NULL) {
+              group = (ZnItem) Tcl_GetHashValue(entry);
+            }
+            else {
+              Tcl_AppendResult(wi->interp, "unknown group in path \"",
+                               tag, "\"", NULL);
+              return TCL_ERROR;
+            }
+          }
+          if (group->class != ZnGroup) {
+            Tcl_AppendResult(wi->interp, "item is not a group in path \"",
+                             tag, "\"", NULL);
+            return TCL_ERROR;
+          }
+        }
+        else {
+          Tcl_AppendResult(wi->interp, "misplaced group id in path \"",
+                           tag, "\"", NULL);
+          return TCL_ERROR;
+        }
       }
       else {
-	ZnListAdd(ZnWorkStrings,
-		  (void *) (recursive ? &star_uid : &dot_uid),
-		  ZnListTail);
-	c = *next;
-	*next = '\0';
-	path = Tk_GetUid(path);
-	*next = c;
-	ZnListAdd(ZnWorkStrings, (void *) &path, ZnListTail);
+        ZnListAdd(ZnWorkStrings,
+                  (void *) (recursive ? &star_uid : &dot_uid),
+                  ZnListTail);
+        c = *next;
+        *next = '\0';
+        path = Tk_GetUid(path);
+        *next = c;
+        ZnListAdd(ZnWorkStrings, (void *) &path, ZnListTail);
       }
       recursive = (*next == '*');
       path = next+1;
     }
 
     group = LookupGroupFromPath(group,
-				ZnListArray(ZnWorkStrings),
-				ZnListSize(ZnWorkStrings));
+                                ZnListArray(ZnWorkStrings),
+                                ZnListSize(ZnWorkStrings));
     if (group == ZN_NO_ITEM) {
       Tcl_AppendResult(wi->interp, "path does not lead to a valid group\"",
-		       tag, "\"", NULL);
+                       tag, "\"", NULL);
       return TCL_ERROR;
     }
 
@@ -2110,7 +2120,7 @@ ZnTagSearchScan(ZnWInfo	  *wi,
   if ((unsigned int)(search->tag_len*1.3) >= search->rewrite_buf_alloc) {
     search->rewrite_buf_alloc = (unsigned int) (search->tag_len*1.3);
     search->rewrite_buf = ZnRealloc(search->rewrite_buf,
-				    search->rewrite_buf_alloc);
+                                    search->rewrite_buf_alloc);
   }
   
   /* Initialize search */
@@ -2144,21 +2154,21 @@ ZnTagSearchScan(ZnWInfo	  *wi,
     if (tag[i] == '"') {
       i++;
       for ( ; i < search->tag_len; i++) {
-	if (tag[i] == '\\') {
-	  i++;
-	  continue;
-	}
-	if (tag[i] == '"') {
-	  break;
-	}
+        if (tag[i] == '\\') {
+          i++;
+          continue;
+        }
+        if (tag[i] == '"') {
+          break;
+        }
       }
     }
     else {
       if (((tag[i] == '&') && (tag[i+1] == '&')) ||
-	  ((tag[i] == '|') && (tag[i+1] == '|')) ||
-	  (tag[i] == '^') || (tag[i] == '!')) {
-	search->type = 4;
-	break;
+          ((tag[i] == '|') && (tag[i+1] == '|')) ||
+          (tag[i] == '^') || (tag[i] == '!')) {
+        search->type = 4;
+        break;
       }
     }
   }
@@ -2219,12 +2229,12 @@ ZnTagSearchScan(ZnWInfo	  *wi,
  * Side effects:
  *      *search is linked into a list of searches in progress
  *      in zinc, so that elements can safely be deleted while
- *	the search is in progress.
+ *      the search is in progress.
  *
  *--------------------------------------------------------------
  */
 static ZnItem
-ZnTagSearchFirst(ZnTagSearch	*search)	/* Record describing tag search */
+ZnTagSearchFirst(ZnTagSearch    *search)        /* Record describing tag search */
 {
   ZnItem item, previous;
 
@@ -2245,14 +2255,14 @@ ZnTagSearchFirst(ZnTagSearch	*search)	/* Record describing tag search */
     item = search->wi->hot_item;
     previous = search->wi->hot_prev;
     if ((item == ZN_NO_ITEM) || (item->id != search->id) ||
-	(previous == ZN_NO_ITEM) || (previous->next != item)) {
+        (previous == ZN_NO_ITEM) || (previous->next != item)) {
       entry = Tcl_FindHashEntry(search->wi->id_table, (char *) search->id);
       if (entry != NULL) {
-	item = (ZnItem) Tcl_GetHashValue(entry);
-	previous = item->previous;
+        item = (ZnItem) Tcl_GetHashValue(entry);
+        previous = item->previous;
       }
       else {
-	previous = item = ZN_NO_ITEM;
+        previous = item = ZN_NO_ITEM;
       }
     }
     search->previous = previous;
@@ -2276,51 +2286,51 @@ ZnTagSearchFirst(ZnTagSearch	*search)	/* Record describing tag search */
   do {
     while (item != ZN_NO_ITEM) {
       if (search->type == 3) {
-	/*
-	 * Optimized single-tag search
-	 */
-	if (ZnITEM.HasTag(item, search->expr->uid)) {
-	  search->previous = previous;
-	  search->current = item;
-	  return item;
-	}
+        /*
+         * Optimized single-tag search
+         */
+        if (ZnITEM.HasTag(item, search->expr->uid)) {
+          search->previous = previous;
+          search->current = item;
+          return item;
+        }
       }
       else {
-	/*
-	 * Type = 4.  Search for an item matching
-	 * the tag expression.
-	 */
-	search->expr->index = 0;
-	if (TagSearchEvalExpr(search->expr, item)) {
-	  search->previous = previous;
-	  search->current = item;
-	  return item;
-	}
+        /*
+         * Type = 4.  Search for an item matching
+         * the tag expression.
+         */
+        search->expr->index = 0;
+        if (TagSearchEvalExpr(search->expr, item)) {
+          search->previous = previous;
+          search->current = item;
+          return item;
+        }
       }
       if ((item->class == ZnGroup) && (search->recursive)) {
-	ZnItem prev_group = (ZnItem) search->group;
-	/*
-	 * Explore the hierarchy depth first using the item stack
-	 * to save the current node.
-	 */
-	/*printf("ZnTagSearchFirst diving for tag '%s', detph %d\n",
-	       search->tag, ZnListSize(search->item_stack)/2);*/
-	search->group = item;
-	previous = item;
-	if (item == prev_group) {
-	  item = ZN_NO_ITEM;
-	}
-	else {
-	  item = item->next;
-	}
-	ZnListAdd(search->item_stack, &previous, ZnListTail);
-	ZnListAdd(search->item_stack, &item, ZnListTail);
-	previous = ZN_NO_ITEM;
-	item = ZnGroupHead(search->group);
+        ZnItem prev_group = (ZnItem) search->group;
+        /*
+         * Explore the hierarchy depth first using the item stack
+         * to save the current node.
+         */
+        /*printf("ZnTagSearchFirst diving for tag '%s', detph %d\n",
+               search->tag, ZnListSize(search->item_stack)/2);*/
+        search->group = item;
+        previous = item;
+        if (item == prev_group) {
+          item = ZN_NO_ITEM;
+        }
+        else {
+          item = item->next;
+        }
+        ZnListAdd(search->item_stack, &previous, ZnListTail);
+        ZnListAdd(search->item_stack, &item, ZnListTail);
+        previous = ZN_NO_ITEM;
+        item = ZnGroupHead(search->group);
       }
       else {
-	previous = item;
-	item = item->next;
+        previous = item;
+        item = item->next;
       }
     }
     /*
@@ -2367,7 +2377,7 @@ ZnTagSearchFirst(ZnTagSearch	*search)	/* Record describing tag search */
  *--------------------------------------------------------------
  */
 static ZnItem
-ZnTagSearchNext(ZnTagSearch	*search) /* Record describing search in progress. */
+ZnTagSearchNext(ZnTagSearch     *search) /* Record describing search in progress. */
 {
   ZnItem item, previous;
 
@@ -2427,8 +2437,8 @@ ZnTagSearchNext(ZnTagSearch	*search) /* Record describing search in progress. */
     if (item != ZN_NO_ITEM) {
       search->group = item->parent;
       /*printf("ZnTagSearchNext popping %d, previous %d, next %d\n",
-	     item->id, (item->previous)?item->previous->id:0,
-	     (item->next)?item->next->id:0);*/
+             item->id, (item->previous)?item->previous->id:0,
+             (item->next)?item->next->id:0);*/
     }
     else {
       /*
@@ -2451,44 +2461,44 @@ ZnTagSearchNext(ZnTagSearch	*search) /* Record describing search in progress. */
   do {
     while (item != ZN_NO_ITEM) {
       if (search->type == 3) { 
-	/*
-	 * Optimized single-tag search
-	 */
-	if (ZnITEM.HasTag(item, search->expr->uid)) {
-	  search->previous = previous;
-	  search->current = item;
-	  return item;
-	}
+        /*
+         * Optimized single-tag search
+         */
+        if (ZnITEM.HasTag(item, search->expr->uid)) {
+          search->previous = previous;
+          search->current = item;
+          return item;
+        }
       }
       else {
-	/*
-	 * Else.... evaluate tag expression
-	 */
-	search->expr->index = 0;
-	if (TagSearchEvalExpr(search->expr, item)) {
-	  search->previous = previous;
-	  search->current = item;
-	  return item;
-	}
+        /*
+         * Else.... evaluate tag expression
+         */
+        search->expr->index = 0;
+        if (TagSearchEvalExpr(search->expr, item)) {
+          search->previous = previous;
+          search->current = item;
+          return item;
+        }
       }
       if ((item->class == ZnGroup) && (search->recursive)) {
-	/*
-	 * Explore the hierarchy depth first using the item stack
-	 * to save the current node.
-	 */
-	/*printf("ZnTagSearchNext diving for tag, depth %d\n",
-	  ZnListSize(search->item_stack)/2);*/
-	search->group = item;
-	previous = item;
+        /*
+         * Explore the hierarchy depth first using the item stack
+         * to save the current node.
+         */
+        /*printf("ZnTagSearchNext diving for tag, depth %d\n",
+          ZnListSize(search->item_stack)/2);*/
+        search->group = item;
+        previous = item;
         item = item->next;
-	ZnListAdd(search->item_stack, &previous, ZnListTail);
-	ZnListAdd(search->item_stack, &item, ZnListTail);
-	previous = ZN_NO_ITEM;
-	item = ZnGroupHead(search->group);
+        ZnListAdd(search->item_stack, &previous, ZnListTail);
+        ZnListAdd(search->item_stack, &item, ZnListTail);
+        previous = ZN_NO_ITEM;
+        item = ZnGroupHead(search->group);
       }
       else {
-	previous = item;
-	item = item->next;
+        previous = item;
+        item = item->next;
       }
     }
     /*printf("ZnTagSearchNext backup for tag, depth %d\n",
@@ -2525,7 +2535,7 @@ ZnTagSearchNext(ZnTagSearch	*search) /* Record describing search in progress. */
  *--------------------------------------------------------------
  */
 void
-ZnTagSearchDestroy(ZnTagSearch	*search) /* Record describing tag search */
+ZnTagSearchDestroy(ZnTagSearch  *search) /* Record describing tag search */
 {
   if (search) {
     TagSearchExprDestroy(search->expr);
@@ -2541,17 +2551,17 @@ ZnTagSearchDestroy(ZnTagSearch	*search) /* Record describing tag search */
  *
  * ZnItemWithTagOrId --
  *
- *	Return the first item matching the given tag or id. The
- *	function returns the item in 'item' and the operation
- *	status as the function's value.
+ *      Return the first item matching the given tag or id. The
+ *      function returns the item in 'item' and the operation
+ *      status as the function's value.
  *
  *----------------------------------------------------------------------
  */
 int
-ZnItemWithTagOrId(ZnWInfo	*wi,
-		  Tcl_Obj	*tag_or_id,
-		  ZnItem	*item,
-		  ZnTagSearch	**search_var)
+ZnItemWithTagOrId(ZnWInfo       *wi,
+                  Tcl_Obj       *tag_or_id,
+                  ZnItem        *item,
+                  ZnTagSearch   **search_var)
 {
   if (ZnTagSearchScan(wi, tag_or_id, search_var) != TCL_OK) {
     return TCL_ERROR;
@@ -2566,20 +2576,20 @@ ZnItemWithTagOrId(ZnWInfo	*wi,
  *
  * LayoutItems --
  *
- *	Perform layouts on items. It can position items horizontally,
- *	vertically, along a path or with respect to a reference item.
- *	It can also align on a grid, evenly space items and resize
- *	items to a common reference.
+ *      Perform layouts on items. It can position items horizontally,
+ *      vertically, along a path or with respect to a reference item.
+ *      It can also align on a grid, evenly space items and resize
+ *      items to a common reference.
  *
  *----------------------------------------------------------------------
  */
 static int
-LayoutItems(ZnWInfo	*wi,
-	    int		argc __unused,
-	    Tcl_Obj	*CONST args[])
+LayoutItems(ZnWInfo     *wi,
+            int         argc,
+            Tcl_Obj     *CONST args[])
 {
-  int		index/*, result*/;
-  /*ZnItem		item;*/
+  int           index/*, result*/;
+  /*ZnItem              item;*/
 #ifdef PTK_800
   static char *layout_cmd_strings[] =
   #else
@@ -2588,12 +2598,12 @@ LayoutItems(ZnWInfo	*wi,
   {
     "align", "grid", "position", "scale", "space", NULL
   };
-  enum		layout_cmds {
+  enum          layout_cmds {
     ZN_L_ALIGN, ZN_L_GRID, ZN_L_POSITION, ZN_L_SCALE, ZN_L_SPACE
   };
   
   if (Tcl_GetIndexFromObj(wi->interp, args[0], layout_cmd_strings,
-			  "layout command", 0, &index) != TCL_OK) {
+                          "layout command", 0, &index) != TCL_OK) {
     return TCL_ERROR;
   }
   switch((enum layout_cmds) index) {
@@ -2633,27 +2643,27 @@ LayoutItems(ZnWInfo	*wi,
  *
  * SetOrigin --
  *
- *	This procedure is invoked to translate the viewed area so
- *	that the given point is displayed in the top left corner.
+ *      This procedure is invoked to translate the viewed area so
+ *      that the given point is displayed in the top left corner.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	Zinc will be redisplayed to reflect the change in ciew.
+ *      Zinc will be redisplayed to reflect the change in ciew.
  *      The scrollbars will be updated if there are any.
- *	The top group transform is modified to achieve the effect,
- *	it is not a good idea to mix view control and application
- *	control of the top group transform.
+ *      The top group transform is modified to achieve the effect,
+ *      it is not a good idea to mix view control and application
+ *      control of the top group transform.
  *
  *----------------------------------------------------------------------
  */
 static void
-SetOrigin(ZnWInfo	*wi,
-	  ZnReal	x_origin,
-	  ZnReal	y_origin)
+SetOrigin(ZnWInfo       *wi,
+          ZnReal        x_origin,
+          ZnReal        y_origin)
 {
-  int	left, right, top, bottom, delta;
+  int   left, right, top, bottom, delta;
 
    /*
     * If scroll increments have been set, round the window origin
@@ -2694,28 +2704,28 @@ SetOrigin(ZnWInfo	*wi,
     if ((left < 0) && (right > 0)) {
       delta = (right > -left) ? -left : right;
       if (wi->x_scroll_incr > 0) {
-	delta -= delta % wi->x_scroll_incr;
+        delta -= delta % wi->x_scroll_incr;
       }
       x_origin += delta;
     }
     else if ((right < 0) && (left > 0)) {
       delta = (left > -right) ? -right : left;
       if (wi->x_scroll_incr > 0) {
-	delta -= delta % wi->x_scroll_incr;
+        delta -= delta % wi->x_scroll_incr;
       }
       x_origin -= delta;
     }
     if ((top < 0) && (bottom > 0)) {
       delta = (bottom > -top) ? -top : bottom;
       if (wi->y_scroll_incr > 0) {
-	delta -= delta % wi->y_scroll_incr;
+        delta -= delta % wi->y_scroll_incr;
       }
       y_origin += delta;
     }
     else if ((bottom < 0) && (top > 0)) {
       delta = (top > -bottom) ? -bottom : top;
       if (wi->y_scroll_incr > 0) {
-	delta -= delta % wi->y_scroll_incr;
+        delta -= delta % wi->y_scroll_incr;
       }
       y_origin -= delta;
     }
@@ -2740,34 +2750,34 @@ SetOrigin(ZnWInfo	*wi,
  *
  * ScrollFractions --
  *
- *	Given the range that's visible in the window and the "100%
- *	range", return a list of two real representing the scroll
- *	fractions.  This procedure is used for both x and y scrolling.
+ *      Given the range that's visible in the window and the "100%
+ *      range", return a list of two real representing the scroll
+ *      fractions.  This procedure is used for both x and y scrolling.
  *
  * Results:
- *	Return a string as a Tcl_Obj holding two real numbers
- *	describing the scroll fraction (between 0 and 1) corresponding
- *	to the arguments.
+ *      Return a string as a Tcl_Obj holding two real numbers
+ *      describing the scroll fraction (between 0 and 1) corresponding
+ *      to the arguments.
  *
  * Side effects:
- *	None.
+ *      None.
  *
  *----------------------------------------------------------------------
  */
 #ifdef PTK
 static void
-ScrollFractions(ZnReal	view1,	/* Lowest coordinate visible in the window. */
-		ZnReal	view2,	/* Highest coordinate visible in the window. */
-		ZnReal	region1,/* Lowest coordinate in the object. */
-		ZnReal	region2,/* Highest coordinate in the object. */
-		ZnReal	*first,
-		ZnReal	*last)
+ScrollFractions(ZnReal  view1,  /* Lowest coordinate visible in the window. */
+                ZnReal  view2,  /* Highest coordinate visible in the window. */
+                ZnReal  region1,/* Lowest coordinate in the object. */
+                ZnReal  region2,/* Highest coordinate in the object. */
+                ZnReal  *first,
+                ZnReal  *last)
 #else
 static Tcl_Obj *
-ScrollFractions(ZnReal	view1,	/* Lowest coordinate visible in the window. */
-		ZnReal	view2,	/* Highest coordinate visible in the window. */
-		ZnReal	region1,/* Lowest coordinate in the object. */
-		ZnReal	region2)/* Highest coordinate in the object. */
+ScrollFractions(ZnReal  view1,  /* Lowest coordinate visible in the window. */
+                ZnReal  view2,  /* Highest coordinate visible in the window. */
+                ZnReal  region1,/* Lowest coordinate in the object. */
+                ZnReal  region2)/* Highest coordinate in the object. */
 #endif
 {
   ZnReal range, f1, f2;
@@ -2806,34 +2816,34 @@ ScrollFractions(ZnReal	view1,	/* Lowest coordinate visible in the window. */
  *
  * UpdateScrollbars --
  *
- *	This procedure is invoked whenever zinc has changed in
- *	a way that requires scrollbars to be redisplayed (e.g.
- *	the view has changed).
+ *      This procedure is invoked whenever zinc has changed in
+ *      a way that requires scrollbars to be redisplayed (e.g.
+ *      the view has changed).
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	If there are scrollbars associated with zinc, then
- *	their scrolling commands are invoked to cause them to
- *	redisplay.  If errors occur, additional Tcl commands may
- *	be invoked to process the errors.
+ *      If there are scrollbars associated with zinc, then
+ *      their scrolling commands are invoked to cause them to
+ *      redisplay.  If errors occur, additional Tcl commands may
+ *      be invoked to process the errors.
  *
  *--------------------------------------------------------------
  */
 static void
-UpdateScrollbars(ZnWInfo	*wi)
+UpdateScrollbars(ZnWInfo        *wi)
 {
-  int		result;
-  Tcl_Interp	*interp;
-  int		x_origin, y_origin, width, height;
-  int		scroll_xo, scroll_xc, scroll_yo, scroll_yc;
+  int           result;
+  Tcl_Interp    *interp;
+  int           x_origin, y_origin, width, height;
+  int           scroll_xo, scroll_xc, scroll_yo, scroll_yc;
 #ifdef PTK
   LangCallback  *x_scroll_cmd, *y_scroll_cmd;
 #else
-  Tcl_Obj	*x_scroll_cmd, *y_scroll_cmd;
+  Tcl_Obj       *x_scroll_cmd, *y_scroll_cmd;
 #endif
-  Tcl_Obj	*fractions;
+  Tcl_Obj       *fractions;
 
   /*
    * Save all the relevant values from wi, because it might be
@@ -2877,7 +2887,7 @@ UpdateScrollbars(ZnWInfo	*wi)
   
   if (y_scroll_cmd != NULL) {
 #ifdef PTK
-    ZnReal	first, last;
+    ZnReal      first, last;
     ScrollFractions(y_origin, y_origin + height, scroll_yo, scroll_yc, &first, &last);
     result = LangDoCallback(interp, y_scroll_cmd, 0, 2, " %g %g", first, last);
 #else
@@ -2900,18 +2910,18 @@ UpdateScrollbars(ZnWInfo	*wi)
  *
  * ZnDoItem --
  *
- *	Either add a tag to an item or add the item id/part to the
- *	interpreter result, depending on the value of tag. If tag
- *	is NULL, the item id/part is added to the result, otherwise
- *	the tag is added to the item.
+ *      Either add a tag to an item or add the item id/part to the
+ *      interpreter result, depending on the value of tag. If tag
+ *      is NULL, the item id/part is added to the result, otherwise
+ *      the tag is added to the item.
  *
  *----------------------------------------------------------------------
  */
 void
-ZnDoItem(Tcl_Interp	*interp,
-	 ZnItem		item,
-	 int		part,
-	 Tk_Uid		tag_uid)
+ZnDoItem(Tcl_Interp     *interp,
+         ZnItem         item,
+         int            part,
+         Tk_Uid         tag_uid)
 {
   if (tag_uid == NULL) {
     Tcl_Obj  *l;
@@ -2932,31 +2942,31 @@ ZnDoItem(Tcl_Interp	*interp,
  *----------------------------------------------------------------------
  *
  * FindArea --
- *	Search the items that are enclosed or overlapping a given
- *	area of the widget. It is used by FindItems.
- *	If tag_uid is not NULL, all the items found are tagged with
- *	tag_uid. If tag_uid is NULL, the items found are added to the
- *	interp result. If enclosed is 1, the search look for
- *	items enclosed in the area. If enclosed is 0, it looks
- *	for overlapping and enclosed items.
- *	If an error occurs, a message is left in the interp result
- *	and TCL_ERROR is returned.
+ *      Search the items that are enclosed or overlapping a given
+ *      area of the widget. It is used by FindItems.
+ *      If tag_uid is not NULL, all the items found are tagged with
+ *      tag_uid. If tag_uid is NULL, the items found are added to the
+ *      interp result. If enclosed is 1, the search look for
+ *      items enclosed in the area. If enclosed is 0, it looks
+ *      for overlapping and enclosed items.
+ *      If an error occurs, a message is left in the interp result
+ *      and TCL_ERROR is returned.
  *
  *----------------------------------------------------------------------
  */
 static int
-FindArea(ZnWInfo	*wi,
-	 Tcl_Obj *CONST args[],
-	 Tk_Uid		tag_uid,
-	 ZnBool		enclosed,
-	 ZnBool		recursive,
-	 ZnBool		override_atomic,
-	 ZnItem		group)
+FindArea(ZnWInfo        *wi,
+         Tcl_Obj *CONST args[],
+         Tk_Uid         tag_uid,
+         ZnBool         enclosed,
+         ZnBool         recursive,
+         ZnBool         override_atomic,
+         ZnItem         group)
 {
-  ZnPos		pos;
-  ZnBBox	area;
+  ZnPos         pos;
+  ZnBBox        area;
   ZnToAreaStruct ta;
-  double	d;
+  double        d;
 
   if (Tcl_GetDoubleFromObj(wi->interp, args[0], &d) == TCL_ERROR) {
     return TCL_ERROR;
@@ -3005,29 +3015,29 @@ FindArea(ZnWInfo	*wi,
  *
  * FindItems --
  *
- *	This procedure interprets the small object query langage for
- *	commands like addtag and find.
- *	If new_tag is NULL, the procedure collects all the objects
- *	matching the request and return them in the interpreter result.
- *	If new_tag is non NULL, it is interpreted as the tag to add to
- *	all matching objects. In this case the interpreter result is
- *	left empty.
+ *      This procedure interprets the small object query langage for
+ *      commands like addtag and find.
+ *      If new_tag is NULL, the procedure collects all the objects
+ *      matching the request and return them in the interpreter result.
+ *      If new_tag is non NULL, it is interpreted as the tag to add to
+ *      all matching objects. In this case the interpreter result is
+ *      left empty.
  *
  *----------------------------------------------------------------------
  */
 static int
-FindItems(ZnWInfo	*wi,
-	  int		argc,
-	  Tcl_Obj *CONST args[],
-	  Tcl_Obj	*tag,		/* NULL to search or tag to add tag. */
-	  int		first,		/* First arg to process in args */
-	  ZnTagSearch	**search_var)
+FindItems(ZnWInfo       *wi,
+          int           argc,
+          Tcl_Obj *CONST args[],
+          Tcl_Obj       *tag,           /* NULL to search or tag to add tag. */
+          int           first,          /* First arg to process in args */
+          ZnTagSearch   **search_var)
 {
-  Tk_Uid	tag_uid = NULL;
-  int		index, result;
-  ZnItem	item;
-  ZnPickStruct	ps;
-  char		*str;
+  Tk_Uid        tag_uid = NULL;
+  int           index, result;
+  ZnItem        item;
+  ZnPickStruct  ps;
+  char          *str;
 #ifdef PTK_800
   static char *search_cmd_strings[] =
 #else
@@ -3037,13 +3047,13 @@ FindItems(ZnWInfo	*wi,
     "above", "ancestors", "atpriority", "below", "closest", "enclosed",
     "overlapping", "withtag", "withtype", NULL
   };
-  enum		search_cmds {
+  enum          search_cmds {
     ZN_S_ABOVE, ZN_S_ANCESTORS, ZN_S_ATPRIORITY, ZN_S_BELOW, ZN_S_CLOSEST,
     ZN_S_ENCLOSED, ZN_S_OVERLAPPING, ZN_S_WITHTAG, ZN_S_WITHTYPE
   };
   
   if (Tcl_GetIndexFromObj(wi->interp, args[first], search_cmd_strings,
-			  "search command", 0, &index) != TCL_OK) {
+                          "search command", 0, &index) != TCL_OK) {
     return TCL_ERROR;
   }
   
@@ -3058,17 +3068,17 @@ FindItems(ZnWInfo	*wi,
   case ZN_S_ABOVE:
     {
       if (argc != first+2) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "tagOrId");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "tagOrId");
+        return TCL_ERROR;
       }
       result = ZnItemWithTagOrId(wi, args[first+1], &item, search_var);
       if (result == TCL_OK) {
-	if ((item != ZN_NO_ITEM) && (item->previous != ZN_NO_ITEM)) {
-	  ZnDoItem(wi->interp, item->previous, ZN_NO_PART, tag_uid);
-	}
+        if ((item != ZN_NO_ITEM) && (item->previous != ZN_NO_ITEM)) {
+          ZnDoItem(wi->interp, item->previous, ZN_NO_PART, tag_uid);
+        }
       }
       else {
-	return TCL_ERROR;
+        return TCL_ERROR;
       }
     }
     break;
@@ -3079,24 +3089,24 @@ FindItems(ZnWInfo	*wi,
     {
       Tk_Uid uid = NULL;
       if ((argc != first+2) && (argc != first+3)) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "tagOrId ?withTag?");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "tagOrId ?withTag?");
+        return TCL_ERROR;
       }
       result = ZnItemWithTagOrId(wi, args[first+1], &item, search_var);
       if (result == TCL_ERROR) {
-	return TCL_ERROR;
+        return TCL_ERROR;
       }
       if (item) {
-	item = item->parent;
-	if (argc == first+3) {
-	  uid = Tk_GetUid(Tcl_GetString(args[first+2]));
-	}
-	while (item != ZN_NO_ITEM) {
-	  if (!uid || ZnITEM.HasTag(item, uid)) {
-	    ZnDoItem(wi->interp, item, ZN_NO_PART, tag_uid);
-	  }
-	  item = item->parent;
-	}
+        item = item->parent;
+        if (argc == first+3) {
+          uid = Tk_GetUid(Tcl_GetString(args[first+2]));
+        }
+        while (item != ZN_NO_ITEM) {
+          if (!uid || ZnITEM.HasTag(item, uid)) {
+            ZnDoItem(wi->interp, item, ZN_NO_PART, tag_uid);
+          }
+          item = item->parent;
+        }
       }
     }
     break;
@@ -3108,12 +3118,12 @@ FindItems(ZnWInfo	*wi,
       int pri;
       
       if ((argc != first+2) && (argc != first+3)) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "pri ?tagOrId?");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "pri ?tagOrId?");
+        return TCL_ERROR;
       }
       if ((Tcl_GetIntFromObj(wi->interp, args[first+1], &pri) == TCL_ERROR) ||
-	  (pri < 0)){
-	return TCL_ERROR;
+          (pri < 0)){
+        return TCL_ERROR;
       }
       
       /*
@@ -3121,14 +3131,14 @@ FindItems(ZnWInfo	*wi,
        * the given priority.
        */
       if (ZnTagSearchScan(wi, (argc == first+3) ? args[first+2] : NULL,
-			  search_var) == TCL_ERROR) {
-	return TCL_ERROR;
+                          search_var) == TCL_ERROR) {
+        return TCL_ERROR;
       }
       for (item = ZnTagSearchFirst(*search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(*search_var)) {
-	if (item->priority == (unsigned int) pri) {
-	  ZnDoItem(wi->interp, item, ZN_NO_PART, tag_uid);
-	}
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(*search_var)) {
+        if (item->priority == (unsigned int) pri) {
+          ZnDoItem(wi->interp, item, ZN_NO_PART, tag_uid);
+        }
       }
     }
     break;
@@ -3137,22 +3147,22 @@ FindItems(ZnWInfo	*wi,
      */
   case ZN_S_BELOW:
     {
-      ZnItem	next;
+      ZnItem    next;
       
       if (argc != first+2) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "tagOrId");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "tagOrId");
+        return TCL_ERROR;
       }
       item = ZN_NO_ITEM;
       if (ZnTagSearchScan(wi, args[first+1], search_var) == TCL_ERROR) {
-	return TCL_ERROR;
+        return TCL_ERROR;
       }
       for (next = ZnTagSearchFirst(*search_var);
-	   next != ZN_NO_ITEM; next = ZnTagSearchNext(*search_var)) {
-	item = next;
+           next != ZN_NO_ITEM; next = ZnTagSearchNext(*search_var)) {
+        item = next;
       }
       if ((item != ZN_NO_ITEM) && (item->next != ZN_NO_ITEM)) {
-	ZnDoItem(wi->interp, item->next, ZN_NO_PART, tag_uid);
+        ZnDoItem(wi->interp, item->next, ZN_NO_PART, tag_uid);
       }
     }
     break;
@@ -3161,61 +3171,61 @@ FindItems(ZnWInfo	*wi,
      */
   case ZN_S_CLOSEST:
     {
-      int	halo = 1;
-      ZnPoint	p;
-      double	d;
+      int       halo = 1;
+      ZnPoint   p;
+      double    d;
 
       if ((argc < first+3) || (argc > first+6)) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "x y ?halo? ?start?, ?recursive?");
-	return TCL_ERROR;      
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "x y ?halo? ?start?, ?recursive?");
+        return TCL_ERROR;      
       }
       if (Tcl_GetDoubleFromObj(wi->interp, args[first+1], &d) == TCL_ERROR) {
-	return TCL_ERROR;
+        return TCL_ERROR;
       }
       p.x = d;
       if (Tcl_GetDoubleFromObj(wi->interp, args[first+2], &d) == TCL_ERROR) {
-	return TCL_ERROR;
+        return TCL_ERROR;
       }
       p.y = d;
       if (argc > first+3) {
-	if (Tcl_GetIntFromObj(wi->interp, args[first+3], &halo) == TCL_ERROR) {
-	  return TCL_ERROR;
-	}
-	if (halo < 0) {
-	  halo = 0;
-	}
+        if (Tcl_GetIntFromObj(wi->interp, args[first+3], &halo) == TCL_ERROR) {
+          return TCL_ERROR;
+        }
+        if (halo < 0) {
+          halo = 0;
+        }
       }
 
       ps.in_group = ZN_NO_ITEM;
       ps.start_item = ZN_NO_ITEM;
       item = ZN_NO_ITEM;      
       if (argc > (first+4)) {
-	result = ZnItemWithTagOrId(wi, args[first+4], &item, search_var);
-	if ((result == TCL_OK) && (item != ZN_NO_ITEM)) {
-	  if ((item->class == ZnGroup) && !ZnGroupAtomic) {
-	    ps.in_group = item;
-	  }
-	  else {
-	    ps.in_group = item->parent;
-	    ps.start_item = item->next;
-	  }
-	}
+        result = ZnItemWithTagOrId(wi, args[first+4], &item, search_var);
+        if ((result == TCL_OK) && (item != ZN_NO_ITEM)) {
+          if ((item->class == ZnGroup) && !ZnGroupAtomic(item)) {
+            ps.in_group = item;
+          }
+          else {
+            ps.in_group = item->parent;
+            ps.start_item = item->next;
+          }
+        }
       }
       ps.recursive = True;
       ps.override_atomic = False;
       if (argc > first+5) {
-	result = Tcl_GetBooleanFromObj(wi->interp, args[first+5], &ps.recursive);
-	if (result != TCL_OK) {
-	  str = Tcl_GetString(args[first+5]);
-	  if (strcmp(str, "override") != 0) { 
-	    Tcl_AppendResult(wi->interp,
-			     "recursive should be a boolean value or ",
-			     "override \"", str, "\"", NULL);
-	    return TCL_ERROR;
-	  }
-	  ps.recursive = True;
-	  ps.override_atomic = True;
-	}
+        result = Tcl_GetBooleanFromObj(wi->interp, args[first+5], &ps.recursive);
+        if (result != TCL_OK) {
+          str = Tcl_GetString(args[first+5]);
+          if (strcmp(str, "override") != 0) { 
+            Tcl_AppendResult(wi->interp,
+                             "recursive should be a boolean value or ",
+                             "override \"", str, "\"", NULL);
+            return TCL_ERROR;
+          }
+          ps.recursive = True;
+          ps.override_atomic = True;
+        }
       }
       /*
        * We always start the search at the top group to use the
@@ -3229,8 +3239,8 @@ FindItems(ZnWInfo	*wi,
       wi->top_group->class->Pick(wi->top_group, &ps);
       
       if (ps.a_item != ZN_NO_ITEM) {
-	ZnDoItem(wi->interp, ps.a_item, ps.a_part, tag_uid);
-	/*printf("first %d %d\n", ps.a_item->id, ps.a_part);*/
+        ZnDoItem(wi->interp, ps.a_item, ps.a_part, tag_uid);
+        /*printf("first %d %d\n", ps.a_item->id, ps.a_part);*/
       }
     }
     break;
@@ -3240,35 +3250,35 @@ FindItems(ZnWInfo	*wi,
   case ZN_S_ENCLOSED:
     {
       if ((argc < first+5) || (argc > first+7)) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "x1 y1 x2 y2 ?inGroup? ?recursive?");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "x1 y1 x2 y2 ?inGroup? ?recursive?");
+        return TCL_ERROR;
       }
       item = wi->top_group;
       if (argc > first+5) {
-	result = ZnItemWithTagOrId(wi, args[first+5], &item, search_var);
-	if ((result != TCL_OK) || (item == ZN_NO_ITEM) || (item->class != ZnGroup)) {
-	  return TCL_ERROR;
-	}
+        result = ZnItemWithTagOrId(wi, args[first+5], &item, search_var);
+        if ((result != TCL_OK) || (item == ZN_NO_ITEM) || (item->class != ZnGroup)) {
+          return TCL_ERROR;
+        }
       }
       ps.recursive = True;
       ps.override_atomic = False;
       if (argc > first+6) {
-	result = Tcl_GetBooleanFromObj(wi->interp, args[first+6], &ps.recursive);
-	if (result != TCL_OK) {
-	  str = Tcl_GetString(args[first+6]);
-	  if (strcmp(str, "override") != 0) { 
-	    Tcl_AppendResult(wi->interp,
-			     "recursive should be a boolean value or ",
-			     "override \"", str, "\"", NULL);
-	    return TCL_ERROR;
-	  }
-	  ps.recursive = True;
-	  ps.override_atomic = True;
-	}
+        result = Tcl_GetBooleanFromObj(wi->interp, args[first+6], &ps.recursive);
+        if (result != TCL_OK) {
+          str = Tcl_GetString(args[first+6]);
+          if (strcmp(str, "override") != 0) { 
+            Tcl_AppendResult(wi->interp,
+                             "recursive should be a boolean value or ",
+                             "override \"", str, "\"", NULL);
+            return TCL_ERROR;
+          }
+          ps.recursive = True;
+          ps.override_atomic = True;
+        }
       }
       return FindArea(wi, args+first+1, tag_uid,
-		      True, ps.recursive, ps.override_atomic,
-		      item);
+                      True, ps.recursive, ps.override_atomic,
+                      item);
     }
     break;
     /*
@@ -3277,35 +3287,35 @@ FindItems(ZnWInfo	*wi,
   case ZN_S_OVERLAPPING:
     {
       if ((argc < first+5) || (argc > first+7)) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "x1 y1 x2 y2 ?inGroup? ?recursive?");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "x1 y1 x2 y2 ?inGroup? ?recursive?");
+        return TCL_ERROR;
       }
       item = wi->top_group;
       if (argc > first+5) {
-	result = ZnItemWithTagOrId(wi, args[first+5], &item, search_var);
-	if ((result != TCL_OK) || (item == ZN_NO_ITEM) || (item->class != ZnGroup)) {
-	  return TCL_ERROR;
-	}
+        result = ZnItemWithTagOrId(wi, args[first+5], &item, search_var);
+        if ((result != TCL_OK) || (item == ZN_NO_ITEM) || (item->class != ZnGroup)) {
+          return TCL_ERROR;
+        }
       }
       ps.recursive = True;
       ps.override_atomic = False;
       if (argc > first+6) {
-	result = Tcl_GetBooleanFromObj(wi->interp, args[first+6], &ps.recursive);
-	if (result != TCL_OK) {
-	  str = Tcl_GetString(args[first+6]);
-	  if (strcmp(str, "override") != 0) { 
-	    Tcl_AppendResult(wi->interp,
-			     "recursive should be a boolean value or ",
-			     "override \"", str, "\"", NULL);
-	    return TCL_ERROR;
-	  }
-	  ps.recursive = True;
-	  ps.override_atomic = True;
-	}
+        result = Tcl_GetBooleanFromObj(wi->interp, args[first+6], &ps.recursive);
+        if (result != TCL_OK) {
+          str = Tcl_GetString(args[first+6]);
+          if (strcmp(str, "override") != 0) { 
+            Tcl_AppendResult(wi->interp,
+                             "recursive should be a boolean value or ",
+                             "override \"", str, "\"", NULL);
+            return TCL_ERROR;
+          }
+          ps.recursive = True;
+          ps.override_atomic = True;
+        }
       }
       return FindArea(wi, args+first+1, tag_uid,
-		      False, ps.recursive, ps.override_atomic,
-		      item);
+                      False, ps.recursive, ps.override_atomic,
+                      item);
     }
     break;
     /*
@@ -3314,15 +3324,15 @@ FindItems(ZnWInfo	*wi,
   case ZN_S_WITHTAG:
     {
       if (argc != first+2) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "tagOrId");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "tagOrId");
+        return TCL_ERROR;
       }
       if (ZnTagSearchScan(wi, args[first+1], search_var) == TCL_ERROR) {
-	return TCL_ERROR;
+        return TCL_ERROR;
       }
       for (item = ZnTagSearchFirst(*search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(*search_var)) {
-	ZnDoItem(wi->interp, item, ZN_NO_PART, tag_uid);
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(*search_var)) {
+        ZnDoItem(wi->interp, item, ZN_NO_PART, tag_uid);
       }
     }
     break;
@@ -3331,17 +3341,17 @@ FindItems(ZnWInfo	*wi,
      */
   case ZN_S_WITHTYPE:
     {
-      ZnItemClass	cls;
+      ZnItemClass       cls;
       
       if ((argc != first+2) && (argc != first+3)) {
-	Tcl_WrongNumArgs(wi->interp, first+1, args, "itemType ?tagOrId?");
-	return TCL_ERROR;
+        Tcl_WrongNumArgs(wi->interp, first+1, args, "itemType ?tagOrId?");
+        return TCL_ERROR;
       }
       cls = ZnLookupItemClass(Tcl_GetString(args[first+1]));
       if (!cls) {
-	Tcl_AppendResult(wi->interp, "unknown item type \"",
-			 Tcl_GetString(args[first+1]), "\"", NULL);
-	return TCL_ERROR;
+        Tcl_AppendResult(wi->interp, "unknown item type \"",
+                         Tcl_GetString(args[first+1]), "\"", NULL);
+        return TCL_ERROR;
       }
       
       /*
@@ -3349,14 +3359,14 @@ FindItems(ZnWInfo	*wi,
        * the given item type.
        */
       if (ZnTagSearchScan(wi, (argc == first+3) ? args[first+2] : NULL,
-			  search_var) == TCL_ERROR) {
-	return TCL_ERROR;
+                          search_var) == TCL_ERROR) {
+        return TCL_ERROR;
       }
       for (item = ZnTagSearchFirst(*search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(*search_var)) {
-	if (item->class == cls) {
-	  ZnDoItem(wi->interp, item, ZN_NO_PART, tag_uid);
-	}
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(*search_var)) {
+        if (item->class == cls) {
+          ZnDoItem(wi->interp, item, ZN_NO_PART, tag_uid);
+        }
       }
     }
     break;
@@ -3374,19 +3384,19 @@ FindItems(ZnWInfo	*wi,
  *----------------------------------------------------------------------
  */
 int
-ZnParseCoordList(ZnWInfo	*wi,
-		 Tcl_Obj	*arg,
-		 ZnPoint	**pts,
-		 char		**controls,
-		 unsigned int	*num_pts,
-		 ZnBool		*old_format)
+ZnParseCoordList(ZnWInfo        *wi,
+                 Tcl_Obj        *arg,
+                 ZnPoint        **pts,
+                 char           **controls,
+                 unsigned int   *num_pts,
+                 ZnBool         *old_format)
 {
-  Tcl_Obj	**elems, **selems;
-  int		i, result, num_elems, num_selems;
-  ZnPoint	*p;
-  int		old_style, len;
-  char		*str;
-  double	d;
+  Tcl_Obj       **elems, **selems;
+  int           i, result, num_elems, num_selems;
+  ZnPoint       *p;
+  int           old_style, len;
+  char          *str;
+  double        d;
 
   if (controls) {
     *controls = NULL;
@@ -3422,15 +3432,15 @@ ZnParseCoordList(ZnWInfo	*wi,
       ZnListAssertSize(ZnWorkPoints, *num_pts);
       *pts = p = (ZnPoint *) ZnListArray(ZnWorkPoints);
       for (i = 0; i < num_elems; i += 2, p++) {
-	if (Tcl_GetDoubleFromObj(wi->interp, elems[i], &d) == TCL_ERROR) {
-	  goto coord_error;
-	}
-	p->x = d;
-	if (Tcl_GetDoubleFromObj(wi->interp, elems[i+1], &d) == TCL_ERROR) {
-	  goto coord_error;
-	}
-	p->y = d;
-	/*printf("Parsed a point: %g@%g, ", p->x, p->y);*/
+        if (Tcl_GetDoubleFromObj(wi->interp, elems[i], &d) == TCL_ERROR) {
+          goto coord_error;
+        }
+        p->x = d;
+        if (Tcl_GetDoubleFromObj(wi->interp, elems[i+1], &d) == TCL_ERROR) {
+          goto coord_error;
+        }
+        p->y = d;
+        /*printf("Parsed a point: %g@%g, ", p->x, p->y);*/
       }
       /*printf("\n");*/
     }
@@ -3439,22 +3449,22 @@ ZnParseCoordList(ZnWInfo	*wi,
       ZnListAssertSize(ZnWorkPoints, *num_pts);
       *pts = p = (ZnPoint *) ZnListArray(ZnWorkPoints);
       if (Tcl_GetDoubleFromObj(wi->interp, elems[0], &d) == TCL_ERROR) {
-	goto coord_error;
+        goto coord_error;
       }
       p->x = d;
       if (Tcl_GetDoubleFromObj(wi->interp, elems[1], &d) == TCL_ERROR) {
-	goto coord_error;
+        goto coord_error;
       }
       p->y = d;
       if (controls) {
-	if (! *controls) {
-	  *controls = ZnMalloc(*num_pts * sizeof(char));
-	  memset(*controls, 0, *num_pts * sizeof(char));
-	}
-	str = Tcl_GetStringFromObj(elems[2], &len);
-	if (len) {
-	  (*controls)[0] = str[0];
-	}
+        if (! *controls) {
+          *controls = ZnMalloc(*num_pts * sizeof(char));
+          memset(*controls, 0, *num_pts * sizeof(char));
+        }
+        str = Tcl_GetStringFromObj(elems[2], &len);
+        if (len) {
+          (*controls)[0] = str[0];
+        }
       }
     }
     else {
@@ -3469,27 +3479,27 @@ ZnParseCoordList(ZnWInfo	*wi,
     for (i = 0; i < num_elems; i++, p++) {
       result = Tcl_ListObjGetElements(wi->interp, elems[i], &num_selems, &selems);
       if ((result == TCL_ERROR) || (num_selems < 2) || (num_selems > 3)) {
-	goto coord_error;
+        goto coord_error;
       }
       if (Tcl_GetDoubleFromObj(wi->interp, selems[0], &d) == TCL_ERROR) {
-	goto coord_error;
+        goto coord_error;
       }
       p->x = d;
       if (Tcl_GetDoubleFromObj(wi->interp, selems[1], &d) == TCL_ERROR) {
-	goto coord_error;
+        goto coord_error;
       }
       p->y = d;
       if (controls) {
-	if (num_selems == 3) {
-	  if (! *controls) {
-	    *controls = ZnMalloc(*num_pts * sizeof(char));
-	    memset(*controls, 0, *num_pts * sizeof(char));
-	  }
-	  str = Tcl_GetStringFromObj(selems[2], &len);
-	  if (len) {
-	    (*controls)[i] = str[0];
-	  }
-	}
+        if (num_selems == 3) {
+          if (! *controls) {
+            *controls = ZnMalloc(*num_pts * sizeof(char));
+            memset(*controls, 0, *num_pts * sizeof(char));
+          }
+          str = Tcl_GetStringFromObj(selems[2], &len);
+          if (len) {
+            (*controls)[i] = str[0];
+          }
+        }
       }
     }
   }
@@ -3509,22 +3519,22 @@ ZnParseCoordList(ZnWInfo	*wi,
  *----------------------------------------------------------------------
  */
 static int
-Contour(ZnWInfo	*wi,
-	int		argc,
-	Tcl_Obj	*CONST	args[],
-	ZnTagSearch	**search_var)
+Contour(ZnWInfo *wi,
+        int             argc,
+        Tcl_Obj *CONST  args[],
+        ZnTagSearch     **search_var)
 {
-  ZnPoint	*points;
-  ZnItem	item, shape;
-  unsigned int	i, j, k,num_points;
-  int		cmd, cw, result;
-  int		winding_flag, revert = False;
-  long		index;
-  char		*controls;
-  ZnBool	simple=False;
-  ZnPoly	poly;
-  ZnTransfo	t, inv;
-  ZnContour	*contours;
+  ZnPoint       *points;
+  ZnItem        item, shape;
+  unsigned int  i, j, k,num_points;
+  int           cmd, cw, result;
+  int           winding_flag, revert = False;
+  long          index;
+  char          *controls;
+  ZnBool        simple=False;
+  ZnPoly        poly;
+  ZnTransfo     t, inv;
+  ZnContour     *contours;
 
   /* Keep this array in sync with ZnContourCmd in Types.h */
 #ifdef PTK_800
@@ -3539,12 +3549,12 @@ Contour(ZnWInfo	*wi,
   result = ZnItemWithTagOrId(wi, args[2], &item, search_var);
   if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)){
     Tcl_AppendResult(wi->interp, "unknown item \"", Tcl_GetString(args[2]),
-		     "\"", NULL);
+                     "\"", NULL);
     return TCL_ERROR;
   }
   if (!item->class->Contour) {
     if (item->class->GetClipVertices ||
-	item->class->GetContours) {
+        item->class->GetContours) {
       Tcl_SetObjResult(wi->interp, Tcl_NewIntObj(1));
     }
     else {
@@ -3563,7 +3573,7 @@ Contour(ZnWInfo	*wi,
    * Get the sub-command
    */
   if (Tcl_GetIndexFromObj(wi->interp, args[3], op_strings,
-			  "contour operation", 0, &cmd) != TCL_OK) {
+                          "contour operation", 0, &cmd) != TCL_OK) {
     return TCL_ERROR;
   }
   /*
@@ -3572,7 +3582,7 @@ Contour(ZnWInfo	*wi,
   if ((Tcl_GetIntFromObj(wi->interp, args[4], &winding_flag) != TCL_OK) ||
       (winding_flag < -1) || (winding_flag > 1)) {
     Tcl_AppendResult(wi->interp, " incorrect winding flag, should be -1, 0, 1, \"",
-		     Tcl_GetString(args[4]), "\"", NULL);
+                     Tcl_GetString(args[4]), "\"", NULL);
     return TCL_ERROR;
   }
   index = ZnListTail;
@@ -3580,7 +3590,7 @@ Contour(ZnWInfo	*wi,
     /* Look for an index value. */
     if (Tcl_GetLongFromObj(wi->interp, args[5], &index) != TCL_OK) {
       Tcl_AppendResult(wi->interp, " incorrect contour index \"",
-		       Tcl_GetString(args[5]), "\"", NULL);
+                       Tcl_GetString(args[5]), "\"", NULL);
       return TCL_ERROR;
     }
     argc--;
@@ -3595,8 +3605,8 @@ Contour(ZnWInfo	*wi,
     if ((result == TCL_ERROR) || (shape == ZN_NO_ITEM)) {
       Tcl_ResetResult(wi->interp);
       if (ZnParseCoordList(wi, args[5], &points,
-			   &controls, &num_points, NULL) == TCL_ERROR) {
-	return TCL_ERROR;
+                           &controls, &num_points, NULL) == TCL_ERROR) {
+        return TCL_ERROR;
       }
       /*
        * Processing contours from an explicit list.
@@ -3609,24 +3619,24 @@ Contour(ZnWInfo	*wi,
       poly.contours[0].points = ZnMalloc(num_points*sizeof(ZnPoint));
       cw = poly.contours[0].cw = !ZnTestCCW(points, num_points);
       if (winding_flag != 0) {
-	revert = cw ^ (winding_flag == -1);
+        revert = cw ^ (winding_flag == -1);
       }
       if (revert) {
-	/* Revert the contour */
-	for (i = 0; i < num_points; i++) {
-	  poly.contours[0].points[num_points-i-1] = points[i];
-	}
-	if (controls) {
-	  char ch;
-	  for (i = 0, j = num_points-1; i < j; i++, j--) {
-	    ch = controls[i];
-	    controls[i] = controls[j];
-	    controls[j] = ch;
-	  }
-	}
+        /* Revert the contour */
+        for (i = 0; i < num_points; i++) {
+          poly.contours[0].points[num_points-i-1] = points[i];
+        }
+        if (controls) {
+          char ch;
+          for (i = 0, j = num_points-1; i < j; i++, j--) {
+            ch = controls[i];
+            controls[i] = controls[j];
+            controls[j] = ch;
+          }
+        }
       }
       else {
-	memcpy(poly.contours[0].points, points, num_points*sizeof(ZnPoint));
+        memcpy(poly.contours[0].points, points, num_points*sizeof(ZnPoint));
       }
       poly.contours[0].controls = controls;
     }
@@ -3635,10 +3645,10 @@ Contour(ZnWInfo	*wi,
        * Processing contours from an item
        */
       if (winding_flag == 0) {
-	Tcl_AppendResult(wi->interp,
-			 "Must supply an explicit winding direction (-1, 1)\nwhen adding a contour from an item",
-			 NULL);
-	return TCL_ERROR;
+        Tcl_AppendResult(wi->interp,
+                         "Must supply an explicit winding direction (-1, 1)\nwhen adding a contour from an item",
+                         NULL);
+        return TCL_ERROR;
       }
       /*
        * If something has changed in the geometry we need to
@@ -3646,36 +3656,36 @@ Contour(ZnWInfo	*wi,
        */
       Update(wi);
       if (!shape->class->GetContours &&
-	  !shape->class->GetClipVertices) {
-	Tcl_AppendResult(wi->interp, "class: \"", shape->class->name,
-			 "\" can't give a polygonal shape", NULL);
-	return TCL_ERROR;
+          !shape->class->GetClipVertices) {
+        Tcl_AppendResult(wi->interp, "class: \"", shape->class->name,
+                         "\" can't give a polygonal shape", NULL);
+        return TCL_ERROR;
       }
       if (!shape->class->GetContours) {
-	ZnTriStrip	tristrip;
-	/*
-	 * If there is no GetContours method try to use
-	 * the GetClipVertices. It works only for simple
-	 * shapes (i.e tose returning a bounding box).
-	 */
-	tristrip.num_strips = 0;
-	/*
-	 * GetClipVertices _may_ return a tristrip describing a fan
-	 * this would lead to strange results. For now, this case
-	 * should not appear, the items candidates to such a behavior
-	 * export a GetContours method which has higher precedence.
-	 */
-	simple = shape->class->GetClipVertices(shape, &tristrip);
-	ZnPolyContour1(&poly, tristrip.strip1.points, tristrip.strip1.num_points,
-		       False);
-	poly.contours[0].controls = NULL;
+        ZnTriStrip      tristrip;
+        /*
+         * If there is no GetContours method try to use
+         * the GetClipVertices. It works only for simple
+         * shapes (i.e tose returning a bounding box).
+         */
+        tristrip.num_strips = 0;
+        /*
+         * GetClipVertices _may_ return a tristrip describing a fan
+         * this would lead to strange results. For now, this case
+         * should not appear, the items candidates to such a behavior
+         * export a GetContours method which has higher precedence.
+         */
+        simple = shape->class->GetClipVertices(shape, &tristrip);
+        ZnPolyContour1(&poly, tristrip.strip1.points, tristrip.strip1.num_points,
+                       False);
+        poly.contours[0].controls = NULL;
       }
       else {
-	poly.num_contours = 0;
-	simple = shape->class->GetContours(shape, &poly);
+        poly.num_contours = 0;
+        simple = shape->class->GetContours(shape, &poly);
       }
       if (poly.num_contours == 0) {
-	return TCL_OK;
+        return TCL_OK;
       }
       /*
        * Compute the tranform to map the device points
@@ -3688,82 +3698,82 @@ Contour(ZnWInfo	*wi,
        * the contour(s) returned by the item.
        */
       if (simple) {
-	ZnPoint	p[4];
-	p[0] = poly.contours[0].points[0];
-	p[2] = poly.contours[0].points[1];
-	if (winding_flag == -1) {
-	  p[1].x = p[2].x;
-	  p[1].y = p[0].y;
-	  p[3].x = p[0].x;
-	  p[3].y = p[2].y;
-	}
-	else {
-	  p[1].x = p[0].x;
-	  p[1].y = p[2].y;
-	  p[3].x = p[2].x;
-	  p[3].y = p[0].y;
-	}
-	points = ZnMalloc(4*sizeof(ZnPoint));
-	ZnTransformPoints(&inv, p, points, 4);
-	poly.contours[0].points = points;
-	poly.contours[0].num_points = 4;
-	poly.contours[0].cw = (winding_flag == -1);
-	poly.contours[0].controls = NULL;
+        ZnPoint p[4];
+        p[0] = poly.contours[0].points[0];
+        p[2] = poly.contours[0].points[1];
+        if (winding_flag == -1) {
+          p[1].x = p[2].x;
+          p[1].y = p[0].y;
+          p[3].x = p[0].x;
+          p[3].y = p[2].y;
+        }
+        else {
+          p[1].x = p[0].x;
+          p[1].y = p[2].y;
+          p[3].x = p[2].x;
+          p[3].y = p[0].y;
+        }
+        points = ZnMalloc(4*sizeof(ZnPoint));
+        ZnTransformPoints(&inv, p, points, 4);
+        poly.contours[0].points = points;
+        poly.contours[0].num_points = 4;
+        poly.contours[0].cw = (winding_flag == -1);
+        poly.contours[0].controls = NULL;
       }
       else {
-	/* Unshare the contour array or use the static storage */
-	contours = poly.contours;
-	if (poly.num_contours == 1) {
-	  poly.contours = &poly.contour1;
-	}
-	else {
-	  poly.contours = ZnMalloc(poly.num_contours*sizeof(ZnContour));
-	}
-	for (i = 0; i < poly.num_contours; i++) {
-	  points = contours[i].points;
-	  num_points = contours[i].num_points;
-	  cw = contours[i].cw;
-	  poly.contours[i].num_points = num_points;
-	  poly.contours[i].cw = cw;
-	  if (contours[i].controls) {
-	    /* 
-	     * The controls array returned by GetContour is shared.
-	     * Here we unshare it.
-	     */
-	    poly.contours[i].controls = ZnMalloc(num_points*sizeof(char));
-	  }
-	  /*
-	   * Unshare the point array.
-	   */
-	  poly.contours[i].points = ZnMalloc(num_points*sizeof(ZnPoint));
-	  ZnTransformPoints(&inv, points, poly.contours[i].points, num_points);
-	  
-	  if ((((poly.num_contours == 1) && ((winding_flag == -1) ^ cw)) ||
-	       ((poly.num_contours > 1) && (winding_flag == -1)))) {
-	    ZnPoint p;
-	    
-	    revert = True;
-	    /* Revert the points */
-	    poly.contours[i].cw = ! cw;
-	    for (j = 0, k = num_points-1; j < k; j++, k--) {
-	      p = poly.contours[i].points[j];
-	      poly.contours[i].points[j] = poly.contours[i].points[k];
-	      poly.contours[i].points[k] = p;
-	    }
-	    
-	    /* Revert the controls */
-	    if (contours[i].controls) {
-	      for (j = 0; j < num_points; j++) {
-		poly.contours[i].controls[num_points-j-1] = contours[i].controls[j];
-	      }
-	    }
-	  }
-	  else {
-	    if (contours[i].controls) {
-	      memcpy(poly.contours[i].controls, contours[i].controls, num_points);
-	    }
-	  }
-	}
+        /* Unshare the contour array or use the static storage */
+        contours = poly.contours;
+        if (poly.num_contours == 1) {
+          poly.contours = &poly.contour1;
+        }
+        else {
+          poly.contours = ZnMalloc(poly.num_contours*sizeof(ZnContour));
+        }
+        for (i = 0; i < poly.num_contours; i++) {
+          points = contours[i].points;
+          num_points = contours[i].num_points;
+          cw = contours[i].cw;
+          poly.contours[i].num_points = num_points;
+          poly.contours[i].cw = cw;
+          if (contours[i].controls) {
+            /* 
+             * The controls array returned by GetContour is shared.
+             * Here we unshare it.
+             */
+            poly.contours[i].controls = ZnMalloc(num_points*sizeof(char));
+          }
+          /*
+           * Unshare the point array.
+           */
+          poly.contours[i].points = ZnMalloc(num_points*sizeof(ZnPoint));
+          ZnTransformPoints(&inv, points, poly.contours[i].points, num_points);
+          
+          if ((((poly.num_contours == 1) && ((winding_flag == -1) ^ cw)) ||
+               ((poly.num_contours > 1) && (winding_flag == -1)))) {
+            ZnPoint p;
+            
+            revert = True;
+            /* Revert the points */
+            poly.contours[i].cw = ! cw;
+            for (j = 0, k = num_points-1; j < k; j++, k--) {
+              p = poly.contours[i].points[j];
+              poly.contours[i].points[j] = poly.contours[i].points[k];
+              poly.contours[i].points[k] = p;
+            }
+            
+            /* Revert the controls */
+            if (contours[i].controls) {
+              for (j = 0; j < num_points; j++) {
+                poly.contours[i].controls[num_points-j-1] = contours[i].controls[j];
+              }
+            }
+          }
+          else {
+            if (contours[i].controls) {
+              memcpy(poly.contours[i].controls, contours[i].controls, num_points);
+            }
+          }
+        }
       }
     }
 
@@ -3794,28 +3804,28 @@ Contour(ZnWInfo	*wi,
  *----------------------------------------------------------------------
  */
 static int
-Coords(ZnWInfo		*wi,
-       int		argc,
-       Tcl_Obj	*CONST	args[],
-       ZnTagSearch	**search_var)
+Coords(ZnWInfo          *wi,
+       int              argc,
+       Tcl_Obj  *CONST  args[],
+       ZnTagSearch      **search_var)
 {
-  ZnPoint	*points;
-  ZnItem	item;
-  unsigned int	num_points, i;
-  int		result, cmd = ZN_COORDS_READ;
-  long		index, contour = 0;
-  char		*str, *controls = NULL;
-  Tcl_Obj	*l, *entries[3];
+  ZnPoint       *points;
+  ZnItem        item;
+  unsigned int  num_points, i;
+  int           result, cmd = ZN_COORDS_READ;
+  long          index, contour = 0;
+  char          *str, *controls = NULL;
+  Tcl_Obj       *l, *entries[3];
   
   result = ZnItemWithTagOrId(wi, args[2], &item, search_var);
   if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
     Tcl_AppendResult(wi->interp, " unknown item \"",
-		     Tcl_GetString(args[2]), "\"", NULL);
+                     Tcl_GetString(args[2]), "\"", NULL);
     return TCL_ERROR;
   }
   if (!item->class->Coords) {
     Tcl_AppendResult(wi->interp, " ", item->class->name,
-		     " does not support the coords command", NULL);
+                     " does not support the coords command", NULL);
     return TCL_ERROR;
   }
   num_points = 0;
@@ -3824,7 +3834,7 @@ Coords(ZnWInfo		*wi,
   if (argc == 3) {
     /* Get all coords of default contour (0). */
     if (item->class->Coords(item, 0, 0, ZN_COORDS_READ_ALL,
-			    &points, &controls, &num_points) == TCL_ERROR) {
+                            &points, &controls, &num_points) == TCL_ERROR) {
       return TCL_ERROR;
     }
   coords_read:
@@ -3835,20 +3845,20 @@ Coords(ZnWInfo		*wi,
       Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewDoubleObj(points->x));
       Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewDoubleObj(points->y));      
       if (controls && *controls) {
-	Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewStringObj(controls, 1));
+        Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewStringObj(controls, 1));
       }
     }
     else {
       for (i = 0; i < num_points; i++, points++) {
-	entries[0] = Tcl_NewDoubleObj(points->x);
-	entries[1] = Tcl_NewDoubleObj(points->y);
-	if (controls && controls[i]) {
-	  entries[2] = Tcl_NewStringObj(&controls[i], 1);
-	  Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewListObj(3, entries));
-	}
-	else {
-	  Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewListObj(2, entries));
-	}
+        entries[0] = Tcl_NewDoubleObj(points->x);
+        entries[1] = Tcl_NewDoubleObj(points->y);
+        if (controls && controls[i]) {
+          entries[2] = Tcl_NewStringObj(&controls[i], 1);
+          Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewListObj(3, entries));
+        }
+        else {
+          Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewListObj(2, entries));
+        }
       }
     }
     return TCL_OK;
@@ -3862,7 +3872,7 @@ Coords(ZnWInfo		*wi,
   if ((str[0] == 'a') && (strcmp(str, "add") == 0)) {
     if ((argc < 5) || (argc > 7)) {
       Tcl_WrongNumArgs(wi->interp, 1, args,
-		       "coords tagOrId add ?contour? ?index? coordList");
+                       "coords tagOrId add ?contour? ?index? coordList");
       return TCL_ERROR;
     }
     cmd = ZN_COORDS_ADD;
@@ -3871,7 +3881,7 @@ Coords(ZnWInfo		*wi,
   else if ((str[0] == 'r') && (strcmp(str, "remove") == 0)) {
     if ((argc != 5) && (argc != 6)) {
       Tcl_WrongNumArgs(wi->interp, 1, args,
-		       "coords tagOrId remove ?contour? index");
+                       "coords tagOrId remove ?contour? index");
       return TCL_ERROR;
     }
     cmd = ZN_COORDS_REMOVE;
@@ -3886,32 +3896,32 @@ Coords(ZnWInfo		*wi,
   if (Tcl_GetLongFromObj(wi->interp, args[i], &index) != TCL_OK) {
     Tcl_ResetResult(wi->interp);
     if (((argc == 5) && (cmd != ZN_COORDS_ADD) && (cmd != ZN_COORDS_REMOVE)) ||
-	(argc == 6) || (argc == 7)) {
+        (argc == 6) || (argc == 7)) {
       Tcl_AppendResult(wi->interp, " incorrect contour index \"",
-		       Tcl_GetString(args[i]), "\"", NULL);
+                       Tcl_GetString(args[i]), "\"", NULL);
       return TCL_ERROR;
     }
     else if ((argc == 5) && (cmd != ZN_COORDS_ADD)) {
       Tcl_AppendResult(wi->interp, " incorrect coord index \"",
-		       Tcl_GetString(args[i]), "\"", NULL);
+                       Tcl_GetString(args[i]), "\"", NULL);
       return TCL_ERROR;
     }
     else if (ZnParseCoordList(wi, args[argc-1], &points,
-			      &controls, &num_points, NULL) == TCL_ERROR) {
+                              &controls, &num_points, NULL) == TCL_ERROR) {
       return TCL_ERROR;
     }
     if (cmd == ZN_COORDS_ADD) {
       /* Append coords at end of default contour (0). */
       if (item->class->Coords(item, 0, 0, ZN_COORDS_ADD_LAST,
-			      &points, &controls, &num_points) == TCL_ERROR) {
-	return TCL_ERROR;
+                              &points, &controls, &num_points) == TCL_ERROR) {
+        return TCL_ERROR;
       }
     }
     else {
       /* Set all coords of default contour (0). */
       if (item->class->Coords(item, 0, 0, ZN_COORDS_REPLACE_ALL,
-			      &points, &controls, &num_points) == TCL_ERROR) {
-	return TCL_ERROR;
+                              &points, &controls, &num_points) == TCL_ERROR) {
+        return TCL_ERROR;
       }
     }
     if (controls) {
@@ -3924,7 +3934,7 @@ Coords(ZnWInfo		*wi,
   if (argc == 4) {
     /* Get all coords of contour. */
     if (item->class->Coords(item, contour, 0, ZN_COORDS_READ_ALL,
-			    &points, &controls, &num_points) == TCL_ERROR) {
+                            &points, &controls, &num_points) == TCL_ERROR) {
       return TCL_ERROR;
     }
     goto coords_read;
@@ -3932,7 +3942,7 @@ Coords(ZnWInfo		*wi,
   else if ((argc == 5) && (cmd == ZN_COORDS_REMOVE)) {
     /*  Remove coord at index in default contour (0). */
     if (item->class->Coords(item, 0, index, ZN_COORDS_REMOVE,
-			    &points, &controls, &num_points) == TCL_ERROR) {
+                            &points, &controls, &num_points) == TCL_ERROR) {
       return TCL_ERROR;
     }
     return TCL_OK;
@@ -3946,25 +3956,25 @@ Coords(ZnWInfo		*wi,
     Tcl_ResetResult(wi->interp);
     if ((argc == 7) || ((argc == 6) && (cmd != ZN_COORDS_ADD))) {
       Tcl_AppendResult(wi->interp, " incorrect coord index \"",
-		       Tcl_GetString(args[i]), "\"", NULL);
+                       Tcl_GetString(args[i]), "\"", NULL);
       return TCL_ERROR;
     }
     else if (ZnParseCoordList(wi, args[argc-1], &points,
-			      &controls, &num_points, NULL) == TCL_ERROR) {
+                              &controls, &num_points, NULL) == TCL_ERROR) {
       return TCL_ERROR;
     }
     if (cmd == ZN_COORDS_ADD) {
       /* Append coords at end of contour. */
       if (item->class->Coords(item, contour, 0, ZN_COORDS_ADD_LAST,
-			      &points, &controls, &num_points) == TCL_ERROR) {
-	return TCL_ERROR;
+                              &points, &controls, &num_points) == TCL_ERROR) {
+        return TCL_ERROR;
       }
     }
     else {
       /* Set all coords of contour. */
       if (item->class->Coords(item, contour, 0, ZN_COORDS_REPLACE_ALL,
-			      &points, &controls, &num_points) == TCL_ERROR) {
-	return TCL_ERROR;
+                              &points, &controls, &num_points) == TCL_ERROR) {
+        return TCL_ERROR;
       }
     }
     if (controls) {
@@ -3975,17 +3985,17 @@ Coords(ZnWInfo		*wi,
   if (argc == 5) {
     /* Get coord of contour at index. */
     if (item->class->Coords(item, contour, index, ZN_COORDS_READ,
-			    &points, &controls, &num_points) == TCL_ERROR) {
+                            &points, &controls, &num_points) == TCL_ERROR) {
       return TCL_ERROR;
     }
     if (num_points) {
       /*printf("  coords: read contour:%d, index:%d, point is %g@%g\n",
-	contour, index, points->x, points->y);    */
+        contour, index, points->x, points->y);    */
       l = Tcl_GetObjResult(wi->interp);
       Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewDoubleObj(points->x));
       Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewDoubleObj(points->y));
       if (controls && *controls) {
-	Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewStringObj(controls, 1));
+        Tcl_ListObjAppendElement(wi->interp, l, Tcl_NewStringObj(controls, 1));
       }
     }
     return TCL_OK;
@@ -3993,7 +4003,7 @@ Coords(ZnWInfo		*wi,
   else if ((argc == 6) && (cmd == ZN_COORDS_REMOVE)) {
     /*  Remove coord of contour at index. */
     if (item->class->Coords(item, contour, index, ZN_COORDS_REMOVE,
-			    &points, &controls, &num_points) == TCL_ERROR) {
+                            &points, &controls, &num_points) == TCL_ERROR) {
       return TCL_ERROR;
     }
     return TCL_OK;
@@ -4001,7 +4011,7 @@ Coords(ZnWInfo		*wi,
   
   /* Set a single coord or add coords at index in contour. */
   if (ZnParseCoordList(wi, args[argc-1], &points,
-		       &controls, &num_points, NULL) == TCL_ERROR) {
+                       &controls, &num_points, NULL) == TCL_ERROR) {
     return TCL_ERROR;
   }
   if (argc == 6) {
@@ -4009,7 +4019,7 @@ Coords(ZnWInfo		*wi,
     cmd = ZN_COORDS_REPLACE;
   }
   if (item->class->Coords(item, contour, index, cmd,
-			  &points, &controls, &num_points) == TCL_ERROR) {
+                          &points, &controls, &num_points) == TCL_ERROR) {
     return TCL_ERROR;
   }
   if (controls) {
@@ -4024,41 +4034,41 @@ Coords(ZnWInfo		*wi,
  *
  * WidgetObjCmd --
  *
- *	This procedure is invoked to process the Tcl command
- *	that corresponds to a widget managed by this module.
- *	See the user documentation for details on what it does.
+ *      This procedure is invoked to process the Tcl command
+ *      that corresponds to a widget managed by this module.
+ *      See the user documentation for details on what it does.
  *
  * Results:
- *	A standard Tcl result.
+ *      A standard Tcl result.
  *
  * Side effects:
- *	See the user documentation.
+ *      See the user documentation.
  *
  *----------------------------------------------------------------------
  */
 static int
-WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
-	     Tcl_Interp		*interp,	/* Current interpreter. */
-	     int		argc,		/* Number of arguments. */
-	     Tcl_Obj *CONST	args[])		/* Arguments. */
+WidgetObjCmd(ClientData         client_data,    /* Information about the widget. */
+             Tcl_Interp         *interp,        /* Current interpreter. */
+             int                argc,           /* Number of arguments. */
+             Tcl_Obj *CONST     args[])         /* Arguments. */
 {
-  ZnWInfo	*wi = (ZnWInfo *) client_data;
-  int		length, result, cmd_index, index;
-  ZnItem	item, item2;
-  int		field = ZN_NO_PART;
-  unsigned int	num = 0, i, j;
-  char		*end, *str;
-  ZnTransfo	*t = NULL;
-  Tcl_Obj	*l;
-  ZnTagSearch	*search_var = NULL;
+  ZnWInfo       *wi = (ZnWInfo *) client_data;
+  int           length, result, cmd_index, index;
+  ZnItem        item, item2;
+  int           field = ZN_NO_PART;
+  unsigned int  num = 0, i, j;
+  char          *end, *str;
+  ZnTransfo     *t = NULL;
+  Tcl_Obj       *l;
+  ZnTagSearch   *search_var = NULL;
   Tcl_HashEntry *entry;
-  ZnPoint	*points;
-  ZnPoint	p;
-  unsigned int	num_points;
-  ZnList	to_points;
-  Tcl_Obj	*entries[3];
-  char		c[] = "c";
-  double	d;
+  ZnPoint       *points;
+  ZnPoint       p;
+  unsigned int  num_points;
+  ZnList        to_points;
+  Tcl_Obj       *entries[3];
+  char          c[] = "c";
+  double        d;
 
 #ifdef PTK_800
   static char *sub_cmd_strings[] =
@@ -4078,7 +4088,7 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
     "transform", "translate", "treset", "trestore", "tsave",
     "tset", "type", "vertexat", "xview", "yview", NULL
   };
-  enum		sub_cmds {
+  enum          sub_cmds {
     ZN_W_ADD, ZN_W_ADDTAG, ZN_W_ANCHORXY, ZN_W_BBOX, ZN_W_BECOMES, ZN_W_BIND,
     ZN_W_CGET, ZN_W_CHGGROUP, ZN_W_CLONE, ZN_W_CONFIGURE,
     ZN_W_CONTOUR, ZN_W_COORDS, ZN_W_CURRENTPART, ZN_W_CURSOR, ZN_W_DCHARS,
@@ -4099,7 +4109,7 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   {
     "adjust", "clear", "from", "item", "to", NULL
   };
-  enum		sel_cmds {
+  enum          sel_cmds {
     ZN_SEL_ADJUST, ZN_SEL_CLEAR, ZN_SEL_FROM, ZN_SEL_ITEM, ZN_SEL_TO
   };
 
@@ -4112,7 +4122,7 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   Tcl_Preserve((ClientData) wi);
   
   if (Tcl_GetIndexFromObj(interp, args[1], sub_cmd_strings,
-			  "subcommand", 0, &cmd_index) != TCL_OK) {
+                          "subcommand", 0, &cmd_index) != TCL_OK) {
     goto error;
   }
   result = TCL_OK;
@@ -4125,51 +4135,51 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_ADD:
     {
-      ZnItem	  group;
+      ZnItem      group;
       ZnItemClass cls;
       
       if (argc == 2) { /* create subcommand alone, return the list of known
-			* object types. */
-	ZnItemClass	*classes = ZnListArray(ZnItemClassList());
-	
-	num = ZnListSize(ZnItemClassList());
-	l = Tcl_GetObjResult(interp);
-	for (i = 0; i < num; i++) {
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(classes[i]->name, -1));
-	}
-	goto done;
+                        * object types. */
+        ZnItemClass     *classes = ZnListArray(ZnItemClassList());
+        
+        num = ZnListSize(ZnItemClassList());
+        l = Tcl_GetObjResult(interp);
+        for (i = 0; i < num; i++) {
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(classes[i]->name, -1));
+        }
+        goto done;
       }
       if ((argc < 4)) {
       add_err:
-	Tcl_WrongNumArgs(interp, 1, args, "add type group ?args?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "add type group ?args?");
+        goto error;
       }
       str = Tcl_GetString(args[2]);
       if (str[0] == '-') {
-	goto add_err;
+        goto add_err;
       }
       cls = ZnLookupItemClass(str);
       if (!cls) {
-	Tcl_AppendResult(interp, "unknown item type \"", str, "\"", NULL);
-	goto error;
+        Tcl_AppendResult(interp, "unknown item type \"", str, "\"", NULL);
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[3], &group, &search_var);
       if ((result == TCL_ERROR) || (group == ZN_NO_ITEM) ||
-	  (group->class != ZnGroup)) {
-	Tcl_AppendResult(interp, ", group item expected, got \"",
-			 Tcl_GetString(args[3]), "\"", NULL);
-	goto error;
+          (group->class != ZnGroup)) {
+        Tcl_AppendResult(interp, ", group item expected, got \"",
+                         Tcl_GetString(args[3]), "\"", NULL);
+        goto error;
       }
       
       argc -= 4;
       args += 4;
       item = ZnCreateItem(wi, cls, &argc, &args);
       if (item == ZN_NO_ITEM) {
-	goto error;
+        goto error;
       }
       ZnITEM.InsertItem(item, group, ZN_NO_ITEM, True);
       if (ZnITEM.ConfigureItem(item, ZN_NO_PART, argc, args, True) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       wi->hot_item = item;
       wi->hot_prev = item->previous;
@@ -4183,8 +4193,8 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_ADDTAG:
     {
       if (argc < 4) {
-	Tcl_WrongNumArgs(interp, 1, args, "addtag tag searchCommand ?arg arg ...?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "addtag tag searchCommand ?arg arg ...?");
+        goto error;
       }
       result = FindItems(wi, argc, args, args[2], 3, &search_var);
     }
@@ -4194,21 +4204,21 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_ANCHORXY:
     {
-      Tk_Anchor	anchor;
+      Tk_Anchor anchor;
       
       if (argc != 4) {
-	Tcl_WrongNumArgs(interp, 1, args, "anchorxy tagOrId anchor");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "anchorxy tagOrId anchor");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM) ||
-	  ISCLEAR(item->class->flags, ZN_CLASS_HAS_ANCHORS)) {
-	Tcl_AppendResult(interp, "unknown item or doesn't support anchors \"",
-			 Tcl_GetString(args[2]), NULL);
-	goto error;
+          ISCLEAR(item->class->flags, ZN_CLASS_HAS_ANCHORS)) {
+        Tcl_AppendResult(interp, "unknown item or doesn't support anchors \"",
+                         Tcl_GetString(args[2]), NULL);
+        goto error;
       }
       if (Tk_GetAnchor(interp, Tcl_GetString(args[3]), &anchor)) {
-	goto error;
+        goto error;
       }
       /*
        * If something has changed in the geometry we need to
@@ -4235,13 +4245,13 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_BBOX:
     {
-      ZnBBox	bbox;
-      ZnDim	width, height;
+      ZnBBox    bbox;
+      ZnDim     width, height;
       ZnFieldSet fs;
 
       if (argc < 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "bbox ?-field fieldNo? ?-label? tagOrId ?tagOrId ...?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "bbox ?-field fieldNo? ?-label? tagOrId ?tagOrId ...?");
+        goto error;
       }
       argc -= 2;
       args += 2;
@@ -4251,76 +4261,76 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
 
       str = Tcl_GetString(args[0]);
       if (*str == '-') {
-	if ((strcmp(str, "-field") == 0) && (argc > 2)) {
-	  if (Tcl_GetIntFromObj(wi->interp, args[1], &field) == TCL_ERROR) {
-	    goto error;
-	  }
-	  argc -= 2;
-	  args += 2;
-	}
-	else if ((strcmp(str, "-label") == 0) && (argc > 1)) {
-	  field = -1;
-	  argc--;
-	  args++;
-	}
-	else {
-	  Tcl_AppendResult(interp, "bbox option should be -field numField or -label",
-			   NULL);
-	  goto error;
-	}
-	result = ZnItemWithTagOrId(wi, args[0], &item, &search_var);
-	if ((result == TCL_ERROR) || (item == ZN_NO_ITEM) ||
-	    ! item->class->GetFieldSet) {
-	  Tcl_AppendResult(interp, "unknown item or doesn't support fields \"",
-			   Tcl_GetString(args[0]), "\"", NULL);
-	  goto error;
-	}
-	fs = item->class->GetFieldSet(item);
-	if (field >= 0) {
-	  if ((unsigned int) field >= fs->num_fields) {
-	    Tcl_AppendResult(interp, "field index is out of bounds", NULL);
-	    goto error;	  
-	  }
-	  ZnFIELD.GetFieldBBox(fs, field, &bbox);
-	}
-	else {
-	  ZnFIELD.GetLabelBBox(fs, &width, &height);
-	  if (width && height) {
-	    p.x = ZnNearestInt(fs->label_pos.x);
-	    p.y = ZnNearestInt(fs->label_pos.y);
-	    ZnAddPointToBBox(&bbox, p.x, p.y);
-	    p.x += width;
-	    p.y += height;
-	    ZnAddPointToBBox(&bbox, p.x, p.y);
-	  }
-	}	
+        if ((strcmp(str, "-field") == 0) && (argc > 2)) {
+          if (Tcl_GetIntFromObj(wi->interp, args[1], &field) == TCL_ERROR) {
+            goto error;
+          }
+          argc -= 2;
+          args += 2;
+        }
+        else if ((strcmp(str, "-label") == 0) && (argc > 1)) {
+          field = -1;
+          argc--;
+          args++;
+        }
+        else {
+          Tcl_AppendResult(interp, "bbox option should be -field numField or -label",
+                           NULL);
+          goto error;
+        }
+        result = ZnItemWithTagOrId(wi, args[0], &item, &search_var);
+        if ((result == TCL_ERROR) || (item == ZN_NO_ITEM) ||
+            ! item->class->GetFieldSet) {
+          Tcl_AppendResult(interp, "unknown item or doesn't support fields \"",
+                           Tcl_GetString(args[0]), "\"", NULL);
+          goto error;
+        }
+        fs = item->class->GetFieldSet(item);
+        if (field >= 0) {
+          if ((unsigned int) field >= fs->num_fields) {
+            Tcl_AppendResult(interp, "field index is out of bounds", NULL);
+            goto error;   
+          }
+          ZnFIELD.GetFieldBBox(fs, field, &bbox);
+        }
+        else {
+          ZnFIELD.GetLabelBBox(fs, &width, &height);
+          if (width && height) {
+            p.x = ZnNearestInt(fs->label_pos.x);
+            p.y = ZnNearestInt(fs->label_pos.y);
+            ZnAddPointToBBox(&bbox, p.x, p.y);
+            p.x += width;
+            p.y += height;
+            ZnAddPointToBBox(&bbox, p.x, p.y);
+          }
+        }       
       }
       else {
-	for (i = 0; i < (unsigned int) argc; i++) {
-	  /*
-	   * Check for options in wrong place amidst tags.
-	   */
-	  str = Tcl_GetString(args[i]);
-	  if (*str == '-') {
-	    Tcl_AppendResult(interp, "bbox options should be specified before any tag", NULL);
-	    goto error;
-	  }
-	  if (ZnTagSearchScan(wi, args[i], &search_var) == TCL_ERROR) {
-	    goto error;
-	  }	
-	  for (item = ZnTagSearchFirst(search_var);
-	       item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	    ZnAddBBoxToBBox(&bbox, &item->item_bounding_box);
-	  }
-	}
+        for (i = 0; i < (unsigned int) argc; i++) {
+          /*
+           * Check for options in wrong place amidst tags.
+           */
+          str = Tcl_GetString(args[i]);
+          if (*str == '-') {
+            Tcl_AppendResult(interp, "bbox options should be specified before any tag", NULL);
+            goto error;
+          }
+          if (ZnTagSearchScan(wi, args[i], &search_var) == TCL_ERROR) {
+            goto error;
+          }     
+          for (item = ZnTagSearchFirst(search_var);
+               item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+            ZnAddBBoxToBBox(&bbox, &item->item_bounding_box);
+          }
+        }
       }
 
       if (!ZnIsEmptyBBox(&bbox)) {
-	l = Tcl_GetObjResult(interp);
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(bbox.orig.x));
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(bbox.orig.y));
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(bbox.corner.x));
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(bbox.corner.y));
+        l = Tcl_GetObjResult(interp);
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(bbox.orig.x));
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(bbox.orig.y));
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(bbox.corner.x));
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(bbox.corner.y));
       }
     }
     break;
@@ -4329,13 +4339,13 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_BIND:
     {
-      ClientData	elem = 0;
-      int		part = ZN_NO_PART;
+      ClientData        elem = 0;
+      int               part = ZN_NO_PART;
       
       if ((argc < 3) || (argc > 6)) {
-	Tcl_WrongNumArgs(interp, 1, args,
-			 "bind tagOrId ?part? ?sequence? ?command?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args,
+                         "bind tagOrId ?part? ?sequence? ?command?");
+        goto error;
       }
       /*
        * Test if (a) an itemid or (b) an itemid:part or
@@ -4347,142 +4357,142 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       args += 3;
 
       if (isdigit(str[0])) {
-	int	id;
-	
-	id = strtoul(str, &end, 0);
-	if ((*end != 0) && (*end != ':')) {
-	  goto bind_a_tag;
-	}
-	entry = Tcl_FindHashEntry(wi->id_table, (char *) id);
-	if (entry == NULL) {
-	  Tcl_AppendResult(interp, "item \"", str, "\" doesn't exist", NULL);
-	  goto error;
-	}
-	item = elem = Tcl_GetHashValue(entry);
-	if (!elem) {
-	  goto error;
-	}
+        int     id;
+        
+        id = strtoul(str, &end, 0);
+        if ((*end != 0) && (*end != ':')) {
+          goto bind_a_tag;
+        }
+        entry = Tcl_FindHashEntry(wi->id_table, (char *) id);
+        if (entry == NULL) {
+          Tcl_AppendResult(interp, "item \"", str, "\" doesn't exist", NULL);
+          goto error;
+        }
+        item = elem = Tcl_GetHashValue(entry);
+        if (!elem) {
+          goto error;
+        }
 
-	if (*end == ':') {
-	  /*
-	   * The part is provided with the id (old method).
-	   */
-	  end++;
-	part_encode:
-	  if (item->class->Part) {
-	    l = Tcl_NewStringObj(end, -1);
-	    if (item->class->Part(item, &l, &part) == TCL_ERROR) {
-	      goto error;
-	    }
-	    elem = EncodeItemPart(item, part);
-	  }
-	  else {
-	    Tcl_AppendResult(interp, "item \"", str, "\" doesn't have parts", NULL);
-	    goto error;
-	  }
-	}
-	else {
-	  /*
-	   * Check if a part is given in the next parameter
-	   * (alternative method for providing a part).
-	   */
-	  if (argc > 3) {
-	    str = Tcl_GetString(args[0]);
-	    if (str[0] != '<') {
-	      end = str;
-	      argc--;
-	      args++;
-	      goto part_encode;
-	    }
-	  }
-	}
-	/*printf("adding element 0x%X to the binding table of item 0x%X\n", elem, item);*/
+        if (*end == ':') {
+          /*
+           * The part is provided with the id (old method).
+           */
+          end++;
+        part_encode:
+          if (item->class->Part) {
+            l = Tcl_NewStringObj(end, -1);
+            if (item->class->Part(item, &l, &part) == TCL_ERROR) {
+              goto error;
+            }
+            elem = EncodeItemPart(item, part);
+          }
+          else {
+            Tcl_AppendResult(interp, "item \"", str, "\" doesn't have parts", NULL);
+            goto error;
+          }
+        }
+        else {
+          /*
+           * Check if a part is given in the next parameter
+           * (alternative method for providing a part).
+           */
+          if (argc > 3) {
+            str = Tcl_GetString(args[0]);
+            if (str[0] != '<') {
+              end = str;
+              argc--;
+              args++;
+              goto part_encode;
+            }
+          }
+        }
+        /*printf("adding element 0x%X to the binding table of item 0x%X\n", elem, item);*/
       }
       else {
       bind_a_tag:
-	elem = (ClientData) Tk_GetUid(str);
+        elem = (ClientData) Tk_GetUid(str);
       }
       
       /*
        * Make a binding table if the widget doesn't already have one.
        */ 
       if (wi->binding_table == NULL) {
-	wi->binding_table = Tk_CreateBindingTable(interp);
+        wi->binding_table = Tk_CreateBindingTable(interp);
       }
       
       if (argc == 2) {
-	int	    append = 0;
-	unsigned long mask;
+        int         append = 0;
+        unsigned long mask;
 
-	str = Tcl_GetString(args[1]);
-	if (str[0] == 0) {
-	  result = Tk_DeleteBinding(interp, wi->binding_table, elem,
-				    Tcl_GetString(args[0]));
-	  goto done;
-	}
+        str = Tcl_GetString(args[1]);
+        if (str[0] == 0) {
+          result = Tk_DeleteBinding(interp, wi->binding_table, elem,
+                                    Tcl_GetString(args[0]));
+          goto done;
+        }
 #ifdef PTK
-	mask = Tk_CreateBinding(interp, wi->binding_table,
-				elem, Tcl_GetString(args[0]), args[1], append);
+        mask = Tk_CreateBinding(interp, wi->binding_table,
+                                elem, Tcl_GetString(args[0]), args[1], append);
 #else
-	if (str[0] == '+') {
-	  str++;
-	  append = 1;
-	}
-	mask = Tk_CreateBinding(interp, wi->binding_table,
-				elem, Tcl_GetString(args[0]), str, append);
+        if (str[0] == '+') {
+          str++;
+          append = 1;
+        }
+        mask = Tk_CreateBinding(interp, wi->binding_table,
+                                elem, Tcl_GetString(args[0]), str, append);
 #endif
-	if (mask == 0) {
-	  goto error;
-	}
-	if (mask & (unsigned) ~(ButtonMotionMask | Button1MotionMask |
-				Button2MotionMask | Button3MotionMask |
-				Button4MotionMask | Button5MotionMask | 
-				ButtonPressMask | ButtonReleaseMask |
-				EnterWindowMask | LeaveWindowMask |
-				KeyPressMask | KeyReleaseMask |
-				PointerMotionMask | VirtualEventMask)) {
-	  Tk_DeleteBinding(interp, wi->binding_table, elem, Tcl_GetString(args[3]));
-	  Tcl_ResetResult(interp);
-	  Tcl_AppendResult(interp, "requested illegal events; ",
-			   "only key, button, motion, enter, leave ",
-			   "and virtual events may be used", NULL);
-	  goto error;
-	}
+        if (mask == 0) {
+          goto error;
+        }
+        if (mask & (unsigned) ~(ButtonMotionMask | Button1MotionMask |
+                                Button2MotionMask | Button3MotionMask |
+                                Button4MotionMask | Button5MotionMask | 
+                                ButtonPressMask | ButtonReleaseMask |
+                                EnterWindowMask | LeaveWindowMask |
+                                KeyPressMask | KeyReleaseMask |
+                                PointerMotionMask | VirtualEventMask)) {
+          Tk_DeleteBinding(interp, wi->binding_table, elem, Tcl_GetString(args[3]));
+          Tcl_ResetResult(interp);
+          Tcl_AppendResult(interp, "requested illegal events; ",
+                           "only key, button, motion, enter, leave ",
+                           "and virtual events may be used", NULL);
+          goto error;
+        }
       }
       else if (argc == 1) {
 #ifdef PTK
-	Tcl_Obj	*command;
-	command = Tk_GetBinding(interp, wi->binding_table, elem,
-				Tcl_GetString(args[0]));
-	if (command == NULL) {
-	  char *string = Tcl_GetString(Tcl_GetObjResult(interp));
-	  /*
-	   * Ignore missing binding errors.  This is a special hack
-	   * that relies on the error message returned by FindSequence
-	   * in tkBind.c.
-	   */
-	  if (string[0] != '\0') {
-	    goto error;
-	  }
-	  else {
-	    Tcl_ResetResult(interp);
-	  }
-	}
-	else {
-	  Tcl_SetObjResult(interp, command);
-	}
+        Tcl_Obj *command;
+        command = Tk_GetBinding(interp, wi->binding_table, elem,
+                                Tcl_GetString(args[0]));
+        if (command == NULL) {
+          char *string = Tcl_GetString(Tcl_GetObjResult(interp));
+          /*
+           * Ignore missing binding errors.  This is a special hack
+           * that relies on the error message returned by FindSequence
+           * in tkBind.c.
+           */
+          if (string[0] != '\0') {
+            goto error;
+          }
+          else {
+            Tcl_ResetResult(interp);
+          }
+        }
+        else {
+          Tcl_SetObjResult(interp, command);
+        }
 #else
-	CONST char *command;
-	command = Tk_GetBinding(interp, wi->binding_table, elem,
-				Tcl_GetString(args[0]));
-	if (command == NULL) {
-	  goto error;
-	}
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(command, -1));
+        CONST char *command;
+        command = Tk_GetBinding(interp, wi->binding_table, elem,
+                                Tcl_GetString(args[0]));
+        if (command == NULL) {
+          goto error;
+        }
+        Tcl_SetObjResult(interp, Tcl_NewStringObj(command, -1));
 #endif
       }
       else {
-	Tk_GetAllBindings(interp, wi->binding_table, elem);
+        Tk_GetAllBindings(interp, wi->binding_table, elem);
       }
     }
     break;
@@ -4492,16 +4502,16 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_CGET:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "cget option");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "cget option");
+        goto error;
       }
 #ifdef PTK_800
       result = Tk_ConfigureValue(interp, wi->win, config_specs,
-				 (char *) wi, Tcl_GetString(args[2]), 0);
+                                 (char *) wi, Tcl_GetString(args[2]), 0);
 #else
       l = Tk_GetOptionValue(interp, (char *) wi, wi->opt_table, args[2], wi->win);
       if (l == NULL) {
-	goto error;
+        goto error;
       }
       Tcl_SetObjResult(interp, l);
 #endif
@@ -4512,28 +4522,28 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_CHGGROUP:
     {
-      ZnItem	grp, scan;
-      int	adjust=0;
+      ZnItem    grp, scan;
+      int       adjust=0;
       ZnTransfo inv, t, t2, *this_one=NULL;
       
       if ((argc != 4) && (argc != 5)) {
-	Tcl_WrongNumArgs(interp, 1, args, "chggroup tagOrIg group ?adjustTransform?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "chggroup tagOrIg group ?adjustTransform?");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	goto error;
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[3], &grp, &search_var);
       if ((result == TCL_ERROR) || (grp == ZN_NO_ITEM)|| (grp->class != ZnGroup)) {
-	goto error;
+        goto error;
       }
       if (item->parent == grp) {
-	/*
-	 * Nothing to be done, the item is already in the
-	 * target group.
-	 */
-	goto done;
+        /*
+         * Nothing to be done, the item is already in the
+         * target group.
+         */
+        goto done;
       }
       /*
        * Check the ancestors to find if item is an
@@ -4542,29 +4552,29 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
        */
       for (scan = grp; scan && (scan != item); scan = scan->parent);
       if (scan == item) {
-	Tcl_AppendResult(interp, "\"", Tcl_GetString(args[3]),
-			 "\" is a descendant of \"", Tcl_GetString(args[2]),
-			 "\" and can't be used as its parent", NULL);
-	goto error;
+        Tcl_AppendResult(interp, "\"", Tcl_GetString(args[3]),
+                         "\" is a descendant of \"", Tcl_GetString(args[2]),
+                         "\" and can't be used as its parent", NULL);
+        goto error;
       }
       if (argc == 5) {
-	if (Tcl_GetBooleanFromObj(interp, args[4], &adjust) != TCL_OK) {
-	  goto error;
-	}
+        if (Tcl_GetBooleanFromObj(interp, args[4], &adjust) != TCL_OK) {
+          goto error;
+        }
       }
       if ((item->parent == grp) || (item->parent == ZN_NO_ITEM)) {
-	goto done;
+        goto done;
       }
       if (adjust) {
-	ZnITEM.GetItemTransform(grp, &t);
-	ZnTransfoInvert(&t, &inv);
-	ZnITEM.GetItemTransform(item->parent, &t);
-	ZnTransfoCompose(&t2, &t, &inv);
-	this_one = &t2;
-	if (item->transfo) {
-	  ZnTransfoCompose(&t, item->transfo, &t2);
-	  this_one = &t;
-	}
+        ZnITEM.GetItemTransform(grp, &t);
+        ZnTransfoInvert(&t, &inv);
+        ZnITEM.GetItemTransform(item->parent, &t);
+        ZnTransfoCompose(&t2, &t, &inv);
+        this_one = &t2;
+        if (item->transfo) {
+          ZnTransfoCompose(&t, item->transfo, &t2);
+          this_one = &t;
+        }
       }
       ZnITEM.ExtractItem(item);
       ZnITEM.InsertItem(item, grp, ZN_NO_ITEM, True);
@@ -4575,9 +4585,9 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
        * is enough.
        */
       ZnITEM.Invalidate(item,
-		      item->class==ZnGroup?ZN_TRANSFO_FLAG:ZN_COORDS_FLAG);
+                      item->class==ZnGroup?ZN_TRANSFO_FLAG:ZN_COORDS_FLAG);
       if (adjust) {
-	ZnITEM.SetTransfo(item, this_one);
+        ZnITEM.SetTransfo(item, this_one);
       }
     }
     break;
@@ -4587,20 +4597,20 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_CLONE:
     {
       if (argc < 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "clone tagOrId ?option value ...?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "clone tagOrId ?option value ...?");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) ||
-	  (item == ZN_NO_ITEM) || (item == wi->top_group)) {
-	goto error;
+          (item == ZN_NO_ITEM) || (item == wi->top_group)) {
+        goto error;
       }
       argc -= 3;
       args += 3;
       item2 = ZnITEM.CloneItem(item);
       ZnITEM.InsertItem(item2, item->parent, ZN_NO_ITEM, True);
       if (ZnITEM.ConfigureItem(item2, ZN_NO_PART, argc, args, False) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       l = Tcl_NewLongObj(item2->id);
       Tcl_SetObjResult(interp, l);
@@ -4613,29 +4623,29 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
     {
 #ifdef PTK_800
       if (argc == 2) {
-	result = Tk_ConfigureInfo(interp, wi->win, config_specs,
-				  (char *) wi, (char *) NULL, 0);
+        result = Tk_ConfigureInfo(interp, wi->win, config_specs,
+                                  (char *) wi, (char *) NULL, 0);
       }
       else if (argc == 3) {
-	result = Tk_ConfigureInfo(interp, wi->win, config_specs,
-				  (char *) wi, Tcl_GetString(args[2]), 0);
+        result = Tk_ConfigureInfo(interp, wi->win, config_specs,
+                                  (char *) wi, Tcl_GetString(args[2]), 0);
       }
       else {
-	result = Configure(interp, wi, argc-2, args+2, TK_CONFIG_ARGV_ONLY);
+        result = Configure(interp, wi, argc-2, args+2, TK_CONFIG_ARGV_ONLY);
       }
 #else
       if (argc == 2) {
-	l = Tk_GetOptionInfo(interp, (char *) wi, wi->opt_table,
-			     (argc == 3) ? args[2] : NULL, wi->win);
-	if (l == NULL) {
-	  goto error;
-	}
-	else {
-	  Tcl_SetObjResult(interp, l);
-	}
+        l = Tk_GetOptionInfo(interp, (char *) wi, wi->opt_table,
+                             (argc == 3) ? args[2] : NULL, wi->win);
+        if (l == NULL) {
+          goto error;
+        }
+        else {
+          Tcl_SetObjResult(interp, l);
+        }
       }
       else {
-	result = Configure(interp, wi, argc-2, args+2);
+        result = Configure(interp, wi, argc-2, args+2);
       }
 #endif
     }
@@ -4646,12 +4656,12 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_CONTOUR:
     {
       if ((argc < 3) || (argc > 7)) {
-	Tcl_WrongNumArgs(interp, 1, args,
-			 "contour tagOrId ?operator windingFlag? ?index? ?coordListOrTagOrId?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args,
+                         "contour tagOrId ?operator windingFlag? ?index? ?coordListOrTagOrId?");
+        goto error;
       }
       if (Contour(wi, argc, args, &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       break;
     }
@@ -4661,12 +4671,12 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_COORDS:
     {
       if ((argc < 3) || (argc > 7)) {
-	Tcl_WrongNumArgs(interp, 1, args,
-			 "coords tagOrId ?add/remove? ?contour? ?index? ?coordList?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args,
+                         "coords tagOrId ?add/remove? ?contour? ?index? ?coordList?");
+        goto error;
       }
       if (Coords(wi, argc, args, &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
     }
     break;
@@ -4675,22 +4685,22 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_CURRENTPART:
     {
-      ZnBool	only_fields = False;
+      ZnBool    only_fields = False;
       if ((argc != 2) && (argc != 3)) {
-	Tcl_WrongNumArgs(interp, 1, args, "currentpart ?onlyFields?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "currentpart ?onlyFields?");
+        goto error;
       }
       if (argc == 3) {
-	if (Tcl_GetBooleanFromObj(interp, args[2], &only_fields) != TCL_OK) {
-	  goto error;
-	}
+        if (Tcl_GetBooleanFromObj(interp, args[2], &only_fields) != TCL_OK) {
+          goto error;
+        }
       }
       if ((wi->current_item != ZN_NO_ITEM) &&
-	  (wi->current_item->class->Part != NULL) &&
-	  ((wi->current_part >= 0) || !only_fields)) {
-	l = NULL;
-	wi->current_item->class->Part(wi->current_item, &l, &wi->current_part);
-	Tcl_SetObjResult(interp, l);
+          (wi->current_item->class->Part != NULL) &&
+          ((wi->current_part >= 0) || !only_fields)) {
+        l = NULL;
+        wi->current_item->class->Part(wi->current_item, &l, &wi->current_part);
+        Tcl_SetObjResult(interp, l);
       }
     }
     break;
@@ -4700,41 +4710,41 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_CURSOR:
     {
       if ((argc != 4) && (argc != 5)) {
-	Tcl_WrongNumArgs(interp, 1, args, "cursor tagOrId ?field? index");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "cursor tagOrId ?field? index");
+        goto error;
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       if (argc == 5) {
-	if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
-	  field = ZN_NO_PART;
-	  if (Tcl_GetString(args[3])[0] != 0) { 
-	    Tcl_AppendResult(interp, "invalid field index \"",
-			     Tcl_GetString(args[3]),
-			     "\", should be a positive integer", NULL);
-	    goto error;
-	  }
-	}
-	argc--;
-	args++;
+        if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
+          field = ZN_NO_PART;
+          if (Tcl_GetString(args[3])[0] != 0) { 
+            Tcl_AppendResult(interp, "invalid field index \"",
+                             Tcl_GetString(args[3]),
+                             "\", should be a positive integer", NULL);
+            goto error;
+          }
+        }
+        argc--;
+        args++;
       }
       for (item = ZnTagSearchFirst(search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	if ((item->class->Cursor == NULL) ||
-	    (item->class->Index == NULL)) {
-	  continue;
-	}
-	result = (*item->class->Index)(item, field, args[3], &index);
-	if (result != TCL_OK) {
-	  goto error;
-	}
-	
-	(*item->class->Cursor)(item, field, index);
-	if ((item == wi->focus_item) && (field == wi->focus_field) &&
-	    wi->text_info.cursor_on) {
-	  ZnITEM.Invalidate(item, ZN_DRAW_FLAG);
-	}
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+        if ((item->class->Cursor == NULL) ||
+            (item->class->Index == NULL)) {
+          continue;
+        }
+        result = (*item->class->Index)(item, field, args[3], &index);
+        if (result != TCL_OK) {
+          goto error;
+        }
+        
+        (*item->class->Cursor)(item, field, index);
+        if ((item == wi->focus_item) && (field == wi->focus_field) &&
+            wi->text_info.cursor_on) {
+          ZnITEM.Invalidate(item, ZN_DRAW_FLAG);
+        }
       }
     }
     break;
@@ -4743,80 +4753,80 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_DCHARS:
     {
-      int	 first, last;
+      int        first, last;
       ZnTextInfo *ti = &wi->text_info;
 
       if ((argc < 4) || (argc > 6)) {
-	Tcl_WrongNumArgs(interp, 1, args, "dchars tagOrId ?field? first ?last?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "dchars tagOrId ?field? first ?last?");
+        goto error;
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       if (argc == 6) {
-	if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
-	  field = ZN_NO_PART;
-	  if (Tcl_GetString(args[3])[0] != 0) { 
-	    Tcl_AppendResult(interp, "invalid field index \"",
-			     Tcl_GetString(args[3]),
-			     "\", should be a positive integer", NULL);
-	    goto error;
-	  }
-	}
-	argc--;
-	args++;
+        if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
+          field = ZN_NO_PART;
+          if (Tcl_GetString(args[3])[0] != 0) { 
+            Tcl_AppendResult(interp, "invalid field index \"",
+                             Tcl_GetString(args[3]),
+                             "\", should be a positive integer", NULL);
+            goto error;
+          }
+        }
+        argc--;
+        args++;
       }
       for (item = ZnTagSearchFirst(search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	if ((item->class->Index == NULL) ||
-	    (item->class->DeleteChars == NULL)) {
-	  continue;
-	}
-	result = (*item->class->Index)(item, field, args[3], &first);
-	if (result != TCL_OK) {
-	  goto error;
-	}
-	if (argc == 5) {
-	  result = (*item->class->Index)(item, field, args[4], &last);
-	  if (result != TCL_OK) {
-	    goto error;
-	  }
-	}
-	else {
-	  last = first;
-	}
-	(*item->class->DeleteChars)(item, field, &first, &last);
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+        if ((item->class->Index == NULL) ||
+            (item->class->DeleteChars == NULL)) {
+          continue;
+        }
+        result = (*item->class->Index)(item, field, args[3], &first);
+        if (result != TCL_OK) {
+          goto error;
+        }
+        if (argc == 5) {
+          result = (*item->class->Index)(item, field, args[4], &last);
+          if (result != TCL_OK) {
+            goto error;
+          }
+        }
+        else {
+          last = first;
+        }
+        (*item->class->DeleteChars)(item, field, &first, &last);
 
-	/*
-	 * Update indexes for the selection to reflect the
-	 * change.
-	 */
-	if ((ti->sel_item == item) && (ti->sel_field == field)) {
-	  int count = last + 1 - first;
-	  if (ti->sel_first > first) {
-	    ti->sel_first -= count;
-	    if (ti->sel_first < first) {
-	      ti->sel_first = first;
-	    }
-	  }
-	  if (ti->sel_last >= first) {
-	    ti->sel_last -= count;
-	    if (ti->sel_last < (first-1)) {
-	      ti->sel_last = first-1;
-	    }
-	  }
-	  if (ti->sel_first >= ti->sel_last) {
-	    ti->sel_item = ZN_NO_ITEM;
-	    ti->sel_field = ZN_NO_PART;
-	  }
-	  if ((ti->anchor_item == item) && (ti->anchor_field == field) &&
-	      (ti->sel_anchor > first)) {
-	    ti->sel_anchor -= count;
-	    if (ti->sel_anchor < first) {
-	      ti->sel_anchor = first;
-	    }
-	  }
-	}
+        /*
+         * Update indexes for the selection to reflect the
+         * change.
+         */
+        if ((ti->sel_item == item) && (ti->sel_field == field)) {
+          int count = last + 1 - first;
+          if (ti->sel_first > first) {
+            ti->sel_first -= count;
+            if (ti->sel_first < first) {
+              ti->sel_first = first;
+            }
+          }
+          if (ti->sel_last >= first) {
+            ti->sel_last -= count;
+            if (ti->sel_last < (first-1)) {
+              ti->sel_last = first-1;
+            }
+          }
+          if (ti->sel_first >= ti->sel_last) {
+            ti->sel_item = ZN_NO_ITEM;
+            ti->sel_field = ZN_NO_PART;
+          }
+          if ((ti->anchor_item == item) && (ti->anchor_field == field) &&
+              (ti->sel_anchor > first)) {
+            ti->sel_anchor -= count;
+            if (ti->sel_anchor < first) {
+              ti->sel_anchor = first;
+            }
+          }
+        }
       }
     }
     break;
@@ -4825,24 +4835,24 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_DTAG:
     {
-      Tk_Uid		tag;
+      Tk_Uid            tag;
       
       if ((argc != 3) && (argc != 4)) {
-	Tcl_WrongNumArgs(interp, 1, args, "dtag tagOrId ?tagToDelete?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "dtag tagOrId ?tagToDelete?");
+        goto error;
       }
       if (argc == 4) {
-	tag = Tk_GetUid(Tcl_GetString(args[3]));
+        tag = Tk_GetUid(Tcl_GetString(args[3]));
       }
       else {
-	tag = Tk_GetUid(Tcl_GetString(args[2]));
+        tag = Tk_GetUid(Tcl_GetString(args[2]));
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       for (item = ZnTagSearchFirst(search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	ZnITEM.RemoveTag(item, (char *) tag);
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+        ZnITEM.RemoveTag(item, (char *) tag);
       }
     }
     break;
@@ -4852,8 +4862,8 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_FIND:
     {
       if (argc < 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "find searchCommand ?arg arg ...?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "find searchCommand ?arg arg ...?");
+        goto error;
       }
       result = FindItems(wi, argc, args, NULL, 2, &search_var);
     }
@@ -4864,15 +4874,15 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_FIT:
     {
       if (argc != 4) {
-	Tcl_WrongNumArgs(interp, 1, args, "fit coordList error");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "fit coordList error");
+        goto error;
       }
       if (ZnParseCoordList(wi, args[2], &points,
-			   NULL, &num_points, NULL) == TCL_ERROR) {
-	return TCL_ERROR;
+                           NULL, &num_points, NULL) == TCL_ERROR) {
+        return TCL_ERROR;
       }
       if (Tcl_GetDoubleFromObj(interp, args[3], &d) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       to_points = ZnListNew(32, sizeof(ZnPoint));
       ZnFitBezier(points, num_points, d, to_points);
@@ -4880,15 +4890,15 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       num_points = ZnListSize(to_points);
       l = Tcl_GetObjResult(interp);
       for (i = 0; i < num_points; i++, points++) {
-	entries[0] = Tcl_NewDoubleObj(points->x);
-	entries[1] = Tcl_NewDoubleObj(points->y);
-	if (i % 3) {
-	  entries[2] = Tcl_NewStringObj(c, -1);
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(3, entries));
-	}
-	else {
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(2, entries));
-	}
+        entries[0] = Tcl_NewDoubleObj(points->x);
+        entries[1] = Tcl_NewDoubleObj(points->y);
+        if (i % 3) {
+          entries[2] = Tcl_NewStringObj(c, -1);
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(3, entries));
+        }
+        else {
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(2, entries));
+        }
       } 
       ZnListFree(to_points);
     }
@@ -4899,51 +4909,51 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_FOCUS:
     {
       if (argc > 4) {
-	Tcl_WrongNumArgs(interp, 1, args, "focus ?tagOrId? ?field?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "focus ?tagOrId? ?field?");
+        goto error;
       }
       item = wi->focus_item;
       if (argc == 2) {
-	field = wi->focus_field;
-	if (item != ZN_NO_ITEM) {
-	  l = Tcl_GetObjResult(interp);
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewLongObj(item->id));
-	  if (field != ZN_NO_PART) {
-	    Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(field));
-	  }
-	  else {
-	    Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj("", -1));
-	  }
-	}
-	break;
+        field = wi->focus_field;
+        if (item != ZN_NO_ITEM) {
+          l = Tcl_GetObjResult(interp);
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewLongObj(item->id));
+          if (field != ZN_NO_PART) {
+            Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(field));
+          }
+          else {
+            Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj("", -1));
+          }
+        }
+        break;
       }
       if ((item != ZN_NO_ITEM) && (item->class->Cursor != NULL) &&
-	  ISSET(wi->flags, ZN_GOT_FOCUS)) {
-	ZnITEM.Invalidate(item, ZN_COORDS_FLAG);
+          ISSET(wi->flags, ZN_GOT_FOCUS)) {
+        ZnITEM.Invalidate(item, ZN_COORDS_FLAG);
       }
       if (Tcl_GetString(args[2])[0] == 0) {
-	wi->focus_item = ZN_NO_ITEM;
-	wi->focus_field = ZN_NO_PART;
-	break;
+        wi->focus_item = ZN_NO_ITEM;
+        wi->focus_field = ZN_NO_PART;
+        break;
       }
       if (ZnItemWithTagOrId(wi, args[2], &item, &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       if (argc == 4) {
-	if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
-	  field = ZN_NO_PART;
-	  if (Tcl_GetString(args[3])[0] != 0) { 
-	    Tcl_AppendResult(interp, "invalid field index \"",
-			     Tcl_GetString(args[3]),
-			     "\", should be a positive integer", NULL);
-	    goto error;
-	  }
-	}
+        if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
+          field = ZN_NO_PART;
+          if (Tcl_GetString(args[3])[0] != 0) { 
+            Tcl_AppendResult(interp, "invalid field index \"",
+                             Tcl_GetString(args[3]),
+                             "\", should be a positive integer", NULL);
+            goto error;
+          }
+        }
       }
       wi->focus_item = item;
       wi->focus_field = field;
       if (ISSET(wi->flags, ZN_GOT_FOCUS) && (item->class->Cursor != NULL)) {
-	ZnITEM.Invalidate(wi->focus_item, ZN_COORDS_FLAG);
+        ZnITEM.Invalidate(wi->focus_item, ZN_COORDS_FLAG);
       }
     }
     break;
@@ -4953,8 +4963,8 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_GDELETE:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "gdelete gName");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "gdelete gName");
+        goto error;
       }
       ZnDeleteGradientName(Tcl_GetString(args[2]));
     }    
@@ -4964,26 +4974,26 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_GETTAGS:
     {
-      Tk_Uid	*tags;
+      Tk_Uid    *tags;
       
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "gettags tagOrId");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "gettags tagOrId");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	goto error;
+        goto error;
       }
       if (!item->tags || !ZnListSize(item->tags)) {
-	goto done;
+        goto done;
       }
       else {
-	num = ZnListSize(item->tags);
-	tags = (Tk_Uid *) ZnListArray(item->tags);
-	l = Tcl_GetObjResult(interp);
-	for (i = 0; i < num; i++) {
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(tags[i], -1));
-	}
+        num = ZnListSize(item->tags);
+        tags = (Tk_Uid *) ZnListArray(item->tags);
+        l = Tcl_GetObjResult(interp);
+        for (i = 0; i < num; i++) {
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(tags[i], -1));
+        }
       }
     }
     break;
@@ -4992,22 +5002,22 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_GNAME:
     {
-      ZnBool	ok;
+      ZnBool    ok;
       
       if ((argc != 3) && (argc != 4)) {
-	Tcl_WrongNumArgs(interp, 1, args, "gname ?grad? gName");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "gname ?grad? gName");
+        goto error;
       }
       if (argc == 3) {
-	l = Tcl_NewBooleanObj(ZnGradientNameExists(Tcl_GetString(args[2])));
-	Tcl_SetObjResult(interp, l);
+        l = Tcl_NewBooleanObj(ZnGradientNameExists(Tcl_GetString(args[2])));
+        Tcl_SetObjResult(interp, l);
       }
       else {
-	ok = ZnNameGradient(interp, wi->win, Tcl_GetString(args[2]),
-			    Tcl_GetString(args[3]));
-	if (!ok) {
-	  goto error;
-	}
+        ok = ZnNameGradient(interp, wi->win, Tcl_GetString(args[2]),
+                            Tcl_GetString(args[3]));
+        if (!ok) {
+          goto error;
+        }
       }
     }
     break;
@@ -5017,23 +5027,23 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_GROUP:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "group tagOrId");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "group tagOrId");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	goto error;
+        goto error;
       }
       if (item->parent != ZN_NO_ITEM) {
-	l = Tcl_NewLongObj(item->parent->id);
-	Tcl_SetObjResult(interp, l);
+        l = Tcl_NewLongObj(item->parent->id);
+        Tcl_SetObjResult(interp, l);
       }
       else {
-	/*
-	 * Top group is its own parent.
-	 */
-	l = Tcl_NewLongObj(item->id);
-	Tcl_SetObjResult(interp, l);
+        /*
+         * Top group is its own parent.
+         */
+        l = Tcl_NewLongObj(item->id);
+        Tcl_SetObjResult(interp, l);
       }
     }
     break;
@@ -5043,12 +5053,12 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_HASANCHORS:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "hasanchors tagOrId");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "hasanchors tagOrId");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	goto error;
+        goto error;
       }
       l = Tcl_NewBooleanObj(ISSET(item->class->flags, ZN_CLASS_HAS_ANCHORS) ? 1 : 0);
       Tcl_SetObjResult(interp, l);
@@ -5060,12 +5070,12 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_HASFIELDS:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "hasfields tagOrId");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "hasfields tagOrId");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	goto error;
+        goto error;
       }
       l =  Tcl_NewBooleanObj(item->class->GetFieldSet?1:0);
       Tcl_SetObjResult(interp, l);
@@ -5077,15 +5087,15 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_HASTAG:
     {
       if (argc != 4) {
-	Tcl_WrongNumArgs(interp, 1, args, "hastag tagOrId tag");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "hastag tagOrId tag");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	goto error;
+        goto error;
       }
       l = Tcl_NewBooleanObj(ZnITEM.HasTag(item,
-					  Tk_GetUid(Tcl_GetString(args[3]))));
+                                          Tk_GetUid(Tcl_GetString(args[3]))));
       Tcl_SetObjResult(interp, l);
     }
     break;
@@ -5095,39 +5105,39 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_INDEX:
     {
       if ((argc != 4) && (argc != 5)) {
-	Tcl_WrongNumArgs(interp, 1, args, "index tagOrId ?field? string");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "index tagOrId ?field? string");
+        goto error;
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       if (argc == 5) {
-	if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
-	  field = ZN_NO_PART;
-	  if (Tcl_GetString(args[3])[0] != 0) {
-	    Tcl_AppendResult(interp, "invalid field index \"",
-			     Tcl_GetString(args[3]),
-			     "\", should be a positive integer", NULL);
-	    goto error;
-	  }
-	}
-	argc--;
-	args++;
+        if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
+          field = ZN_NO_PART;
+          if (Tcl_GetString(args[3])[0] != 0) {
+            Tcl_AppendResult(interp, "invalid field index \"",
+                             Tcl_GetString(args[3]),
+                             "\", should be a positive integer", NULL);
+            goto error;
+          }
+        }
+        argc--;
+        args++;
       }
       for (item = ZnTagSearchFirst(search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	if (item->class->Index != NULL) {
-	  result = (*item->class->Index)(item, field, args[3], &index);
-	  if (result != TCL_OK) {
-	    goto error;
-	  }
-	  l = Tcl_NewIntObj(index);
-	  Tcl_SetObjResult(interp, l);
-	  goto done;
-	}
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+        if (item->class->Index != NULL) {
+          result = (*item->class->Index)(item, field, args[3], &index);
+          if (result != TCL_OK) {
+            goto error;
+          }
+          l = Tcl_NewIntObj(index);
+          Tcl_SetObjResult(interp, l);
+          goto done;
+        }
       }
       Tcl_AppendResult(interp, "can't find an indexable item \"",
-		       Tcl_GetString(args[2]), "\"", NULL);
+                       Tcl_GetString(args[2]), "\"", NULL);
       goto error;
     }
     break;
@@ -5137,56 +5147,56 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_INSERT:
     {
       ZnTextInfo *ti = &wi->text_info;
-      char	 *chars;
+      char       *chars;
 
       if ((argc != 5) && (argc != 6)) {
-	Tcl_WrongNumArgs(interp, 1, args, "insert tagOrId ?field? before string");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "insert tagOrId ?field? before string");
+        goto error;
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       if (argc == 6) {
-	if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
-	  field = ZN_NO_PART;
-	  if (Tcl_GetString(args[3])[0] != 0) { 
-	    Tcl_AppendResult(interp, "invalid field index \"",
-			     Tcl_GetString(args[3]),
-			     "\", should be a positive integer", NULL);
-	    goto error;
-	  }
-	}
-	argc--;
-	args++;
+        if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
+          field = ZN_NO_PART;
+          if (Tcl_GetString(args[3])[0] != 0) { 
+            Tcl_AppendResult(interp, "invalid field index \"",
+                             Tcl_GetString(args[3]),
+                             "\", should be a positive integer", NULL);
+            goto error;
+          }
+        }
+        argc--;
+        args++;
       }
       for (item = ZnTagSearchFirst(search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	if ((item->class->Index == NULL) ||
-	    (item->class->InsertChars == NULL)) {
-	  continue;
-	}
-	result = (*item->class->Index)(item, field, args[3], &index);
-	if (result != TCL_OK) {
-	  goto error;
-	}
-	chars = Tcl_GetString(args[4]);
-	(*item->class->InsertChars)(item, field, &index, chars);
-	/*
-	 * Inserting characters invalidates selection indices.
-	 */
-	if ((ti->sel_item == item) && (ti->sel_field == field)) {
-	  length = strlen(chars);
-	  if (ti->sel_first >= index) {
-	    ti->sel_first += length;
-	  }
-	  if (ti->sel_last >= index) {
-	    ti->sel_last += length;
-	  }
-	  if ((ti->anchor_item == item) && (ti->anchor_field == field) &&
-	      (ti->sel_anchor >= index)) {
-	    ti->sel_anchor += length;
-	  }
-	}
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+        if ((item->class->Index == NULL) ||
+            (item->class->InsertChars == NULL)) {
+          continue;
+        }
+        result = (*item->class->Index)(item, field, args[3], &index);
+        if (result != TCL_OK) {
+          goto error;
+        }
+        chars = Tcl_GetString(args[4]);
+        (*item->class->InsertChars)(item, field, &index, chars);
+        /*
+         * Inserting characters invalidates selection indices.
+         */
+        if ((ti->sel_item == item) && (ti->sel_field == field)) {
+          length = strlen(chars);
+          if (ti->sel_first >= index) {
+            ti->sel_first += length;
+          }
+          if (ti->sel_last >= index) {
+            ti->sel_last += length;
+          }
+          if ((ti->anchor_item == item) && (ti->anchor_field == field) &&
+              (ti->sel_anchor >= index)) {
+            ti->sel_anchor += length;
+          }
+        }
       }
     }
     break;
@@ -5197,31 +5207,31 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
     {
       if (argc < 4) {
       itemcget_syntax:
-	Tcl_WrongNumArgs(interp, 1, args, "itemcget tagOrId ?field? option");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "itemcget tagOrId ?field? option");
+        goto error;
       }    
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	goto error;
+        goto error;
       }
       if (argc == 5) {
-	if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
-	  field = ZN_NO_PART;
-	  if (Tcl_GetString(args[3])[0] != 0) {
-	    Tcl_AppendResult(interp, "invalid field index \"",
-			     Tcl_GetString(args[3]),
-			     "\", should be a positive integer", NULL);
-	    goto error;
-	  }
-	}
-	argc--;
-	args++;
+        if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
+          field = ZN_NO_PART;
+          if (Tcl_GetString(args[3])[0] != 0) {
+            Tcl_AppendResult(interp, "invalid field index \"",
+                             Tcl_GetString(args[3]),
+                             "\", should be a positive integer", NULL);
+            goto error;
+          }
+        }
+        argc--;
+        args++;
       }
       if (argc != 4) {
-	goto itemcget_syntax;	  
+        goto itemcget_syntax;     
       }
       if (ZnITEM.QueryItem(item, field, 1, &args[3]) != TCL_OK) {
-	goto error;
+        goto error;
       }
     }
     break;
@@ -5231,57 +5241,57 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_ITEMCONFIGURE:
     {
       if (argc < 3) {
-	Tcl_WrongNumArgs(interp, 1, args,
-			 "itemconfigure tagOrId ?field? option value ?option value? ...");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args,
+                         "itemconfigure tagOrId ?field? option value ?option value? ...");
+        goto error;
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       if ((argc > 3) && (Tcl_GetString(args[3])[0] != '-')) {
-	if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
-	  field = ZN_NO_PART;
-	  if (Tcl_GetString(args[3])[0] != 0) { 
-	    Tcl_AppendResult(interp, "invalid field index \"",
-			     Tcl_GetString(args[3]),
-			     "\", should be a positive integer", NULL);
-	    goto error;
-	  }
-	}
-	argc--;
-	args++;
+        if (Tcl_GetIntFromObj(interp, args[3], &field) != TCL_OK) {
+          field = ZN_NO_PART;
+          if (Tcl_GetString(args[3])[0] != 0) { 
+            Tcl_AppendResult(interp, "invalid field index \"",
+                             Tcl_GetString(args[3]),
+                             "\", should be a positive integer", NULL);
+            goto error;
+          }
+        }
+        argc--;
+        args++;
       }
       argc -= 3;
       args += 3;
       for (item = ZnTagSearchFirst(search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	if (argc < 2) {
-	  if (field == ZN_NO_PART) {
-	    result = ZnAttributesInfo(wi->interp, item, item->class->attr_desc, argc, args);
-	  }
-	  else if (item->class->GetFieldSet) {
-	    ZnFieldSet fs = item->class->GetFieldSet(item);
-	    if (field < (int) ZnFIELD.NumFields(fs)) {
-	      result = ZnAttributesInfo(wi->interp, ZnFIELD.GetFieldStruct(fs, field),
-					ZnFIELD.attr_desc, argc, args);
-	    }
-	    else {
-	      Tcl_AppendResult(interp, "field index out of bound", NULL);
-	      goto error;
-	    }
-	  }
-	  else {
-	    Tcl_AppendResult(interp, "the item does not support fields", NULL);
-	    goto error;
-	  }
-	  goto done;
-	}
-	else {
-	  result = ZnITEM.ConfigureItem(item, field, argc, args, False);
-	}
-	if (result == TCL_ERROR) {
-	  goto error;
-	}
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+        if (argc < 2) {
+          if (field == ZN_NO_PART) {
+            result = ZnAttributesInfo(wi->interp, item, item->class->attr_desc, argc, args);
+          }
+          else if (item->class->GetFieldSet) {
+            ZnFieldSet fs = item->class->GetFieldSet(item);
+            if (field < (int) ZnFIELD.NumFields(fs)) {
+              result = ZnAttributesInfo(wi->interp, ZnFIELD.GetFieldStruct(fs, field),
+                                        ZnFIELD.attr_desc, argc, args);
+            }
+            else {
+              Tcl_AppendResult(interp, "field index out of bound", NULL);
+              goto error;
+            }
+          }
+          else {
+            Tcl_AppendResult(interp, "the item does not support fields", NULL);
+            goto error;
+          }
+          goto done;
+        }
+        else {
+          result = ZnITEM.ConfigureItem(item, field, argc, args, False);
+        }
+        if (result == TCL_ERROR) {
+          goto error;
+        }
       }
     }
     break;
@@ -5291,12 +5301,12 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_LAYOUT:
     {
       if (argc < 4) {
-	Tcl_WrongNumArgs(interp, 1, args,
-			 "layout operator ?args...? tagOrId ?tagOrId...?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args,
+                         "layout operator ?args...? tagOrId ?tagOrId...?");
+        goto error;
       }
       if (LayoutItems(wi, argc-2, args+2) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
     }
     break;
@@ -5308,41 +5318,41 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       ZnItem      first, group, mark = ZN_NO_ITEM;
       
       if (argc < 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "lower tagOrId ?belowThis?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "lower tagOrId ?belowThis?");
+        goto error;
       }
       if (argc == 4) {
-	if (ZnTagSearchScan(wi, args[3], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
-	for (item = ZnTagSearchFirst(search_var);
-	     item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	  mark = item;
-	}
-	if (mark == ZN_NO_ITEM) {
-	  Tcl_AppendResult(interp, "unknown tag or item \"",
-			   Tcl_GetString(args[3]), "\"", NULL);
-	  goto error;
-	}
+        if (ZnTagSearchScan(wi, args[3], &search_var) == TCL_ERROR) {
+          goto error;
+        }
+        for (item = ZnTagSearchFirst(search_var);
+             item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+          mark = item;
+        }
+        if (mark == ZN_NO_ITEM) {
+          Tcl_AppendResult(interp, "unknown tag or item \"",
+                           Tcl_GetString(args[3]), "\"", NULL);
+          goto error;
+        }
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       item = ZnTagSearchFirst(search_var);
       if ((item == ZN_NO_ITEM) || (item == wi->top_group)) {
-	goto done;
+        goto done;
       }
       first = item;
       if (mark == ZN_NO_ITEM) {
-	mark = ZnGroupTail(item->parent);
+        mark = ZnGroupTail(item->parent);
       }
       group = mark->parent;
       do {
-	if ((item->parent == group) && (item != mark)) {
-	  ZnITEM.UpdateItemPriority(item, mark, False);
-	  mark = item;
-	}
-	item = ZnTagSearchNext(search_var);
+        if ((item->parent == group) && (item != mark)) {
+          ZnITEM.UpdateItemPriority(item, mark, False);
+          mark = item;
+        }
+        item = ZnTagSearchNext(search_var);
       }
       while ((item != ZN_NO_ITEM) && (item != first));
     }
@@ -5356,31 +5366,31 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       ZnBool  on_off;
       
       if ((argc != 2) && (argc != 3)) {
-	Tcl_WrongNumArgs(interp, 1, args, "monitor ?onOff?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "monitor ?onOff?");
+        goto error;
       }
       if (argc == 3) {
-	if (Tcl_GetBooleanFromObj(interp, args[2], &on_off) != TCL_OK) {
-	  goto error;
-	}
-	ASSIGN(wi->flags, ZN_MONITORING, on_off);
-	if (on_off == True) {
-	  ZnResetChronos(wi->total_draw_chrono);
-	  ZnResetChronos(wi->this_draw_chrono);
-	}
+        if (Tcl_GetBooleanFromObj(interp, args[2], &on_off) != TCL_OK) {
+          goto error;
+        }
+        ASSIGN(wi->flags, ZN_MONITORING, on_off);
+        if (on_off == True) {
+          ZnResetChronos(wi->total_draw_chrono);
+          ZnResetChronos(wi->this_draw_chrono);
+        }
       }
       if ((argc == 2) || (on_off == False)) {
-	long ttime, ltime;
-	int  num_actions;
-	ZnGetChrono(wi->total_draw_chrono, &ttime, &num_actions);
-	ZnGetChrono(wi->this_draw_chrono, &ltime, NULL);
-	l = Tcl_GetObjResult(interp);
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(num_actions));
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(ltime));
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(ttime));
-	/*Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(wi->damaged_area_w));
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(wi->damaged_area_h));
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(ttime));*/
+        long ttime, ltime;
+        int  num_actions;
+        ZnGetChrono(wi->total_draw_chrono, &ttime, &num_actions);
+        ZnGetChrono(wi->this_draw_chrono, &ltime, NULL);
+        l = Tcl_GetObjResult(interp);
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(num_actions));
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(ltime));
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(ttime));
+        /*Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(wi->damaged_area_w));
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(wi->damaged_area_h));
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(ttime));*/
       }
 #endif
     }
@@ -5391,12 +5401,12 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_NUMPARTS:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "numparts tagOrId");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "numparts tagOrId");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	goto error;
+        goto error;
       }
       l = Tcl_NewIntObj((int) item->class->num_parts);
       Tcl_SetObjResult(interp, l);
@@ -5407,11 +5417,9 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_POSTSCRIPT:
     {
-#if 0
       if (ZnPostScriptCmd(wi, argc, args) != TCL_OK) {
-	goto error;
+        goto error;
       }
-#endif
     }
     break;
     /*
@@ -5422,41 +5430,41 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       ZnItem      group, mark = ZN_NO_ITEM;
       
       if (argc < 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "raise tagOrId ?aboveThis?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "raise tagOrId ?aboveThis?");
+        goto error;
       }
       if (argc == 4) {
-	/*
-	 * Find the topmost item with the tag.
-	 */
-	if (ZnTagSearchScan(wi, args[3], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
-	mark = ZnTagSearchFirst(search_var);
-	if (mark == ZN_NO_ITEM) {
-	  Tcl_AppendResult(interp, "unknown tag or item \"",
-			   Tcl_GetString(args[3]), "\"", NULL);
-	  goto error;
-	}
+        /*
+         * Find the topmost item with the tag.
+         */
+        if (ZnTagSearchScan(wi, args[3], &search_var) == TCL_ERROR) {
+          goto error;
+        }
+        mark = ZnTagSearchFirst(search_var);
+        if (mark == ZN_NO_ITEM) {
+          Tcl_AppendResult(interp, "unknown tag or item \"",
+                           Tcl_GetString(args[3]), "\"", NULL);
+          goto error;
+        }
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       item = ZnTagSearchFirst(search_var);
       if ((item == ZN_NO_ITEM) || (item == wi->top_group)) {
-	goto done;
+        goto done;
       }
       if (mark == ZN_NO_ITEM) {
-	mark = ZnGroupHead(item->parent);
+        mark = ZnGroupHead(item->parent);
       }
       group = mark->parent;
       for (; item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	if (item->parent != group) {
-	  continue;
-	}
-	if (item != mark) {
-	  ZnITEM.UpdateItemPriority(item, mark, True);
-	}
+        if (item->parent != group) {
+          continue;
+        }
+        if (item != mark) {
+          ZnITEM.UpdateItemPriority(item, mark, True);
+        }
       }
     }
     break;
@@ -5468,36 +5476,36 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       unsigned int num_fields;
       
       if (argc < 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "remove tagOrId ?tagOrId ...?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "remove tagOrId ?tagOrId ...?");
+        goto error;
       }
       argc -= 2;
       args += 2;
       for (i = 0; i < (unsigned int) argc; i++) {
-	if (ZnTagSearchScan(wi, args[i], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
-	for (item = ZnTagSearchFirst(search_var);
-	     item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	  if (item == wi->top_group) {
-	    continue;
-	  }
-	  if (wi->binding_table != NULL) {
-	    Tk_DeleteAllBindings(wi->binding_table, (ClientData) item);
-	    if (item->class->GetFieldSet) {
-	      num_fields = ZnFIELD.NumFields(item->class->GetFieldSet(item));
-	      for (j = 0; j < num_fields; j++) {
-		Tk_DeleteAllBindings(wi->binding_table,
-				     (ClientData) EncodeItemPart(item, j));
-	      }
-	    }
-	    for (j = 0; j < item->class->num_parts; j++) {
-	      Tk_DeleteAllBindings(wi->binding_table,
-				   (ClientData) EncodeItemPart(item, -(int)(j+2)));
-	    }
-	  }
-	  ZnITEM.DestroyItem(item);
-	}
+        if (ZnTagSearchScan(wi, args[i], &search_var) == TCL_ERROR) {
+          goto error;
+        }
+        for (item = ZnTagSearchFirst(search_var);
+             item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+          if (item == wi->top_group) {
+            continue;
+          }
+          if (wi->binding_table != NULL) {
+            Tk_DeleteAllBindings(wi->binding_table, (ClientData) item);
+            if (item->class->GetFieldSet) {
+              num_fields = ZnFIELD.NumFields(item->class->GetFieldSet(item));
+              for (j = 0; j < num_fields; j++) {
+                Tk_DeleteAllBindings(wi->binding_table,
+                                     (ClientData) EncodeItemPart(item, j));
+              }
+            }
+            for (j = 0; j < item->class->num_parts; j++) {
+              Tk_DeleteAllBindings(wi->binding_table,
+                                   (ClientData) EncodeItemPart(item, -(int)(j+2)));
+            }
+          }
+          ZnITEM.DestroyItem(item);
+        }
       }
     }
     break;
@@ -5506,61 +5514,61 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_ROTATE:
     {
-      ZnBool	deg=False;
+      ZnBool    deg=False;
 
       if ((argc < 4) && (argc > 7)) {
-	Tcl_WrongNumArgs(interp, 1, args, "rotate tagOrIdOrTransform angle ?degree? ?centerX centerY?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "rotate tagOrIdOrTransform angle ?degree? ?centerX centerY?");
+        goto error;
       }
       
       if (argc > 5) {
-	if (Tcl_GetDoubleFromObj(interp, args[argc-2], &d) == TCL_ERROR) {
-	  goto error;
-	}
-	p.x = d;
-	if (Tcl_GetDoubleFromObj(interp, args[argc-1], &d) == TCL_ERROR) {
-	  goto error;
-	}
-	p.y = d;
+        if (Tcl_GetDoubleFromObj(interp, args[argc-2], &d) == TCL_ERROR) {
+          goto error;
+        }
+        p.x = d;
+        if (Tcl_GetDoubleFromObj(interp, args[argc-1], &d) == TCL_ERROR) {
+          goto error;
+        }
+        p.y = d;
       }
       if ((argc == 5) || (argc == 7)) {
-	if (Tcl_GetBooleanFromObj(interp, args[4], &deg) != TCL_OK) {
-	  goto error;
-	}
-	
+        if (Tcl_GetBooleanFromObj(interp, args[4], &deg) != TCL_OK) {
+          goto error;
+        }
+        
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry != NULL) {
-	t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
       else {
-	if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
+        if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
+          goto error;
+        }
       }
       if (Tcl_GetDoubleFromObj(interp, args[3], &d) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
 
       if (t) {
-	if (argc > 5) {
-	  ZnTranslate(t, -p.x, -p.y, False);
-	}
-	if (deg) {
-	  ZnRotateDeg(t, d);
-	}
-	else {
-	  ZnRotateRad(t, d);
-	}
-	if (argc > 5) {
-	  ZnTranslate(t, p.x, p.y, False);
-	}
+        if (argc > 5) {
+          ZnTranslate(t, -p.x, -p.y, False);
+        }
+        if (deg) {
+          ZnRotateDeg(t, d);
+        }
+        else {
+          ZnRotateRad(t, d);
+        }
+        if (argc > 5) {
+          ZnTranslate(t, p.x, p.y, False);
+        }
       }
       else {
-	for (item = ZnTagSearchFirst(search_var);
-	     item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	  ZnITEM.RotateItem(item, d, deg, (argc > 5) ? &p : NULL);
-	}
+        for (item = ZnTagSearchFirst(search_var);
+             item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+          ZnITEM.RotateItem(item, d, deg, (argc > 5) ? &p : NULL);
+        }
       }
     }
     break;
@@ -5572,52 +5580,52 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       ZnPoint   scale;
       
       if ((argc != 5) && (argc != 7)) {
-	Tcl_WrongNumArgs(interp, 1, args,
-			 "scale tagOrIdOrTransform xFactor yFactor ?centerX centerY?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args,
+                         "scale tagOrIdOrTransform xFactor yFactor ?centerX centerY?");
+        goto error;
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry != NULL) {
-	t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
       else {
-	if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
+        if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
+          goto error;
+        }
       }
       if (Tcl_GetDoubleFromObj(interp, args[3], &d) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       scale.x = d;
       if (Tcl_GetDoubleFromObj(interp, args[4], &d) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       scale.y = d;
       if (argc == 7) {
-	if (Tcl_GetDoubleFromObj(interp, args[5], &d) == TCL_ERROR) {
-	  goto error;
-	}
-	p.x = d;
-	if (Tcl_GetDoubleFromObj(interp, args[6], &d) == TCL_ERROR) {
-	  goto error;
-	}
-	p.y = d;
+        if (Tcl_GetDoubleFromObj(interp, args[5], &d) == TCL_ERROR) {
+          goto error;
+        }
+        p.x = d;
+        if (Tcl_GetDoubleFromObj(interp, args[6], &d) == TCL_ERROR) {
+          goto error;
+        }
+        p.y = d;
       }
 
       if (t) {
-	if (argc == 7) {
-	  ZnTranslate(t, -p.x, -p.y, False);
-	}
-	ZnScale(t, scale.x, scale.y);
-	if (argc == 7) {
-	  ZnTranslate(t, p.x, p.y, False);
-	}
+        if (argc == 7) {
+          ZnTranslate(t, -p.x, -p.y, False);
+        }
+        ZnScale(t, scale.x, scale.y);
+        if (argc == 7) {
+          ZnTranslate(t, p.x, p.y, False);
+        }
       }
       else {
-	for (item = ZnTagSearchFirst(search_var);
-	     item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	  ZnITEM.ScaleItem(item, scale.x, scale.y, (argc == 7) ? &p : NULL);
-	}
+        for (item = ZnTagSearchFirst(search_var);
+             item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+          ZnITEM.ScaleItem(item, scale.x, scale.y, (argc == 7) ? &p : NULL);
+        }
       }
     }
     break;
@@ -5629,108 +5637,108 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       ZnTextInfo *ti = &wi->text_info;
 
       if (argc < 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "select option ?tagOrId? ?arg?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "select option ?tagOrId? ?arg?");
+        goto error;
       }
       if (argc >= 4) {
-	if (ZnTagSearchScan(wi, args[3], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
-	for (item = ZnTagSearchFirst(search_var);
-	     item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	  if ((item->class->Index != NULL) &&
-	      (item->class->Selection != NULL)) {
-	    break;
-	  }
-	}
-	if (item == ZN_NO_ITEM) {
-	  Tcl_AppendResult(interp, "can't find an indexable item \"",
-			   Tcl_GetString(args[3]), "\"", NULL);
-	  goto error;
-	}
+        if (ZnTagSearchScan(wi, args[3], &search_var) == TCL_ERROR) {
+          goto error;
+        }
+        for (item = ZnTagSearchFirst(search_var);
+             item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+          if ((item->class->Index != NULL) &&
+              (item->class->Selection != NULL)) {
+            break;
+          }
+        }
+        if (item == ZN_NO_ITEM) {
+          Tcl_AppendResult(interp, "can't find an indexable item \"",
+                           Tcl_GetString(args[3]), "\"", NULL);
+          goto error;
+        }
       }
       if (Tcl_GetIndexFromObj(interp, args[2], sel_cmd_strings,
-			      "selection option", 0, &cmd_index) != TCL_OK) {
-	goto error;
+                              "selection option", 0, &cmd_index) != TCL_OK) {
+        goto error;
       }
       if ((argc == 5) || (argc == 6)) {
-	if (argc == 6) {
-	  if (Tcl_GetIntFromObj(interp, args[4], &field) != TCL_OK) {
-	    field = ZN_NO_PART;
-	    if (Tcl_GetString(args[4])[0] != 0) {
-	      Tcl_AppendResult(interp, "invalid field index \"",
-			       Tcl_GetString(args[4]),
-			       "\", should be a positive integer", NULL);
-	      goto error;
-	    }
-	  }
-	  argc--;
-	  args++;
-	}
-	result = item->class->Index(item, field, args[4], &index);
-	if (result != TCL_OK) {
-	  goto error;
-	}
+        if (argc == 6) {
+          if (Tcl_GetIntFromObj(interp, args[4], &field) != TCL_OK) {
+            field = ZN_NO_PART;
+            if (Tcl_GetString(args[4])[0] != 0) {
+              Tcl_AppendResult(interp, "invalid field index \"",
+                               Tcl_GetString(args[4]),
+                               "\", should be a positive integer", NULL);
+              goto error;
+            }
+          }
+          argc--;
+          args++;
+        }
+        result = item->class->Index(item, field, args[4], &index);
+        if (result != TCL_OK) {
+          goto error;
+        }
       }
       switch ((enum sel_cmds) cmd_index) {
       case ZN_SEL_ADJUST:
-	if (argc != 5) {
-	  Tcl_WrongNumArgs(interp, 1, args, "select adjust tagOrId ?field? index");
-	  goto error;
-	}
-	if ((ti->sel_item == item) && (ti->sel_field == field)) {
-	  if (index < (ti->sel_first + ti->sel_last)/2) {
-	    ti->sel_anchor = ti->sel_last+1;
-	  }
-	  else {
-	    ti->sel_anchor = ti->sel_first;
-	  }
-	}
-	SelectTo(item, field, index);
-	break;
+        if (argc != 5) {
+          Tcl_WrongNumArgs(interp, 1, args, "select adjust tagOrId ?field? index");
+          goto error;
+        }
+        if ((ti->sel_item == item) && (ti->sel_field == field)) {
+          if (index < (ti->sel_first + ti->sel_last)/2) {
+            ti->sel_anchor = ti->sel_last+1;
+          }
+          else {
+            ti->sel_anchor = ti->sel_first;
+          }
+        }
+        SelectTo(item, field, index);
+        break;
       case ZN_SEL_CLEAR:
-	if (argc != 3) {
-	  Tcl_WrongNumArgs(interp, 1, args, "select clear");
-	  goto error;
-	}
-	if (ti->sel_item != ZN_NO_ITEM) {
-	  ZnITEM.Invalidate(ti->sel_item, ZN_DRAW_FLAG);
-	  ti->sel_item = ZN_NO_ITEM;
-	  ti->sel_field = ZN_NO_PART;
-	}
-	break;
+        if (argc != 3) {
+          Tcl_WrongNumArgs(interp, 1, args, "select clear");
+          goto error;
+        }
+        if (ti->sel_item != ZN_NO_ITEM) {
+          ZnITEM.Invalidate(ti->sel_item, ZN_DRAW_FLAG);
+          ti->sel_item = ZN_NO_ITEM;
+          ti->sel_field = ZN_NO_PART;
+        }
+        break;
       case ZN_SEL_FROM:
-	if (argc != 5) {
-	  Tcl_WrongNumArgs(interp, 1, args, "select from tagOrId ?field? index");
-	  goto error;
-	}
-	ti->anchor_item = item;
-	ti->anchor_field = field;
-	ti->sel_anchor = index;
-	break;
+        if (argc != 5) {
+          Tcl_WrongNumArgs(interp, 1, args, "select from tagOrId ?field? index");
+          goto error;
+        }
+        ti->anchor_item = item;
+        ti->anchor_field = field;
+        ti->sel_anchor = index;
+        break;
       case ZN_SEL_ITEM:
-	if (argc != 3) {
-	  Tcl_WrongNumArgs(interp, 1, args, "select item");
-	  goto error;
-	}
-	if (ti->sel_item != ZN_NO_ITEM) {
-	  l = Tcl_GetObjResult(interp);
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewLongObj(ti->sel_item->id));
-	  if (ti->sel_field != ZN_NO_PART) {
-	    Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(ti->sel_field));
-	  }
-	  else {
-	    Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj("", -1));
-	  }
-	}
-	break;
+        if (argc != 3) {
+          Tcl_WrongNumArgs(interp, 1, args, "select item");
+          goto error;
+        }
+        if (ti->sel_item != ZN_NO_ITEM) {
+          l = Tcl_GetObjResult(interp);
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewLongObj(ti->sel_item->id));
+          if (ti->sel_field != ZN_NO_PART) {
+            Tcl_ListObjAppendElement(interp, l, Tcl_NewIntObj(ti->sel_field));
+          }
+          else {
+            Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj("", -1));
+          }
+        }
+        break;
       case ZN_SEL_TO:
-	if (argc != 5) {
-	  Tcl_WrongNumArgs(interp, 1, args, "select to tagOrId ?field? index");
-	  goto error;
-	}
-	SelectTo(item, field, index);
-	break;
+        if (argc != 5) {
+          Tcl_WrongNumArgs(interp, 1, args, "select to tagOrId ?field? index");
+          goto error;
+        }
+        SelectTo(item, field, index);
+        break;
       }
     }
     break;
@@ -5742,33 +5750,33 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       double   x_skew, y_skew;
       
       if (argc != 5) {
-	Tcl_WrongNumArgs(interp, 1, args, "skew tagOrIdOrTransform xSkewAngle ySkewAngle");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "skew tagOrIdOrTransform xSkewAngle ySkewAngle");
+        goto error;
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry != NULL) {
-	t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
       else {
-	if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
+        if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
+          goto error;
+        }
       }
       if (Tcl_GetDoubleFromObj(interp, args[3], &x_skew) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       if (Tcl_GetDoubleFromObj(interp, args[4], &y_skew) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       
       if (t) {
-	ZnSkewRad(t, x_skew, y_skew);
+        ZnSkewRad(t, x_skew, y_skew);
       }
       else {
-	for (item = ZnTagSearchFirst(search_var);
-	     item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	  ZnITEM.SkewItem(item, x_skew, y_skew);
-	}
+        for (item = ZnTagSearchFirst(search_var);
+             item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+          ZnITEM.SkewItem(item, x_skew, y_skew);
+        }
       }
     }
     break;
@@ -5778,12 +5786,12 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_SMOOTH:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "smooth coordList");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "smooth coordList");
+        goto error;
       }
       if (ZnParseCoordList(wi, args[2], &points,
-			   NULL, &num_points, NULL) == TCL_ERROR) {
-	return TCL_ERROR;
+                           NULL, &num_points, NULL) == TCL_ERROR) {
+        return TCL_ERROR;
       }
       to_points = ZnListNew(32, sizeof(ZnPoint));
       ZnSmoothPathWithBezier(points, num_points, to_points);
@@ -5791,9 +5799,9 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       num_points = ZnListSize(to_points);
       l = Tcl_GetObjResult(interp);
       for (i = 0; i < num_points; i++, points++) {
-	entries[0] = Tcl_NewDoubleObj(points->x);
-	entries[1] = Tcl_NewDoubleObj(points->y);
-	Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(2, entries));
+        entries[0] = Tcl_NewDoubleObj(points->x);
+        entries[1] = Tcl_NewDoubleObj(points->y);
+        Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(2, entries));
       }
       ZnListFree(to_points);
     }
@@ -5812,68 +5820,68 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_TCOMPOSE:
     {
-      ZnTransfo		*to;
-      ZnBool		invert=False;
-      ZnTransfo		res_t, inv_t;
+      ZnTransfo         *to;
+      ZnBool            invert=False;
+      ZnTransfo         res_t, inv_t;
 
       if ((argc != 4) && (argc != 5)) {
-	Tcl_WrongNumArgs(interp, 1, args, "tcompose transformTo aTransform ?invert?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "tcompose transformTo aTransform ?invert?");
+        goto error;
       }
       if (argc == 5) {
-	if (Tcl_GetBooleanFromObj(interp, args[4], &invert) != TCL_OK) {
-	  goto error;
-	}
-	argc--;
+        if (Tcl_GetBooleanFromObj(interp, args[4], &invert) != TCL_OK) {
+          goto error;
+        }
+        argc--;
       }
       
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[3]));
       if (entry != NULL) {
-	t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
       else {
-	result = ZnItemWithTagOrId(wi, args[3], &item, &search_var);
-	if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	  Tcl_ResetResult(interp);
-	  Tcl_AppendResult(interp, "\"", Tcl_GetString(args[3]),
-			   "\" must be either a tag, ",
-			   "an id or a transform name", (char *) NULL);
-	  goto error;
-	}
-	t = item->transfo;
+        result = ZnItemWithTagOrId(wi, args[3], &item, &search_var);
+        if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
+          Tcl_ResetResult(interp);
+          Tcl_AppendResult(interp, "\"", Tcl_GetString(args[3]),
+                           "\" must be either a tag, ",
+                           "an id or a transform name", (char *) NULL);
+          goto error;
+        }
+        t = item->transfo;
       }
 
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry != NULL) {
-	to = (ZnTransfo *) Tcl_GetHashValue(entry);
+        to = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
       else {
-	result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
-	if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	  Tcl_ResetResult(interp);
-	  Tcl_AppendResult(interp, "\"", Tcl_GetString(args[2]),
-			   "\" must be either a tag, ",
-			   "an id or a transform name", (char *) NULL);
-	  goto error;
-	}
-	to = item->transfo;
+        result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
+        if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
+          Tcl_ResetResult(interp);
+          Tcl_AppendResult(interp, "\"", Tcl_GetString(args[2]),
+                           "\" must be either a tag, ",
+                           "an id or a transform name", (char *) NULL);
+          goto error;
+        }
+        to = item->transfo;
       }
 
       if (invert) {
-	ZnTransfoInvert(t, &inv_t);
-	ZnTransfoCompose(&res_t, to, &inv_t);
+        ZnTransfoInvert(t, &inv_t);
+        ZnTransfoCompose(&res_t, to, &inv_t);
       }
       else {
-	ZnTransfoCompose(&res_t, to, t);
+        ZnTransfoCompose(&res_t, to, t);
       }
 
       if (item != ZN_NO_ITEM) {
-	/* Set back the transform in the item */
-	ZnITEM.SetTransfo(item, &res_t);
+        /* Set back the transform in the item */
+        ZnITEM.SetTransfo(item, &res_t);
       }
       else {
-	ZnTransfoFree(to);
-	Tcl_SetHashValue(entry, ZnTransfoDuplicate(&res_t));
+        ZnTransfoFree(to);
+        Tcl_SetHashValue(entry, ZnTransfoDuplicate(&res_t));
       }
 
       break;
@@ -5884,14 +5892,14 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_TDELETE:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "tdelete tName");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "tdelete tName");
+        goto error;
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry == NULL) {
-	Tcl_AppendResult(interp, "\"", Tcl_GetString(args[2]),
-			 "\" must be a transform name", (char *) NULL);
-	goto error;
+        Tcl_AppendResult(interp, "\"", Tcl_GetString(args[2]),
+                         "\" must be a transform name", (char *) NULL);
+        goto error;
       }
       t = (ZnTransfo *) Tcl_GetHashValue(entry);
       ZnTransfoFree(t);
@@ -5903,82 +5911,82 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_TGET:
     {
-      ZnPoint	scale, trans;
-      ZnReal	rotation, skewxy;
-      ZnBool	raw=1, get_trans=0, get_rot=0;
-      ZnBool	get_scale=0, get_skew=0;
-      ZnTransfo	tid;
+      ZnPoint   scale, trans;
+      ZnReal    rotation, skewxy;
+      ZnBool    raw=1, get_trans=0, get_rot=0;
+      ZnBool    get_scale=0, get_skew=0;
+      ZnTransfo tid;
 
       if ((argc != 3) && (argc != 4)) {
       err_tget:
-	Tcl_WrongNumArgs(interp, 1, args, "tget transform ?all|translation|scale|rotation|skew?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "tget transform ?all|translation|scale|rotation|skew?");
+        goto error;
       }
       if (argc == 4) {
-	raw = 0;
-	str = Tcl_GetString(args[3]);
-	length = strlen(str);
-	if (strncmp(str, "all", length) == 0) {
-	  get_scale = get_rot = get_trans = get_skew = 1;
-	}
-	else if (strncmp(str, "translation", length) == 0) {
-	  get_trans = 1;
-	}
-	else if (strncmp(str, "scale", length) == 0) {
-	  get_scale = 1;
-	}
-	else if (strncmp(str, "rotation", length) == 0) {
-	  get_rot = 1;
-	}
-	else if (strncmp(str, "skew", length) == 0) {
-	  get_skew = 1;
-	}
-	else {
-	  goto err_tget;
-	}
+        raw = 0;
+        str = Tcl_GetString(args[3]);
+        length = strlen(str);
+        if (strncmp(str, "all", length) == 0) {
+          get_scale = get_rot = get_trans = get_skew = 1;
+        }
+        else if (strncmp(str, "translation", length) == 0) {
+          get_trans = 1;
+        }
+        else if (strncmp(str, "scale", length) == 0) {
+          get_scale = 1;
+        }
+        else if (strncmp(str, "rotation", length) == 0) {
+          get_rot = 1;
+        }
+        else if (strncmp(str, "skew", length) == 0) {
+          get_skew = 1;
+        }
+        else {
+          goto err_tget;
+        }
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry != NULL) {
-	t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
       else {
-	result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
-	if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	  Tcl_ResetResult(interp);
-	  Tcl_AppendResult(interp, "\"", Tcl_GetString(args[3]),
-			   "\" must be either a tag, ",
-			   "an id or a transform name", (char *) NULL);
-	  goto error;
-	}
-	t = item->transfo;
+        result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
+        if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
+          Tcl_ResetResult(interp);
+          Tcl_AppendResult(interp, "\"", Tcl_GetString(args[3]),
+                           "\" must be either a tag, ",
+                           "an id or a transform name", (char *) NULL);
+          goto error;
+        }
+        t = item->transfo;
       }
       l = Tcl_GetObjResult(interp);
       if (raw) {
-	if (!t) {
-	  ZnTransfoSetIdentity(&tid);
-	  t = &tid;
-	}
-	for (i = 0; i < 6; i++) {
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(t->_[i/2][i%2]));
-	}
+        if (!t) {
+          ZnTransfoSetIdentity(&tid);
+          t = &tid;
+        }
+        for (i = 0; i < 6; i++) {
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(t->_[i/2][i%2]));
+        }
       }
       else {
-	ZnTransfoDecompose(t, get_scale?&scale:NULL, get_trans?&trans:NULL,
-			   get_rot?&rotation:NULL, get_skew?&skewxy:NULL);
-	if (get_trans) {
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(trans.x));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(trans.y));
-	}
-	if (get_scale) {
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(scale.x));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(scale.y));
-	}
-	if (get_rot) {
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(rotation));
-	}
-	if (get_skew) {
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(skewxy));
-	}
+        ZnTransfoDecompose(t, get_scale?&scale:NULL, get_trans?&trans:NULL,
+                           get_rot?&rotation:NULL, get_skew?&skewxy:NULL);
+        if (get_trans) {
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(trans.x));
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(trans.y));
+        }
+        if (get_scale) {
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(scale.x));
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(scale.y));
+        }
+        if (get_rot) {
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(rotation));
+        }
+        if (get_skew) {
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(skewxy));
+        }
       }
       break;
     }
@@ -5987,121 +5995,121 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_TRANSFORM:
     {
-      char	*controls, *tag;
-      ZnPoint	*p, xp;
-      ZnTransfo	*from_t=NULL, *to_t=NULL, *result_t;
-      ZnTransfo	t1, t2, t3;
-      ZnBool	old_format;
+      char      *controls, *tag;
+      ZnPoint   *p, xp;
+      ZnTransfo *from_t=NULL, *to_t=NULL, *result_t;
+      ZnTransfo t1, t2, t3;
+      ZnBool    old_format;
 
       if ((argc != 4) && (argc != 5)) {
-	Tcl_WrongNumArgs(interp, 1, args, "transform ?tagOrIdFrom? tagOrIdTo coordlist");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "transform ?tagOrIdFrom? tagOrIdTo coordlist");
+        goto error;
       }
       
       if (argc == 5) {
-	/*
-	 * Setup the source transform.
-	 */
-	tag = Tcl_GetString(args[2]);
-	if (strcmp(tag, "device") == 0) {
-	  from_t = &t1;
-	  ZnTransfoSetIdentity(from_t);
-	}
-	else {
-	  entry = Tcl_FindHashEntry(wi->t_table, tag);
-	  if (entry != NULL) {
-	    /* from is a named transform */
-	    from_t = (ZnTransfo *) Tcl_GetHashValue(entry);
-	  }
-	  else {
-	    result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
-	    if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	      Tcl_ResetResult(interp);
-	      Tcl_AppendResult(interp, "\"", Tcl_GetString(args[argc-2]),
-			       "\" must be either identity or a tag or ",
-			       "an id or a transform name", (char *) NULL);
-	      goto error;
-	    }
-	    ZnITEM.GetItemTransform(item, &t1);
-	    from_t = &t1;
-	  }
-	}
+        /*
+         * Setup the source transform.
+         */
+        tag = Tcl_GetString(args[2]);
+        if (strcmp(tag, "device") == 0) {
+          from_t = &t1;
+          ZnTransfoSetIdentity(from_t);
+        }
+        else {
+          entry = Tcl_FindHashEntry(wi->t_table, tag);
+          if (entry != NULL) {
+            /* from is a named transform */
+            from_t = (ZnTransfo *) Tcl_GetHashValue(entry);
+          }
+          else {
+            result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
+            if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
+              Tcl_ResetResult(interp);
+              Tcl_AppendResult(interp, "\"", Tcl_GetString(args[argc-2]),
+                               "\" must be either identity or a tag or ",
+                               "an id or a transform name", (char *) NULL);
+              goto error;
+            }
+            ZnITEM.GetItemTransform(item, &t1);
+            from_t = &t1;
+          }
+        }
       }
       /*
        * Setup the destination transform
        */
       tag = Tcl_GetString(args[argc-2]);
       if (strcmp(tag, "device") == 0) {
-	to_t = &t2;
-	ZnTransfoSetIdentity(to_t);
+        to_t = &t2;
+        ZnTransfoSetIdentity(to_t);
       }
       else {
-	entry = Tcl_FindHashEntry(wi->t_table, tag);
-	if (entry != NULL) {
-	  /* to is a named transform */
-	  to_t = (ZnTransfo *) Tcl_GetHashValue(entry);
-	}
-	else {
-	  result = ZnItemWithTagOrId(wi, args[argc-2], &item, &search_var);
-	  if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	    Tcl_ResetResult(interp);
-	    Tcl_AppendResult(interp, "\"", Tcl_GetString(args[argc-2]),
-			     "\" must be either identity a tag or ",
-			     "an id or a transform name", (char *) NULL);
-	    goto error;
-	  }
-	  ZnITEM.GetItemTransform(item, &t2);
-	  to_t = &t2;
-	}
+        entry = Tcl_FindHashEntry(wi->t_table, tag);
+        if (entry != NULL) {
+          /* to is a named transform */
+          to_t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        }
+        else {
+          result = ZnItemWithTagOrId(wi, args[argc-2], &item, &search_var);
+          if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
+            Tcl_ResetResult(interp);
+            Tcl_AppendResult(interp, "\"", Tcl_GetString(args[argc-2]),
+                             "\" must be either identity a tag or ",
+                             "an id or a transform name", (char *) NULL);
+            goto error;
+          }
+          ZnITEM.GetItemTransform(item, &t2);
+          to_t = &t2;
+        }
       }
       ZnTransfoInvert(to_t, &t3);
       to_t = &t3;
       result_t = to_t;
 
       if (argc == 5) {
-	ZnTransfoCompose(&t2, from_t, to_t);
-	result_t = &t2;
+        ZnTransfoCompose(&t2, from_t, to_t);
+        result_t = &t2;
       }
       /*ZnPrintTransfo(&t);
-	ZnPrintTransfo(&inv);*/
+        ZnPrintTransfo(&inv);*/
       
       if (ZnParseCoordList(wi, args[argc-1], &p,
-			   &controls, &num_points, &old_format) == TCL_ERROR) {
-	Tcl_AppendResult(interp, " invalid coord list \"",
-			 Tcl_GetString(args[argc-1]), "\"", NULL);
-	goto error;
+                           &controls, &num_points, &old_format) == TCL_ERROR) {
+        Tcl_AppendResult(interp, " invalid coord list \"",
+                         Tcl_GetString(args[argc-1]), "\"", NULL);
+        goto error;
       }
       l = Tcl_GetObjResult(interp);
       if (old_format) {
-	for (i = 0; i < num_points; i++, p++) {
-	  ZnTransformPoint(result_t, p, &xp);
-	  /*printf("p->x=%g, p->y=%g, xp.x=%g, xp.y=%g\n", p->x, p->y, xp.x, xp.y);*/
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(xp.x));
-	  Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(xp.y));
-	  /* The next case only applies for a one point
-	   * list with a control flag.
-	   */
-	  if (controls && controls[i]) {
-	    c[0] = controls[i];
-	    Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(c, -1));
-	  }
-	}
+        for (i = 0; i < num_points; i++, p++) {
+          ZnTransformPoint(result_t, p, &xp);
+          /*printf("p->x=%g, p->y=%g, xp.x=%g, xp.y=%g\n", p->x, p->y, xp.x, xp.y);*/
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(xp.x));
+          Tcl_ListObjAppendElement(interp, l, Tcl_NewDoubleObj(xp.y));
+          /* The next case only applies for a one point
+           * list with a control flag.
+           */
+          if (controls && controls[i]) {
+            c[0] = controls[i];
+            Tcl_ListObjAppendElement(interp, l, Tcl_NewStringObj(c, -1));
+          }
+        }
       }
       else {
-	for (i = 0; i < num_points; i++, p++) {
-	  ZnTransformPoint(result_t, p, &xp);
-	  /*printf("p->x=%g, p->y=%g, xp.x=%g, xp.y=%g\n", p->x, p->y, xp.x, xp.y);*/
-	  entries[0] = Tcl_NewDoubleObj(xp.x);
-	  entries[1] = Tcl_NewDoubleObj(xp.y);
-	  if (controls && controls[i]) {
-	    c[0] = controls[i];
-	    entries[2] = Tcl_NewStringObj(c, -1);
-	    Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(3, entries));
-	  }
-	  else {
-	    Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(2, entries));
-	  }
-	}
+        for (i = 0; i < num_points; i++, p++) {
+          ZnTransformPoint(result_t, p, &xp);
+          /*printf("p->x=%g, p->y=%g, xp.x=%g, xp.y=%g\n", p->x, p->y, xp.x, xp.y);*/
+          entries[0] = Tcl_NewDoubleObj(xp.x);
+          entries[1] = Tcl_NewDoubleObj(xp.y);
+          if (controls && controls[i]) {
+            c[0] = controls[i];
+            entries[2] = Tcl_NewStringObj(c, -1);
+            Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(3, entries));
+          }
+          else {
+            Tcl_ListObjAppendElement(interp, l, Tcl_NewListObj(2, entries));
+          }
+        }
       }
     }
     break;
@@ -6113,40 +6121,40 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       ZnBool abs = False;
 
       if ((argc != 5) && (argc != 6)) {
-	Tcl_WrongNumArgs(interp, 1, args, "translate tagOrIdorTransform xAmount yAmount ?abs?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "translate tagOrIdorTransform xAmount yAmount ?abs?");
+        goto error;
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry != NULL) {
-	t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
       else {
-	if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
+        if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
+          goto error;
+        }
       }
       if (Tcl_GetDoubleFromObj(interp, args[3], &d) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       p.x = d;
       if (Tcl_GetDoubleFromObj(interp, args[4], &d) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       p.y = d;
       if (argc == 6) {
-	if (Tcl_GetBooleanFromObj(interp, args[5], &abs) == TCL_ERROR) {
-	  goto error;
-	}
+        if (Tcl_GetBooleanFromObj(interp, args[5], &abs) == TCL_ERROR) {
+          goto error;
+        }
       }
 
       if (t) {
-	ZnTranslate(t, p.x, p.y, abs);
+        ZnTranslate(t, p.x, p.y, abs);
       }
       else {
-	for (item = ZnTagSearchFirst(search_var);
-	     item != ZN_NO_ITEM; item =ZnTagSearchNext(search_var)) {
-	  ZnITEM.TranslateItem(item, p.x, p.y, abs);
-	}
+        for (item = ZnTagSearchFirst(search_var);
+             item != ZN_NO_ITEM; item =ZnTagSearchNext(search_var)) {
+          ZnITEM.TranslateItem(item, p.x, p.y, abs);
+        }
       }
     }
     break;
@@ -6156,27 +6164,27 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_TRESET:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "treset tagOrIdOrTransform");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "treset tagOrIdOrTransform");
+        goto error;
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry != NULL) {
-	t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
       else {
-	if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	  goto error;
-	}
+        if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
+          goto error;
+        }
       }
 
       if (t) {
-	ZnTransfoSetIdentity(t);
+        ZnTransfoSetIdentity(t);
       }
       else {
-	for (item = ZnTagSearchFirst(search_var);
-	     item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	  ZnITEM.ResetTransfo(item);
-	}
+        for (item = ZnTagSearchFirst(search_var);
+             item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+          ZnITEM.ResetTransfo(item);
+        }
       }
     }
     break;
@@ -6186,22 +6194,22 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_TRESTORE:
     {
       if (argc != 4) {
-	Tcl_WrongNumArgs(interp, 1, args, "trestore tagOrId tName");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "trestore tagOrId tName");
+        goto error;
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[argc-1]));
       if (entry == NULL) {
-	Tcl_AppendResult(interp, "\"", Tcl_GetString(args[argc-1]),
-			 "\" must be a transform name", (char *) NULL);
-	goto error;
+        Tcl_AppendResult(interp, "\"", Tcl_GetString(args[argc-1]),
+                         "\" must be a transform name", (char *) NULL);
+        goto error;
       }
       t = (ZnTransfo *) Tcl_GetHashValue(entry);
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       for (item = ZnTagSearchFirst(search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	ZnITEM.SetTransfo(item, t);
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+        ZnITEM.SetTransfo(item, t);
       }
     }
     break;
@@ -6210,56 +6218,56 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_TSAVE:
     {
-      int	is_ident, new, invert=0;
-      ZnTransfo	*inv, ident;
-      char	*from;
+      int       is_ident, new, invert=0;
+      ZnTransfo *inv, ident;
+      char      *from;
 
       if ((argc != 3) && (argc != 4) && (argc != 5)) {
-	Tcl_WrongNumArgs(interp, 1, args, "tsave ?tagOrIdOrTransform? tName ?invert?");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "tsave ?tagOrIdOrTransform? tName ?invert?");
+        goto error;
       }
       if (argc == 3) {
-	entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
-	l = Tcl_NewBooleanObj(entry != NULL);
-	Tcl_SetObjResult(interp, l);
-	goto done;
+        entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+        l = Tcl_NewBooleanObj(entry != NULL);
+        Tcl_SetObjResult(interp, l);
+        goto done;
       }
       from = Tcl_GetString(args[2]);
       is_ident = strcmp(from, "identity") == 0;
       if (is_ident) {
-	t = &ident;
-	ZnTransfoSetIdentity(t);
+        t = &ident;
+        ZnTransfoSetIdentity(t);
       }
       else {
-	entry = Tcl_FindHashEntry(wi->t_table, from);
-	if (entry != NULL) {
-	  t = (ZnTransfo *) Tcl_GetHashValue(entry);
-	}
-	else {
-	  result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
-	  if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	    goto error;
-	  }
-	  t = item->transfo;
-	}
+        entry = Tcl_FindHashEntry(wi->t_table, from);
+        if (entry != NULL) {
+          t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        }
+        else {
+          result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
+          if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
+            goto error;
+          }
+          t = item->transfo;
+        }
       }
       if (argc == 5) {
-	if (Tcl_GetBooleanFromObj(interp, args[4], &invert) != TCL_OK) {
-	  goto error;
-	}
-	argc--;
+        if (Tcl_GetBooleanFromObj(interp, args[4], &invert) != TCL_OK) {
+          goto error;
+        }
+        argc--;
       }
       entry = Tcl_CreateHashEntry(wi->t_table, Tcl_GetString(args[argc-1]), &new);
       if (!new) {
-	ZnTransfoFree((ZnTransfo *) Tcl_GetHashValue(entry));
+        ZnTransfoFree((ZnTransfo *) Tcl_GetHashValue(entry));
       }
       if (invert && !is_ident) {
-	inv = ZnTransfoNew();
-	ZnTransfoInvert(t, inv);
-	Tcl_SetHashValue(entry, inv);
+        inv = ZnTransfoNew();
+        ZnTransfoInvert(t, inv);
+        Tcl_SetHashValue(entry, inv);
       }
       else {
-	Tcl_SetHashValue(entry, ZnTransfoDuplicate(t));
+        Tcl_SetHashValue(entry, ZnTransfoDuplicate(t));
       }
     }
     break;
@@ -6268,35 +6276,35 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
      */
   case ZN_W_TSET:
     {
-      ZnTransfo	    new;
+      ZnTransfo     new;
 
       if (argc != 9) {
-	Tcl_WrongNumArgs(interp, 1, args,
-			 "tset tagOrIdorTransform m00 m01 m10 m11 m20 m21");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args,
+                         "tset tagOrIdorTransform m00 m01 m10 m11 m20 m21");
+        goto error;
       }
       
       for (i = 0; i < 6; i++) {
-	if (Tcl_GetDoubleFromObj(interp, args[3+i], &d) == TCL_ERROR) {
-	  goto error;
-	}
-	new._[i/2][i%2] = (float) d;
+        if (Tcl_GetDoubleFromObj(interp, args[3+i], &d) == TCL_ERROR) {
+          goto error;
+        }
+        new._[i/2][i%2] = (float) d;
       }
       entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
       if (entry != NULL) {
-	t = (ZnTransfo *) Tcl_GetHashValue(entry);
-	*t = new;
+        t = (ZnTransfo *) Tcl_GetHashValue(entry);
+        *t = new;
       }
       else {
-	result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
-	if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
-	  Tcl_ResetResult(interp);
-	  Tcl_AppendResult(interp, "\"", Tcl_GetString(args[2]),
-			   "\" must be either a tag, ",
-			   "an id or a transform name", (char *) NULL);
-	  goto error;
-	}
-	ZnITEM.SetTransfo(item, &new);
+        result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
+        if ((result == TCL_ERROR) || (item == ZN_NO_ITEM)) {
+          Tcl_ResetResult(interp);
+          Tcl_AppendResult(interp, "\"", Tcl_GetString(args[2]),
+                           "\" must be either a tag, ",
+                           "an id or a transform name", (char *) NULL);
+          goto error;
+        }
+        ZnITEM.SetTransfo(item, &new);
       }
       break;
     }
@@ -6306,16 +6314,16 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
   case ZN_W_TYPE:
     {
       if (argc != 3) {
-	Tcl_WrongNumArgs(interp, 1, args, "type tagOrId");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, "type tagOrId");
+        goto error;
       }
       result = ZnItemWithTagOrId(wi, args[2], &item, &search_var);
       if (result == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       if (item != ZN_NO_ITEM) {
-	l = Tcl_NewStringObj(item->class->name, -1);
-	Tcl_SetObjResult(interp, l);      
+        l = Tcl_NewStringObj(item->class->name, -1);
+        Tcl_SetObjResult(interp, l);      
       }
     }
     break;
@@ -6327,29 +6335,29 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
       int contour, vertex, o_vertex;
       
       if (argc != 5) {
-	Tcl_WrongNumArgs(interp, 1, args, " vertexat tagOrId x y");
-	goto error;
+        Tcl_WrongNumArgs(interp, 1, args, " vertexat tagOrId x y");
+        goto error;
       }
       if (ZnTagSearchScan(wi, args[2], &search_var) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       for (item = ZnTagSearchFirst(search_var);
-	   item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
-	if (item->class->PickVertex != NULL) {
-	  break;
-	}
+           item != ZN_NO_ITEM; item = ZnTagSearchNext(search_var)) {
+        if (item->class->PickVertex != NULL) {
+          break;
+        }
       }
       if (item == ZN_NO_ITEM) {
-	Tcl_AppendResult(interp, "can't find a suitable item \"",
-			 Tcl_GetString(args[2]), "\"", NULL);
-	goto error;
+        Tcl_AppendResult(interp, "can't find a suitable item \"",
+                         Tcl_GetString(args[2]), "\"", NULL);
+        goto error;
       }
       if (Tcl_GetDoubleFromObj(interp, args[3], &d) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       p.x = d;
       if (Tcl_GetDoubleFromObj(interp, args[4], &d) == TCL_ERROR) {
-	goto error;
+        goto error;
       }
       p.y = d;
       item->class->PickVertex(item, &p, &contour, &vertex, &o_vertex);
@@ -6363,43 +6371,43 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
     /* xview */
   case ZN_W_XVIEW:
     {
-      int	count, type;
-      ZnReal	new_x=0.0, fraction;
+      int       count, type;
+      ZnReal    new_x=0.0, fraction;
       
       if (argc == 2) {
 #ifdef PTK
-	ZnReal	first, last;
-	ScrollFractions(wi->origin.x, wi->origin.x + Tk_Width(wi->win),
-			wi->scroll_xo, wi->scroll_xc, &first, &last);
-	Tcl_DoubleResults(interp, 2, 0, first, last);
+        ZnReal  first, last;
+        ScrollFractions(wi->origin.x, wi->origin.x + Tk_Width(wi->win),
+                        wi->scroll_xo, wi->scroll_xc, &first, &last);
+        Tcl_DoubleResults(interp, 2, 0, first, last);
 #else
-	Tcl_SetObjResult(interp,
-			 ScrollFractions(wi->origin.x, wi->origin.x + Tk_Width(wi->win),
-					 wi->scroll_xo, wi->scroll_xc));
+        Tcl_SetObjResult(interp,
+                         ScrollFractions(wi->origin.x, wi->origin.x + Tk_Width(wi->win),
+                                         wi->scroll_xo, wi->scroll_xc));
 #endif
       }
       else {
-	type = Tk_GetScrollInfoObj(interp, argc, args, &fraction, &count);
-	switch (type) {
-	case TK_SCROLL_ERROR:
-	  result = TCL_ERROR;
-	  goto done;
-	case TK_SCROLL_MOVETO:
-	  new_x = (wi->scroll_xo + (int) (fraction * (wi->scroll_xc - wi->scroll_xo) + 0.5));
-	  break;
-	case TK_SCROLL_PAGES:
-	  new_x = (int) (wi->origin.x + count * 0.9 * Tk_Width(wi->win));
-	  break;
-	case TK_SCROLL_UNITS:
-	  if (wi->x_scroll_incr > 0) {
-	    new_x = wi->origin.x + count * wi->x_scroll_incr;
-	  }
-	  else {
-	    new_x = (int) (wi->origin.x + count * 0.1 * Tk_Width(wi->win));
-	  }
-	  break;
-	}
-	SetOrigin(wi, new_x, wi->origin.y);
+        type = Tk_GetScrollInfoObj(interp, argc, args, &fraction, &count);
+        switch (type) {
+        case TK_SCROLL_ERROR:
+          result = TCL_ERROR;
+          goto done;
+        case TK_SCROLL_MOVETO:
+          new_x = (wi->scroll_xo + (int) (fraction * (wi->scroll_xc - wi->scroll_xo) + 0.5));
+          break;
+        case TK_SCROLL_PAGES:
+          new_x = (int) (wi->origin.x + count * 0.9 * Tk_Width(wi->win));
+          break;
+        case TK_SCROLL_UNITS:
+          if (wi->x_scroll_incr > 0) {
+            new_x = wi->origin.x + count * wi->x_scroll_incr;
+          }
+          else {
+            new_x = (int) (wi->origin.x + count * 0.1 * Tk_Width(wi->win));
+          }
+          break;
+        }
+        SetOrigin(wi, new_x, wi->origin.y);
       }
       break;
     }
@@ -6407,43 +6415,43 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
     /*yview */
   case ZN_W_YVIEW:
     {
-      int	count, type;
-      ZnReal	new_y = 0.0, fraction;
+      int       count, type;
+      ZnReal    new_y = 0.0, fraction;
 
       if (argc == 2) {
 #ifdef PTK
-	ZnReal	first, last;
-	ScrollFractions(wi->origin.y, wi->origin.y + Tk_Height(wi->win),
-			wi->scroll_yo, wi->scroll_yc, &first, &last);
-	Tcl_DoubleResults(interp, 2, 0, first, last);
+        ZnReal  first, last;
+        ScrollFractions(wi->origin.y, wi->origin.y + Tk_Height(wi->win),
+                        wi->scroll_yo, wi->scroll_yc, &first, &last);
+        Tcl_DoubleResults(interp, 2, 0, first, last);
 #else
-	Tcl_SetObjResult(interp,
-			 ScrollFractions(wi->origin.y, wi->origin.y + Tk_Height(wi->win),
-					 wi->scroll_yo, wi->scroll_yc));
+        Tcl_SetObjResult(interp,
+                         ScrollFractions(wi->origin.y, wi->origin.y + Tk_Height(wi->win),
+                                         wi->scroll_yo, wi->scroll_yc));
 #endif
       }
       else {
-	type = Tk_GetScrollInfoObj(interp, argc, args, &fraction, &count);
-	switch (type) {
-	case TK_SCROLL_ERROR:
-	  result = TCL_ERROR;
-	  goto done;
-	case TK_SCROLL_MOVETO:
-	  new_y = (wi->scroll_yo + (int) (fraction * (wi->scroll_yc - wi->scroll_yo) + 0.5));
-	  break;
-	case TK_SCROLL_PAGES:
-	  new_y = (int) (wi->origin.y + count * 0.9 * Tk_Height(wi->win));
-	  break;
-	case TK_SCROLL_UNITS:
-	  if (wi->y_scroll_incr > 0) {
-	    new_y = wi->origin.y + count * wi->y_scroll_incr;
-	  }
-	  else {
-	    new_y = (int) (wi->origin.y + count * 0.1 * Tk_Height(wi->win));
-	  }
-	  break;
-	}
-	SetOrigin(wi, wi->origin.x, new_y);
+        type = Tk_GetScrollInfoObj(interp, argc, args, &fraction, &count);
+        switch (type) {
+        case TK_SCROLL_ERROR:
+          result = TCL_ERROR;
+          goto done;
+        case TK_SCROLL_MOVETO:
+          new_y = (wi->scroll_yo + (int) (fraction * (wi->scroll_yc - wi->scroll_yo) + 0.5));
+          break;
+        case TK_SCROLL_PAGES:
+          new_y = (int) (wi->origin.y + count * 0.9 * Tk_Height(wi->win));
+          break;
+        case TK_SCROLL_UNITS:
+          if (wi->y_scroll_incr > 0) {
+            new_y = wi->origin.y + count * wi->y_scroll_incr;
+          }
+          else {
+            new_y = (int) (wi->origin.y + count * 0.1 * Tk_Height(wi->win));
+          }
+          break;
+        }
+        SetOrigin(wi, wi->origin.x, new_y);
       }
       break;
     }
@@ -6465,41 +6473,41 @@ WidgetObjCmd(ClientData		client_data,	/* Information about the widget. */
  *
  * Configure --
  *
- *	This procedure is called to process an args/argc list in
- *	conjunction with the Tk option database to configure (or
- *	reconfigure) a Zinc widget.
+ *      This procedure is called to process an args/argc list in
+ *      conjunction with the Tk option database to configure (or
+ *      reconfigure) a Zinc widget.
  *
  * Results:
- *	The return value is a standard Tcl result.  If TCL_ERROR is
- *	returned, then interp->result contains an error message.
+ *      The return value is a standard Tcl result.  If TCL_ERROR is
+ *      returned, then interp->result contains an error message.
  *
  * Side effects:
- *	Configuration information, such as colors, border width,
- *	etc. get set for the widget;  old resources get freed,
- *	if there were any.
+ *      Configuration information, such as colors, border width,
+ *      etc. get set for the widget;  old resources get freed,
+ *      if there were any.
  *
  *----------------------------------------------------------------------
  */
 #ifdef PTK_800
 static int
-Configure(Tcl_Interp		*interp,/* Used for error reporting. */
-	  ZnWInfo		*wi,	/* Information about widget. */
-	  int			argc,	/* Number of valid entries in args. */
-	  Tcl_Obj	*CONST	args[],	/* Arguments. */
-	  int			flags)	/* Flags to pass to Tk_ConfigureWidget. */
+Configure(Tcl_Interp            *interp,/* Used for error reporting. */
+          ZnWInfo               *wi,    /* Information about widget. */
+          int                   argc,   /* Number of valid entries in args. */
+          Tcl_Obj       *CONST  args[], /* Arguments. */
+          int                   flags)  /* Flags to pass to Tk_ConfigureWidget. */
 {
 #define CONFIG_PROBE(offset) (ISSET(config_specs[offset].specFlags, \
                                     TK_CONFIG_OPTION_SPECIFIED))
   ZnBool  init;
-  int	  render;
+  int     render;
 
   init = wi->fore_color == NULL;
   render = wi->render;
   if (Tk_ConfigureWidget(interp, wi->win, config_specs, argc,
 #ifdef PTK
-			 (Tcl_Obj **) args, (char *) wi, flags) != TCL_OK)
+                         (Tcl_Obj **) args, (char *) wi, flags) != TCL_OK)
 #else
-			 (CONST char **) args, (char *) wi, flags|TK_CONFIG_OBJS) != TCL_OK)
+                         (CONST char **) args, (char *) wi, flags|TK_CONFIG_OBJS) != TCL_OK)
 #endif
   {
     return TCL_ERROR;
@@ -6526,12 +6534,14 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     }
     wi->font_tfi = ZnGetTexFont(wi, wi->font);
   }
+#ifdef ATC
   if (CONFIG_PROBE(MAP_TEXT_FONT_SPEC) || !wi->map_font_tfi) {
     if (wi->map_font_tfi) {
       ZnFreeTexFont(wi->map_font_tfi);
     }
     wi->map_font_tfi = ZnGetTexFont(wi, wi->map_text_font);
   }
+#endif
 #endif
 
   /*
@@ -6541,7 +6551,7 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     wi->pick_aperture = 0;
   }
   if (CONFIG_PROBE(BACK_COLOR_SPEC) || !wi->relief_grad) {
-    XColor	   *color;
+    XColor         *color;
     unsigned short alpha;
 
     Tk_SetWindowBackground(wi->win, ZnGetGradientPixel(wi->back_color, 0.0));
@@ -6552,7 +6562,7 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     if (wi->relief != ZN_RELIEF_FLAT) {
       color = ZnGetGradientColor(wi->back_color, 0.0, &alpha);
       wi->relief_grad = ZnGetReliefGradient(interp, wi->win,
-					    Tk_NameOfColor(color), alpha);
+                                            Tk_NameOfColor(color), alpha);
     }
   }
   if (CONFIG_PROBE(BACK_COLOR_SPEC) || CONFIG_PROBE(LIGHT_ANGLE_SPEC)) {
@@ -6567,6 +6577,7 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
       CONFIG_PROBE(HIGHLIGHT_THICKNESS_SPEC)) {
     ZnDamageAll(wi);
   }
+#ifdef ATC
   if (CONFIG_PROBE(SPEED_VECTOR_LENGTH_SPEC) ||
       CONFIG_PROBE(VISIBLE_HISTORY_SIZE_SPEC) ||
       CONFIG_PROBE(MANAGED_HISTORY_SIZE_SPEC)) {
@@ -6579,7 +6590,8 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     ZnITEM.InvalidateItems(wi->top_group, ZnTrack);
     ZnITEM.InvalidateItems(wi->top_group, ZnWayPoint);
   }
-  
+#endif
+        
   /*
    * Request the new geometry.
    */
@@ -6596,10 +6608,10 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
   /*
    * Update the registration with the overlap manager.
    */
-#ifdef OM
+#ifdef ATC
   if (CONFIG_PROBE(OVERLAP_MANAGER_SPEC)) {
-    Tcl_HashEntry	*entry;
-    ZnItem		grp;
+    Tcl_HashEntry       *entry;
+    ZnItem              grp;
 
     if (wi->om_group != ZN_NO_ITEM) {
       OmUnregister((void *) wi);
@@ -6608,12 +6620,12 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     if (wi->om_group_id != 0) {
       entry = Tcl_FindHashEntry(wi->id_table, (char *) wi->om_group_id);
       if (entry != NULL) {
-	grp = (ZnItem) Tcl_GetHashValue(entry);
-	if (grp->class == ZnGroup) {
-	  OmRegister((void *) wi, ZnSendTrackToOm,
-		     ZnSetLabelAngleFromOm, ZnQueryLabelPosition);
-	  wi->om_group = grp;
-	}
+        grp = (ZnItem) Tcl_GetHashValue(entry);
+        if (grp->class == ZnGroup) {
+          OmRegister((void *) wi, ZnSendTrackToOm,
+                     ZnSetLabelAngleFromOm, ZnQueryLabelPosition);
+          wi->om_group = grp;
+        }
       }
     }
   }
@@ -6638,9 +6650,9 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     wi->scroll_xo = wi->scroll_yo = 0;
     wi->scroll_xc = wi->scroll_yc = 0;
     if (wi->region != NULL) {
-      int	 argc2;
+      int        argc2;
 #ifdef PTK
-      Arg	*args2;
+      Arg       *args2;
 #else
       CONST char **args2;
 #endif
@@ -6651,38 +6663,38 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
       if (Tcl_SplitList(interp, wi->region, &argc2, &args2) != TCL_OK)
 #endif
       {
-	return TCL_ERROR;
+        return TCL_ERROR;
       }
       if (argc2 != 4) {
-	Tcl_AppendResult(interp, "bad scrollRegion \"", wi->region, "\"", (char *) NULL);
+        Tcl_AppendResult(interp, "bad scrollRegion \"", wi->region, "\"", (char *) NULL);
       badRegion:
 #ifndef PTK
-	ZnFree(wi->region);
-	ZnFree(args2);
+        ZnFree(wi->region);
+        ZnFree(args2);
 #endif
-	wi->region = NULL;
-	return TCL_ERROR;
+        wi->region = NULL;
+        return TCL_ERROR;
       }
 #ifdef PTK
 #ifdef PTK_800
       if ((Tk_GetPixels(interp, wi->win, LangString(args2[0]), &wi->scroll_xo) != TCL_OK) ||
-	  (Tk_GetPixels(interp, wi->win, LangString(args2[1]), &wi->scroll_yo) != TCL_OK) ||
-	  (Tk_GetPixels(interp, wi->win, LangString(args2[2]), &wi->scroll_xc) != TCL_OK) ||
-	  (Tk_GetPixels(interp, wi->win, LangString(args2[3]), &wi->scroll_yc) != TCL_OK))
+          (Tk_GetPixels(interp, wi->win, LangString(args2[1]), &wi->scroll_yo) != TCL_OK) ||
+          (Tk_GetPixels(interp, wi->win, LangString(args2[2]), &wi->scroll_xc) != TCL_OK) ||
+          (Tk_GetPixels(interp, wi->win, LangString(args2[3]), &wi->scroll_yc) != TCL_OK))
 #else
       if ((Tk_GetPixelsFromObj(interp, wi->win, args2[0], &wi->scroll_xo) != TCL_OK) ||
-	  (Tk_GetPixelsFromObj(interp, wi->win, args2[1], &wi->scroll_yo) != TCL_OK) ||
-	  (Tk_GetPixelsFromObj(interp, wi->win, args2[2], &wi->scroll_xc) != TCL_OK) ||
-	  (Tk_GetPixelsFromObj(interp, wi->win, args2[3], &wi->scroll_yc) != TCL_OK))
+          (Tk_GetPixelsFromObj(interp, wi->win, args2[1], &wi->scroll_yo) != TCL_OK) ||
+          (Tk_GetPixelsFromObj(interp, wi->win, args2[2], &wi->scroll_xc) != TCL_OK) ||
+          (Tk_GetPixelsFromObj(interp, wi->win, args2[3], &wi->scroll_yc) != TCL_OK))
 #endif
 #else
       if ((Tk_GetPixels(interp, wi->win, args2[0], &wi->scroll_xo) != TCL_OK) ||
-	  (Tk_GetPixels(interp, wi->win, args2[1], &wi->scroll_yo) != TCL_OK) ||
-	  (Tk_GetPixels(interp, wi->win, args2[2], &wi->scroll_xc) != TCL_OK) ||
-	  (Tk_GetPixels(interp, wi->win, args2[3], &wi->scroll_yc) != TCL_OK))
+          (Tk_GetPixels(interp, wi->win, args2[1], &wi->scroll_yo) != TCL_OK) ||
+          (Tk_GetPixels(interp, wi->win, args2[2], &wi->scroll_xc) != TCL_OK) ||
+          (Tk_GetPixels(interp, wi->win, args2[3], &wi->scroll_yc) != TCL_OK))
 #endif
       {
-	goto badRegion;
+        goto badRegion;
       }
     }
   }
@@ -6700,14 +6712,14 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
        * the item under pointer.
        */
       if (wi->pick_event.type == ButtonPress ||
-	  wi->pick_event.type == ButtonRelease ||
-	  wi->pick_event.type == MotionNotify ||
-	  wi->pick_event.type == EnterNotify ||
-	  wi->pick_event.type == LeaveNotify) {
-	Tcl_Preserve((ClientData) wi);
-	CLEAR(wi->flags, ZN_INTERNAL_NEED_REPICK);
-	PickCurrentItem(wi, &wi->pick_event);
-	Tcl_Release((ClientData) wi);
+          wi->pick_event.type == ButtonRelease ||
+          wi->pick_event.type == MotionNotify ||
+          wi->pick_event.type == EnterNotify ||
+          wi->pick_event.type == LeaveNotify) {
+        Tcl_Preserve((ClientData) wi);
+        CLEAR(wi->flags, ZN_INTERNAL_NEED_REPICK);
+        PickCurrentItem(wi, &wi->pick_event);
+        Tcl_Release((ClientData) wi);
       }
     }
   }
@@ -6724,15 +6736,15 @@ TileUpdate(void *client_data)
 }
 
 static int
-Configure(Tcl_Interp		*interp,/* Used for error reporting. */
-	  ZnWInfo		*wi,	/* Information about widget. */
-	  int			argc,	/* Number of valid entries in args. */
-	  Tcl_Obj	*CONST	args[])	/* Arguments. */
+Configure(Tcl_Interp            *interp,/* Used for error reporting. */
+          ZnWInfo               *wi,    /* Information about widget. */
+          int                   argc,   /* Number of valid entries in args. */
+          Tcl_Obj       *CONST  args[]) /* Arguments. */
 {
-  ZnBool		init;
-  int			render, mask, error;
-  Tk_SavedOptions	saved_options;
-  Tcl_Obj		*error_result = NULL;
+  ZnBool                init;
+  int                   render, mask, error;
+  Tk_SavedOptions       saved_options;
+  Tcl_Obj               *error_result = NULL;
 
   render = wi->render;
   init = render < 0;
@@ -6740,8 +6752,8 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
   for (error = 0; error <= 1; error++) {
     if (!error) {
       if (Tk_SetOptions(interp, (char *) wi, wi->opt_table, argc, args,
-			wi->win, &saved_options, &mask) != TCL_OK) {
-	continue;
+                        wi->win, &saved_options, &mask) != TCL_OK) {
+        continue;
       }
     }
     else {
@@ -6753,8 +6765,8 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
 
     if (!init) {
       if (render != wi->render) {
-	ZnWarning("It is not possible to change the -render option after widget creation.\n");
-	wi->render = render;
+        ZnWarning("It is not possible to change the -render option after widget creation.\n");
+        wi->render = render;
       }
     }
     else if (wi->render < 0) {
@@ -6776,32 +6788,32 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
       wi->scroll_xo = wi->scroll_yo = 0;
       wi->scroll_xc = wi->scroll_yc = 0;
       if (wi->region != NULL) {
-	int	 argc2;
-	Tcl_Obj	**args2;
-	
-	if (Tcl_ListObjGetElements(interp, wi->region, &argc2, &args2) != TCL_OK) {
-	badRegion:
-	  Tcl_AppendResult(interp, "bad scrollRegion \"",
-			   Tcl_GetString(wi->region), "\"", (char *) NULL);
-	  continue;
-	}
-	if (argc2 != 4) {
-	  goto badRegion;
-	}
+        int      argc2;
+        Tcl_Obj **args2;
+        
+        if (Tcl_ListObjGetElements(interp, wi->region, &argc2, &args2) != TCL_OK) {
+        badRegion:
+          Tcl_AppendResult(interp, "bad scrollRegion \"",
+                           Tcl_GetString(wi->region), "\"", (char *) NULL);
+          continue;
+        }
+        if (argc2 != 4) {
+          goto badRegion;
+        }
 #ifdef PTK_800
-	if ((Tk_GetPixels(interp, wi->win, LangString(args2[0]), &wi->scroll_xo) != TCL_OK) ||
-	    (Tk_GetPixels(interp, wi->win, LangString(args2[1]), &wi->scroll_yo) != TCL_OK) ||
-	    (Tk_GetPixels(interp, wi->win, LangString(args2[2]), &wi->scroll_xc) != TCL_OK) ||
-	    (Tk_GetPixels(interp, wi->win, LangString(args2[3]), &wi->scroll_yc) != TCL_OK))
+        if ((Tk_GetPixels(interp, wi->win, LangString(args2[0]), &wi->scroll_xo) != TCL_OK) ||
+            (Tk_GetPixels(interp, wi->win, LangString(args2[1]), &wi->scroll_yo) != TCL_OK) ||
+            (Tk_GetPixels(interp, wi->win, LangString(args2[2]), &wi->scroll_xc) != TCL_OK) ||
+            (Tk_GetPixels(interp, wi->win, LangString(args2[3]), &wi->scroll_yc) != TCL_OK))
 #else
-	if ((Tk_GetPixelsFromObj(interp, wi->win, args2[0], &wi->scroll_xo) != TCL_OK) ||
-	    (Tk_GetPixelsFromObj(interp, wi->win, args2[1], &wi->scroll_yo) != TCL_OK) ||
-	    (Tk_GetPixelsFromObj(interp, wi->win, args2[2], &wi->scroll_xc) != TCL_OK) ||
-	    (Tk_GetPixelsFromObj(interp, wi->win, args2[3], &wi->scroll_yc) != TCL_OK))
+        if ((Tk_GetPixelsFromObj(interp, wi->win, args2[0], &wi->scroll_xo) != TCL_OK) ||
+            (Tk_GetPixelsFromObj(interp, wi->win, args2[1], &wi->scroll_yo) != TCL_OK) ||
+            (Tk_GetPixelsFromObj(interp, wi->win, args2[2], &wi->scroll_xc) != TCL_OK) ||
+            (Tk_GetPixelsFromObj(interp, wi->win, args2[3], &wi->scroll_yc) != TCL_OK))
 #endif
-	{
-	  goto badRegion;
-	}
+        {
+          goto badRegion;
+        }
       }
     }
     
@@ -6813,61 +6825,65 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
 #ifdef GL
     if ((mask & CONFIG_FONT) || !wi->font_tfi) {
       if (wi->font_tfi) {
-	ZnFreeTexFont(wi->font_tfi);
+        ZnFreeTexFont(wi->font_tfi);
       }
       wi->font_tfi = ZnGetTexFont(wi, wi->font);
     }
+#ifdef ATC
     if ((mask & CONFIG_MAP_FONT) || !wi->map_font_tfi) {
       if (wi->map_font_tfi) {
-	ZnFreeTexFont(wi->map_font_tfi);
+        ZnFreeTexFont(wi->map_font_tfi);
       }
       wi->map_font_tfi = ZnGetTexFont(wi, wi->map_text_font);
     }
+#endif
 #endif
 
     if ((mask & CONFIG_TILE) || init) {
       char *tile_name;
       if (wi->tile) {
-	ZnFreeImage(wi->tile, TileUpdate, wi);
+        ZnFreeImage(wi->tile, TileUpdate, wi);
       }
       if (!wi->tile_obj || !*(tile_name = Tcl_GetString(wi->tile_obj))) {
-	wi->tile = ZnUnspecifiedImage;
+        wi->tile = ZnUnspecifiedImage;
       }
       else {
-	wi->tile = ZnGetImage(wi, tile_name, TileUpdate, wi);
-	if (wi->tile == ZnUnspecifiedImage) {
-	  Tcl_AppendResult(interp, "Incorrect tile \"", tile_name, "\"", (char *) NULL);
-	  continue;
-	}
+        wi->tile = ZnGetImage(wi, tile_name, TileUpdate, wi);
+        if (wi->tile == ZnUnspecifiedImage) {
+          Tcl_AppendResult(interp, "Incorrect tile \"", tile_name, "\"", (char *) NULL);
+          continue;
+        }
       }
     }
 
+#ifdef ATC
     if ((mask & CONFIG_MAP_SYMBOL) || init) {
       if (wi->map_distance_symbol) {
-	ZnFreeImage(wi->map_distance_symbol, NULL, NULL);
+        ZnFreeImage(wi->map_distance_symbol, NULL, NULL);
       }
       wi->map_distance_symbol = ZnGetImage(wi, Tcl_GetString(wi->map_symbol_obj), NULL, NULL);
       if ((wi->map_distance_symbol == ZnUnspecifiedImage) ||
-	  ! ZnImageIsBitmap(wi->map_distance_symbol)) {
-	Tcl_AppendResult(interp, "Incorrect bitmap \"",
-			 Tcl_GetString(wi->map_symbol_obj), "\"", (char *) NULL);
-	continue;
+          ! ZnImageIsBitmap(wi->map_distance_symbol)) {
+        Tcl_AppendResult(interp, "Incorrect bitmap \"",
+                         Tcl_GetString(wi->map_symbol_obj), "\"", (char *) NULL);
+        continue;
       }
     }
     
     if ((mask & CONFIG_TRACK_SYMBOL) || init) {
       if (wi->track_symbol) {
-	ZnFreeImage(wi->track_symbol, NULL, NULL);
+        ZnFreeImage(wi->track_symbol, NULL, NULL);
       }
       wi->track_symbol = ZnGetImage(wi, Tcl_GetString(wi->track_symbol_obj), NULL, NULL);
       if ((wi->track_symbol == ZnUnspecifiedImage) ||
-	  ! ZnImageIsBitmap(wi->track_symbol)) {
-	Tcl_AppendResult(interp, "Incorrect bitmap \"",
-			 Tcl_GetString(wi->track_symbol_obj), "\"", (char *) NULL);
-	continue;
-	
+          ! ZnImageIsBitmap(wi->track_symbol)) {
+        Tcl_AppendResult(interp, "Incorrect bitmap \"",
+                         Tcl_GetString(wi->track_symbol_obj), "\"", (char *) NULL);
+        continue;
+        
       }
     }
+#endif
 
     /*
      * Maintain the pick aperture within meaningful bounds.
@@ -6877,18 +6893,18 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     }
 
     if ((mask & CONFIG_BACK_COLOR) || !wi->relief_grad) {
-      XColor	   *color;
+      XColor       *color;
       unsigned short alpha;
       
       Tk_SetWindowBackground(wi->win, ZnGetGradientPixel(wi->back_color, 0.0));
       if (wi->relief_grad) {
-	ZnFreeGradient(wi->relief_grad);
-	wi->relief_grad = NULL;
+        ZnFreeGradient(wi->relief_grad);
+        wi->relief_grad = NULL;
       }
       if (wi->relief != ZN_RELIEF_FLAT) {
-	color = ZnGetGradientColor(wi->back_color, 0.0, &alpha);
-	wi->relief_grad = ZnGetReliefGradient(interp, wi->win,
-					      Tk_NameOfColor(color), alpha);
+        color = ZnGetGradientColor(wi->back_color, 0.0, &alpha);
+        wi->relief_grad = ZnGetReliefGradient(interp, wi->win,
+                                              Tk_NameOfColor(color), alpha);
       }
     }
     if (mask & CONFIG_DAMAGE_ALL) {
@@ -6900,6 +6916,7 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     
     wi->inset = wi->border_width + wi->highlight_width;
     
+#ifdef ATC
     if (mask & CONFIG_INVALIDATE_TRACKS) {
       ZnITEM.InvalidateItems(wi->top_group, ZnTrack);
     }
@@ -6909,7 +6926,8 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     if (mask & CONFIG_INVALIDATE_WPS) {
       ZnITEM.InvalidateItems(wi->top_group, ZnWayPoint);
     }
-    
+#endif
+                
     /*
      * Request the new geometry.
      */
@@ -6920,25 +6938,25 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     /*
      * Update the registration with the overlap manager.
      */
-#ifdef OM
+#ifdef ATC
     if (mask & CONFIG_OM) {
-      Tcl_HashEntry	*entry;
-      ZnItem		grp;
+      Tcl_HashEntry     *entry;
+      ZnItem            grp;
       
       if (wi->om_group != ZN_NO_ITEM) {
-	OmUnregister((void *) wi);
-	wi->om_group = ZN_NO_ITEM;
+        OmUnregister((void *) wi);
+        wi->om_group = ZN_NO_ITEM;
       }
       if (wi->om_group_id != 0) {
-	entry = Tcl_FindHashEntry(wi->id_table, (char *) wi->om_group_id);
-	if (entry != NULL) {
-	  grp = (ZnItem) Tcl_GetHashValue(entry);
-	  if (grp->class == ZnGroup) {
-	    OmRegister((void *) wi, ZnSendTrackToOm,
-		       ZnSetLabelAngleFromOm, ZnQueryLabelPosition);
-	    wi->om_group = grp;
-	  }
-	}
+        entry = Tcl_FindHashEntry(wi->id_table, (char *) wi->om_group_id);
+        if (entry != NULL) {
+          grp = (ZnItem) Tcl_GetHashValue(entry);
+          if (grp->class == ZnGroup) {
+            OmRegister((void *) wi, ZnSendTrackToOm,
+                       ZnSetLabelAngleFromOm, ZnQueryLabelPosition);
+            wi->om_group = grp;
+          }
+        }
       }
     }
 #endif
@@ -6955,20 +6973,20 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
     
     if (mask & CONFIG_FOLLOW_POINTER) {
       if (wi->follow_pointer) {
-	/* Flag has just been turned on, process
-	 * the last known positional event to update
-	 * the item under pointer.
-	 */
-	if (wi->pick_event.type == ButtonPress ||
-	    wi->pick_event.type == ButtonRelease ||
-	    wi->pick_event.type == MotionNotify ||
-	    wi->pick_event.type == EnterNotify ||
-	    wi->pick_event.type == LeaveNotify) {
-	  Tcl_Preserve((ClientData) wi);
-	  CLEAR(wi->flags, ZN_INTERNAL_NEED_REPICK);
-	  PickCurrentItem(wi, &wi->pick_event);
-	  Tcl_Release((ClientData) wi);
-	}
+        /* Flag has just been turned on, process
+         * the last known positional event to update
+         * the item under pointer.
+         */
+        if (wi->pick_event.type == ButtonPress ||
+            wi->pick_event.type == ButtonRelease ||
+            wi->pick_event.type == MotionNotify ||
+            wi->pick_event.type == EnterNotify ||
+            wi->pick_event.type == LeaveNotify) {
+          Tcl_Preserve((ClientData) wi);
+          CLEAR(wi->flags, ZN_INTERNAL_NEED_REPICK);
+          PickCurrentItem(wi, &wi->pick_event);
+          Tcl_Release((ClientData) wi);
+        }
       }
     }
     break;
@@ -6991,20 +7009,20 @@ Configure(Tcl_Interp		*interp,/* Used for error reporting. */
  *
  * Focus --
  *
- *	This procedure is called whenever a zinc gets or loses the
- *	input focus.  It's also called whenever the window is
- *	reconfigured while it has the focus.
+ *      This procedure is called whenever a zinc gets or loses the
+ *      input focus.  It's also called whenever the window is
+ *      reconfigured while it has the focus.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	The cursor gets turned on or off.
+ *      The cursor gets turned on or off.
  *
  *----------------------------------------------------------------------
  */
 static void
-Blink(ClientData	client_data)
+Blink(ClientData        client_data)
 {
   ZnWInfo *wi = (ZnWInfo *) client_data;
 
@@ -7014,12 +7032,12 @@ Blink(ClientData	client_data)
   if (wi->text_info.cursor_on) {
     wi->text_info.cursor_on = 0;
     wi->blink_handler = Tcl_CreateTimerHandler(wi->insert_off_time,
-					       Blink, client_data);
+                                               Blink, client_data);
   }
   else {
     wi->text_info.cursor_on = 1;
     wi->blink_handler = Tcl_CreateTimerHandler(wi->insert_on_time,
-					       Blink, client_data);
+                                               Blink, client_data);
   }
   if ((wi->focus_item != ZN_NO_ITEM) &&
       (wi->focus_item->class->Cursor != NULL)) {
@@ -7028,8 +7046,8 @@ Blink(ClientData	client_data)
 }
 
 static void
-Focus(ZnWInfo	*wi,
-      ZnBool		got_focus)
+Focus(ZnWInfo   *wi,
+      ZnBool            got_focus)
 {
   Tcl_DeleteTimerHandler(wi->blink_handler);
   if (got_focus) {
@@ -7037,7 +7055,7 @@ Focus(ZnWInfo	*wi,
     wi->text_info.cursor_on = 1;
     if (wi->insert_off_time != 0) {
       wi->blink_handler = Tcl_CreateTimerHandler(wi->insert_off_time,
-						 Blink, (ClientData) wi);
+                                                 Blink, (ClientData) wi);
     }
   }
   else {
@@ -7061,23 +7079,23 @@ Focus(ZnWInfo	*wi,
  *
  * Event --
  *
- *	This procedure is invoked by the Tk dispatcher for various
- *	events on Zincs.
+ *      This procedure is invoked by the Tk dispatcher for various
+ *      events on Zincs.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	When the window gets deleted, internal structures get
- *	cleaned up.  When it gets exposed, it is redisplayed.
+ *      When the window gets deleted, internal structures get
+ *      cleaned up.  When it gets exposed, it is redisplayed.
  *
  *----------------------------------------------------------------------
  */
 static void
-TopEvent(ClientData	client_data,	/* Information about widget. */
-	 XEvent		*event)
+TopEvent(ClientData     client_data,    /* Information about widget. */
+         XEvent         *event)
 {
-  ZnWInfo	*wi = (ZnWInfo *) client_data;
+  ZnWInfo       *wi = (ZnWInfo *) client_data;
   if (event->type == ConfigureNotify) {
     /*printf("Window moved\n");*/
     SET(wi->flags, ZN_CONFIGURE_EVENT);
@@ -7085,20 +7103,20 @@ TopEvent(ClientData	client_data,	/* Information about widget. */
 }
 
 static void
-Event(ClientData client_data,	/* Information about widget. */
-      XEvent	*event)	/* Information about event. */
+Event(ClientData client_data,   /* Information about widget. */
+      XEvent    *event) /* Information about event. */
 {
-  ZnWInfo	*wi = (ZnWInfo *) client_data;
-  XGCValues	values;
-  ZnBBox	bbox;
+  ZnWInfo       *wi = (ZnWInfo *) client_data;
+  XGCValues     values;
+  ZnBBox        bbox;
 
   /*printf("=============== DEBUT %s %d EVENT ==================\n",
          event->type == MapNotify ? "MAP":
-	 event->type == Expose? "EXPOSE" :
-	 event->type == ConfigureNotify ? "CONFIGURE" :
-	 event->type == VisibilityNotify ? "VISIBILITY" :
-	 event->type == DestroyNotify ? "DESTROY" :
-	 "??", event->type);*/
+         event->type == Expose? "EXPOSE" :
+         event->type == ConfigureNotify ? "CONFIGURE" :
+         event->type == VisibilityNotify ? "VISIBILITY" :
+         event->type == DestroyNotify ? "DESTROY" :
+         "??", event->type);*/
   if (event->type == MapNotify) {
     SET(wi->flags, ZN_CONFIGURE_EVENT);
     if (!wi->gc) {
@@ -7119,38 +7137,38 @@ Event(ClientData client_data,	/* Information about widget. */
        * Set the real top window above us.
        */
       {
-	Window	  parent, root, *children=NULL;
-	Tk_Window top_level;
-	int       num_children, success;
-	
-	top_level = wi->win;
-	while (!Tk_IsTopLevel(top_level)) {
-	  top_level = Tk_Parent(top_level);
-	}
-	success = XQueryTree(wi->dpy, Tk_WindowId(top_level), &root, &parent,
-			     &children, &num_children);
-	if (!success || (root == parent)) {
-	  wi->real_top = Tk_WindowId(top_level);
-	}
-	else {
-	  wi->real_top = parent;
-	}
-	/*
-	 * Needed under glx to suspend update with scissors after
-	 * a move to synchronise the two buffers. Fix a refresh
-	 * bug when the window is partially clipped by the display
-	 * border. Can be usefull under Windows too.
-	 */
-	Tk_CreateEventHandler(top_level, StructureNotifyMask, TopEvent, (ClientData) wi);
-	if (children && success) {
-	  XFree(children);
-	}
+        Window    parent, root, *children=NULL;
+        Tk_Window top_level;
+        int       num_children, success;
+        
+        top_level = wi->win;
+        while (!Tk_IsTopLevel(top_level)) {
+          top_level = Tk_Parent(top_level);
+        }
+        success = XQueryTree(wi->dpy, Tk_WindowId(top_level), &root, &parent,
+                             &children, &num_children);
+        if (!success || (root == parent)) {
+          wi->real_top = Tk_WindowId(top_level);
+        }
+        else {
+          wi->real_top = parent;
+        }
+        /*
+         * Needed under glx to suspend update with scissors after
+         * a move to synchronise the two buffers. Fix a refresh
+         * bug when the window is partially clipped by the display
+         * border. Can be usefull under Windows too.
+         */
+        Tk_CreateEventHandler(top_level, StructureNotifyMask, TopEvent, (ClientData) wi);
+        if (children && success) {
+          XFree(children);
+        }
       }
     }
     ZnNeedRedisplay(wi);
   }
   else if (event->type == Expose) {
-    ZnDim	width, height;
+    ZnDim       width, height;
 
     SET(wi->flags, ZN_CONFIGURE_EVENT);
 
@@ -7170,8 +7188,8 @@ Event(ClientData client_data,	/* Information about widget. */
     bbox.corner.y = MIN(wi->height, bbox.orig.y + height);
     
     /*printf("expose %d %d %d %d\n",
-	   ((XExposeEvent*) event)->x, ((XExposeEvent*) event)->y,
-	   ((XExposeEvent*) event)->width, ((XExposeEvent*) event)->height);*/
+           ((XExposeEvent*) event)->x, ((XExposeEvent*) event)->y,
+           ((XExposeEvent*) event)->width, ((XExposeEvent*) event)->height);*/
     /*
      * Add the exposed area to the expose region and
      * schedule an asynchronous redisplay of the window
@@ -7179,7 +7197,7 @@ Event(ClientData client_data,	/* Information about widget. */
      */
     ZnAddBBoxToBBox(&wi->exposed_area, &bbox);
     if (/*(((XExposeEvent*) event)->count == 0) &&*/
-	!ZnIsEmptyBBox(&wi->exposed_area)) {
+        !ZnIsEmptyBBox(&wi->exposed_area)) {
       ZnNeedRedisplay(wi);
     }
   }
@@ -7221,13 +7239,13 @@ Event(ClientData client_data,	/* Information about widget. */
        * Reallocate the double buffer pixmap/image.
        */
       if (!wi->render) {
-	/*printf("reallocating double buffer\n");*/
-	if (wi->draw_buffer) {
-	  Tk_FreePixmap(wi->dpy, wi->draw_buffer);
-	}
-	wi->draw_buffer = Tk_GetPixmap(wi->dpy, RootWindowOfScreen(wi->screen),
-				       int_width, int_height,
-				       DefaultDepthOfScreen(wi->screen));
+        /*printf("reallocating double buffer\n");*/
+        if (wi->draw_buffer) {
+          Tk_FreePixmap(wi->dpy, wi->draw_buffer);
+        }
+        wi->draw_buffer = Tk_GetPixmap(wi->dpy, RootWindowOfScreen(wi->screen),
+                                       int_width, int_height,
+                                       DefaultDepthOfScreen(wi->screen));
       }
     }
     else {
@@ -7275,12 +7293,12 @@ Event(ClientData client_data,	/* Information about widget. */
   }
   
   /*printf("=============== FIN %s EVENT ==================\n",
-	 event->type == MapNotify ? "MAP":
-	 event->type == Expose? "EXPOSE" :
-	 event->type == ConfigureNotify ? "CONFIGURE" :
-	 event->type == VisibilityNotify ? "VISIBILITY" :
-	 event->type == DestroyNotify ? "DESTROY" :
-	 "??");*/
+         event->type == MapNotify ? "MAP":
+         event->type == Expose? "EXPOSE" :
+         event->type == ConfigureNotify ? "CONFIGURE" :
+         event->type == VisibilityNotify ? "VISIBILITY" :
+         event->type == DestroyNotify ? "DESTROY" :
+         "??");*/
 }
 
 
@@ -7289,42 +7307,42 @@ Event(ClientData client_data,	/* Information about widget. */
  *
  * DoEvent --
  *
- *	Trigger the bindings associated with an event.
+ *      Trigger the bindings associated with an event.
  *
  *----------------------------------------------------------------------
  */
 static void
-DoEvent(ZnWInfo	*wi,
-	XEvent	*event,
-	ZnBool	bind_item, /* Controls whether item bindings will trigger.
-			    * Useful for Enter/Leaves between fields */
-	ZnBool	bind_part) /* Controls whether part bindings will trigger.
-			    * Useful for precise control of Enter/Leaves
-			    * during grabs. */
+DoEvent(ZnWInfo *wi,
+        XEvent  *event,
+        ZnBool  bind_item, /* Controls whether item bindings will trigger.
+                            * Useful for Enter/Leaves between fields */
+        ZnBool  bind_part) /* Controls whether part bindings will trigger.
+                            * Useful for precise control of Enter/Leaves
+                            * during grabs. */
 {
 #define NUM_STATIC 4
-  ClientData		items[NUM_STATIC], *its;
-  static unsigned int	worksize = 128, len, num, num_tags;
-  static char		*workspace = NULL;
-  unsigned int		i, ptr;
-  ClientData		*tag_list = NULL;
-  ZnItem		item;
-  int			part;
+  ClientData            items[NUM_STATIC], *its;
+  static unsigned int   worksize = 128, len, num, num_tags;
+  static char           *workspace = NULL;
+  unsigned int          i, ptr;
+  ClientData            *tag_list = NULL;
+  ZnItem                item;
+  int                   part;
 
-#define BIND_ITEM(test)			\
-  if (bind_item && (test)) {		\
-    its[ptr] = (ClientData) all_uid;	\
-    ptr++;				\
-    for (i = 0; i < num_tags; i++) {	\
-      its[ptr] = tag_list[i];		\
-      ptr++;				\
-    }					\
-    its[ptr] = (ClientData) item;	\
-    ptr++;				\
+#define BIND_ITEM(test)                 \
+  if (bind_item && (test)) {            \
+    its[ptr] = (ClientData) all_uid;    \
+    ptr++;                              \
+    for (i = 0; i < num_tags; i++) {    \
+      its[ptr] = tag_list[i];           \
+      ptr++;                            \
+    }                                   \
+    its[ptr] = (ClientData) item;       \
+    ptr++;                              \
   }
 
   if (wi->binding_table == NULL) {
-    /*printf("no bindings\n");*/
+    //printf("no bindings\n");
     return;
   }
 
@@ -7349,19 +7367,20 @@ DoEvent(ZnWInfo	*wi,
   num_tags = 0;
   its = items;
   bind_part = (bind_part &&
-	       (part != ZN_NO_PART) &&
-	       item->class->IsSensitive(item, part) &&
-	       (wi->current_item->class->num_parts ||
-		wi->current_item->class->GetFieldSet));
+               (part != ZN_NO_PART) &&
+               item->class->IsSensitive(item, part) &&
+               ((wi->current_item != ZN_NO_ITEM) &&
+                (wi->current_item->class->num_parts ||
+                 wi->current_item->class->GetFieldSet)));
 
-  /*printf("type=%s, current=%d, new=%d --> %s, currentp %d, newp %d\n",
-	 event->type==EnterNotify?"<Enter>":
-	 event->type==LeaveNotify?"<Leave>":
-	 event->type==MotionNotify?"<Motion>":"other",
-	 wi->current_item?wi->current_item->id:0,
-	 wi->new_item?wi->new_item->id:0,
-	 bind_item?"bind":"nobind",
-	 wi->current_part, wi->new_part);*/
+  //printf("type=%s, current=%d, new=%d --> %s, currentp %d, newp %d\n",
+    //     event->type==EnterNotify?"<Enter>":
+    //     event->type==LeaveNotify?"<Leave>":
+    //     event->type==MotionNotify?"<Motion>":"other",
+    //     wi->current_item?wi->current_item->id:0,
+    //     wi->new_item?wi->new_item->id:0,
+    //     bind_item?"bind":"nobind",
+    //     wi->current_part, wi->new_part);
   if (bind_item) {
     num += 2;
   }
@@ -7396,8 +7415,8 @@ DoEvent(ZnWInfo	*wi,
     for (i = 0; i < num_tags; i++) {
       len = strlen(tag_list[i])+ TCL_INTEGER_SPACE;
       if (worksize < len) {
-	worksize = len + 10;
-	workspace = ZnRealloc(workspace, len);
+        worksize = len + 10;
+        workspace = ZnRealloc(workspace, len);
       }
       sprintf(workspace, "%s:%d", (char *) tag_list[i], part);
       its[ptr] = (ClientData) Tk_GetUid(workspace);
@@ -7431,36 +7450,36 @@ DoEvent(ZnWInfo	*wi,
  *
  * PickCurrentItem --
  *
- *	Finds the topmost item/field that contains the pointer and mark
- *	it has the current item. Generates Enter/leave events on the
- *	old and new current items/fields has necessary.
+ *      Finds the topmost item/field that contains the pointer and mark
+ *      it has the current item. Generates Enter/leave events on the
+ *      old and new current items/fields has necessary.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	The current item/field may change.  If it does,
- *	then the commands associated with item entry and exit
- *	could do just about anything.  A binding script could
- *	delete the widget, so callers should protect themselves
- *	with Tcl_Preserve and Tcl_Release.
+ *      The current item/field may change.  If it does,
+ *      then the commands associated with item entry and exit
+ *      could do just about anything.  A binding script could
+ *      delete the widget, so callers should protect themselves
+ *      with Tcl_Preserve and Tcl_Release.
  *
  * Note:
- *	See the Bind function's note.
+ *      See the Bind function's note.
  *
  *----------------------------------------------------------------------
  */
 static void
-PickCurrentItem(ZnWInfo	*wi,
-		XEvent	*event)
+PickCurrentItem(ZnWInfo *wi,
+                XEvent  *event)
 {
-  int	 button_down;
+  int    button_down;
   ZnBool enter_item;
   ZnBool grab_release = False;
 
   /*printf("PickCurrent current=%d, new=%d\n",
-	 wi->current_item?wi->current_item->id:0,
-	 wi->new_item?wi->new_item->id:0);*/
+         wi->current_item?wi->current_item->id:0,
+         wi->new_item?wi->new_item->id:0);*/
   /*
    * Check whether or not a button is down.  If so, we'll log entry
    * and exit into and out of the current item, but not entry into
@@ -7528,8 +7547,8 @@ PickCurrentItem(ZnWInfo	*wi,
    */
   if (wi->pick_event.type != LeaveNotify) {
     ZnPickStruct ps;
-    ZnReal	 dist;
-    ZnPoint	 p;
+    ZnReal       dist;
+    ZnPoint      p;
     
     p.x = wi->pick_event.xcrossing.x;
     p.y = wi->pick_event.xcrossing.y;
@@ -7560,8 +7579,8 @@ PickCurrentItem(ZnWInfo	*wi,
   enter_item = ((wi->new_item != wi->current_item) || ISSET(wi->flags, ZN_GRABBED_ITEM));
 
   /*printf("------ PickCurrentItem current: %d %d, new %d %d\n",
-	 wi->current_item==ZN_NO_ITEM?0:wi->current_item->id, wi->current_part,
-	 wi->new_item==ZN_NO_ITEM?0:wi->new_item->id, wi->new_part);*/
+         wi->current_item==ZN_NO_ITEM?0:wi->current_item->id, wi->current_part,
+         wi->new_item==ZN_NO_ITEM?0:wi->new_item->id, wi->new_part);*/
 
   if ((wi->new_item == wi->current_item) &&
       (wi->new_part == wi->current_part) &&
@@ -7599,7 +7618,7 @@ PickCurrentItem(ZnWInfo	*wi,
       event.xcrossing.detail = NotifyAncestor;
       SET(wi->flags, ZN_REPICK_IN_PROGRESS);
       DoEvent(wi, &event,
-	      wi->new_item != wi->current_item, ISCLEAR(wi->flags, ZN_GRABBED_PART));
+              wi->new_item != wi->current_item, ISCLEAR(wi->flags, ZN_GRABBED_PART));
       CLEAR(wi->flags, ZN_REPICK_IN_PROGRESS);
     }
     
@@ -7663,7 +7682,7 @@ PickCurrentItem(ZnWInfo	*wi,
     event.type = EnterNotify;
     event.xcrossing.detail = NotifyAncestor;
     DoEvent(wi, &event,
-	    enter_item, !(grab_release && ISSET(wi->flags, ZN_GRABBED_PART)));
+            enter_item, !(grab_release && ISSET(wi->flags, ZN_GRABBED_PART)));
   }
 }
 
@@ -7673,29 +7692,29 @@ PickCurrentItem(ZnWInfo	*wi,
  *
  * Bind --
  *
- *	This procedure is invoked by the Tk dispatcher to handle
- *	events associated with bindings on items.
+ *      This procedure is invoked by the Tk dispatcher to handle
+ *      events associated with bindings on items.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	Depends on the command invoked as part of the binding
- *	(if there was any).
+ *      Depends on the command invoked as part of the binding
+ *      (if there was any).
  *
  * Note:
- *	This has been taken as is from the Tk canvas. It might not
- *	not be fully adequate for the purpose. But at least this
- *	provides two benefits: a/ It is believe to be correct and
- *	b/ users are accustomed to its behavior.
+ *      This has been taken as is from the Tk canvas. It might not
+ *      not be fully adequate for the purpose. But at least this
+ *      provides two benefits: a/ It is believe to be correct and
+ *      b/ users are accustomed to its behavior.
  *
  *----------------------------------------------------------------------
  */
 static void
-Bind(ClientData	client_data,	/* Information about widget. */
-     XEvent	*event)		/* Information about event. */
+Bind(ClientData client_data,    /* Information about widget. */
+     XEvent     *event)         /* Information about event. */
 {
-  ZnWInfo	*wi = (ZnWInfo *) client_data;
+  ZnWInfo       *wi = (ZnWInfo *) client_data;
   
   Tcl_Preserve((ClientData) wi);
 
@@ -7745,7 +7764,7 @@ Bind(ClientData	client_data,	/* Information about widget. */
       PickCurrentItem(wi, event);
       wi->state ^= mask;
       if (wi->current_item != ZN_NO_ITEM) {
-	DoEvent(wi, event, True, True);
+        DoEvent(wi, event, True, True);
       }
     }
     else {
@@ -7795,23 +7814,23 @@ done:
  *
  * LostSelection --
  *
- *	This procedure is called back by Tk when the selection is
- *	grabbed away from a zinc widget.
+ *      This procedure is called back by Tk when the selection is
+ *      grabbed away from a zinc widget.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	The existing selection is unhighlighted, and the window is
- *	marked as not containing a selection.
+ *      The existing selection is unhighlighted, and the window is
+ *      marked as not containing a selection.
  *
  *----------------------------------------------------------------------
  */
 static void
-LostSelection(ClientData	client_data)
+LostSelection(ClientData        client_data)
 {
-  ZnWInfo	*wi = (ZnWInfo *) client_data;
-  ZnTextInfo	*ti = &wi->text_info;
+  ZnWInfo       *wi = (ZnWInfo *) client_data;
+  ZnTextInfo    *ti = &wi->text_info;
   
   if (ti->sel_item != ZN_NO_ITEM) {
     ZnITEM.Invalidate(ti->sel_item, ZN_DRAW_FLAG);
@@ -7826,26 +7845,26 @@ LostSelection(ClientData	client_data)
  *
  * SelectTo --
  *
- *	Modify the selection by moving its un-anchored end.  This could
- *	make the selection either larger or smaller.
+ *      Modify the selection by moving its un-anchored end.  This could
+ *      make the selection either larger or smaller.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	The selection changes.
+ *      The selection changes.
  *
  *----------------------------------------------------------------------
  */
 static void
-SelectTo(ZnItem	item,
-	 int	field,
-	 int	index)
+SelectTo(ZnItem item,
+         int    field,
+         int    index)
 {
-  ZnWInfo	*wi = item->wi;
-  ZnTextInfo	*ti = &wi->text_info;
-  int		old_first, old_last, old_field;
-  ZnItem	old_sel_item;
+  ZnWInfo       *wi = item->wi;
+  ZnTextInfo    *ti = &wi->text_info;
+  int           old_first, old_last, old_field;
+  ZnItem        old_sel_item;
 
   old_first = ti->sel_first;
   old_last = ti->sel_last;
@@ -7890,33 +7909,33 @@ SelectTo(ZnItem	item,
  *
  * FetchSelection --
  *
- *	This procedure is invoked by Tk to return part or all of
- *	the selection, when the selection is in a zinc widget.
- *	This procedure always returns the selection as a STRING.
+ *      This procedure is invoked by Tk to return part or all of
+ *      the selection, when the selection is in a zinc widget.
+ *      This procedure always returns the selection as a STRING.
  *
  * Results:
- *	The return value is the number of non-NULL bytes stored
- *	at buffer.  Buffer is filled (or partially filled) with a
- *	NULL-terminated string containing part or all of the selection,
- *	as given by offset and maxBytes.
+ *      The return value is the number of non-NULL bytes stored
+ *      at buffer.  Buffer is filled (or partially filled) with a
+ *      NULL-terminated string containing part or all of the selection,
+ *      as given by offset and maxBytes.
  *
  * Side effects:
- *	None.
+ *      None.
  *
  *--------------------------------------------------------------
  */
 static int
-FetchSelection( ClientData	client_data,
-		int		offset,		/* Offset within selection of first
-						 * character to be returned. */
-		char		*buffer,	/* Location in which to place
-						 * selection. */
-		int		max_bytes)	/* Maximum number of bytes to place
-						 * at buffer, not including terminating
-						 * NULL character. */
+FetchSelection( ClientData      client_data,
+                int             offset,         /* Offset within selection of first
+                                                 * character to be returned. */
+                char            *buffer,        /* Location in which to place
+                                                 * selection. */
+                int             max_bytes)      /* Maximum number of bytes to place
+                                                 * at buffer, not including terminating
+                                                 * NULL character. */
 {
-  ZnWInfo	*wi = (ZnWInfo *) client_data;
-  ZnTextInfo	*ti = &wi->text_info;
+  ZnWInfo       *wi = (ZnWInfo *) client_data;
+  ZnTextInfo    *ti = &wi->text_info;
   
   if (ti->sel_item == ZN_NO_ITEM) {
     return -1;
@@ -7925,7 +7944,7 @@ FetchSelection( ClientData	client_data,
     return -1;
   }
   return (*ti->sel_item->class->Selection)(ti->sel_item, ti->sel_field,
-					   offset, buffer, max_bytes);
+                                           offset, buffer, max_bytes);
 }
 
 
@@ -7934,22 +7953,22 @@ FetchSelection( ClientData	client_data,
  *
  * CmdDeleted --
  *
- *	This procedure is invoked when a widget command is deleted. If
- *	the widget isn't already in the process of being destroyed,
- *	this command destroys it.
+ *      This procedure is invoked when a widget command is deleted. If
+ *      the widget isn't already in the process of being destroyed,
+ *      this command destroys it.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	The widget is destroyed.
+ *      The widget is destroyed.
  *
  *----------------------------------------------------------------------
  */
 static void
 CmdDeleted(ClientData client_data) /* Pointer to widget record for widget. */
 {
-  ZnWInfo	*wi = (ZnWInfo *) client_data;
+  ZnWInfo       *wi = (ZnWInfo *) client_data;
 
   if (wi->win != NULL) {
     Tk_DestroyWindow(wi->win);
@@ -7963,29 +7982,29 @@ CmdDeleted(ClientData client_data) /* Pointer to widget record for widget. */
  *
  * Destroy --
  *
- *	This procedure is invoked by Tk_EventuallyFree or Tk_Release
- *	to clean up the internal structure of the widget at a safe time
- *	(when no-one is using it anymore).
+ *      This procedure is invoked by Tk_EventuallyFree or Tk_Release
+ *      to clean up the internal structure of the widget at a safe time
+ *      (when no-one is using it anymore).
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	Everything associated with the widget is freed up.
+ *      Everything associated with the widget is freed up.
  *
  *----------------------------------------------------------------------
  */
 static void
-Destroy(char *mem_ptr)		/* Info about the widget. */
+Destroy(char *mem_ptr)          /* Info about the widget. */
 {
-  ZnWInfo	*wi = (ZnWInfo *) mem_ptr;
-  unsigned int	num;
+  ZnWInfo       *wi = (ZnWInfo *) mem_ptr;
+  unsigned int  num;
   Tcl_HashSearch search;
-  Tcl_HashEntry	*entry;
+  Tcl_HashEntry *entry;
 #ifdef GL
-  unsigned int	i;
+  unsigned int  i;
   ZnGLContextEntry *ce;
-  ZnWInfo	**wip;
+  ZnWInfo       **wip;
 #endif
 
   /*printf("Destroy begining\n");*/
@@ -7998,7 +8017,7 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
   /*
    * Unregister form the overlap manager.
    */
-#ifdef OM
+#ifdef ATC
   if (wi->om_group != ZN_NO_ITEM) {
     OmUnregister((void *) wi);
   }
@@ -8056,6 +8075,7 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
     wi->tile = ZnUnspecifiedImage;
   }
 
+#ifdef ATC
   /* Free the symbols */
   if (wi->map_distance_symbol != ZnUnspecifiedImage) {
     ZnFreeImage(wi->map_distance_symbol, NULL, NULL);
@@ -8065,6 +8085,7 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
     ZnFreeImage(wi->track_symbol, NULL, NULL);
     wi->track_symbol = ZnUnspecifiedImage;
   }
+#endif
 
   /* Free the double buffer pixmap/image */
   if (wi->draw_buffer) {
@@ -8104,10 +8125,12 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
     ZnFreeTexFont(wi->font_tfi);
     wi->font_tfi = NULL;
   }
+#ifdef ATC
   if (wi->map_font_tfi) {
     ZnFreeTexFont(wi->map_font_tfi);
     wi->map_font_tfi = NULL;
   }
+#endif
   /*
    * Remove the widget from the context list and
    * free the context if no more widgets are active.
@@ -8118,7 +8141,7 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
     num = ZnListSize(ce->widgets);
     for (i = 0; i < num; i++, wip++) {
       if (*wip == wi) {
-	ZnListDelete(ce->widgets, i);
+        ZnListDelete(ce->widgets, i);
       }
     }
     /*
@@ -8132,16 +8155,16 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
       ZnGLContextEntry *prev, *next;
       /*printf("Freeing a GL context\n");*/
       if (ce == gl_contexts) {
-	gl_contexts = ce->next;
+        gl_contexts = ce->next;
       }
       else {
-	for (prev = gl_contexts, next = gl_contexts->next; next;
-	     prev = next, next = next->next) {
-	  if (next == ce) {
-	    prev->next = next->next;
-	    break;
-	  }
-	}
+        for (prev = gl_contexts, next = gl_contexts->next; next;
+             prev = next, next = next->next) {
+          if (next == ce) {
+            prev->next = next->next;
+            break;
+          }
+        }
       }
 #ifdef _WIN32
       ZnGLReleaseContext(ce);
@@ -8192,8 +8215,8 @@ Destroy(char *mem_ptr)		/* Info about the widget. */
  **********************************************************************************
  */
 void
-ZnDamage(ZnWInfo	*wi,
-	 ZnBBox		*damage)
+ZnDamage(ZnWInfo        *wi,
+         ZnBBox         *damage)
 {
   if ((damage == NULL) || ZnIsEmptyBBox(damage)) {
     return;
@@ -8216,8 +8239,8 @@ ZnDamage(ZnWInfo	*wi,
     wi->damaged_area.corner.y = MAX(wi->damaged_area.corner.y, damage->corner.y);
   }
   /*printf("damaged area: %g %g %g %g\n", wi->damaged_area.orig.x,
-	 wi->damaged_area.orig.y, wi->damaged_area.corner.x,
-	 wi->damaged_area.corner.y);*/
+         wi->damaged_area.orig.y, wi->damaged_area.corner.x,
+         wi->damaged_area.corner.y);*/
 }
 
 void
@@ -8232,9 +8255,9 @@ ZnDamageAll(ZnWInfo *wi)
 }
 
 static void
-ClampDamageArea(ZnWInfo	*wi)
+ClampDamageArea(ZnWInfo *wi)
 {
-  int	width, height;
+  int   width, height;
 
   if (wi->damaged_area.orig.x < wi->inset) {
     wi->damaged_area.orig.x = wi->inset;
@@ -8273,17 +8296,17 @@ ClampDamageArea(ZnWInfo	*wi)
  **********************************************************************************
  */
 static void
-Update(ZnWInfo	*wi)
+Update(ZnWInfo  *wi)
 {
   /*
    * Give the overlap manager a chance to do its work.
    */
-#ifdef OM
+#ifdef ATC
   if ((wi->om_group != ZN_NO_ITEM) && ZnGroupCallOm(wi->om_group)) {  
     ZnPoint scale={1.0,1.0};
     if (wi->om_group->transfo) {
       ZnTransfoDecompose(wi->om_group->transfo, &scale,
-			    NULL, NULL, NULL);
+                            NULL, NULL, NULL);
     }
     OmProcessOverlap((void *) wi, wi->width, wi->height, scale.x);
     ZnGroupSetCallOm(wi->om_group, False);
@@ -8304,17 +8327,17 @@ Update(ZnWInfo	*wi)
  **********************************************************************************
  */
 static void
-Repair(ZnWInfo	*wi)
+Repair(ZnWInfo  *wi)
 {
-  XGCValues	values;
-  ZnPoint	p[5];
-  ZnTriStrip	tristrip;
+  XGCValues     values;
+  ZnPoint       p[5];
+  ZnTriStrip    tristrip;
 #ifdef GL
-  XColor	*color;
+  XColor        *color;
   ZnGLContextEntry *ce;
 #endif
-  int		int_width = Tk_Width(wi->win);
-  int		int_height = Tk_Height(wi->win);
+  int           int_width = Tk_Width(wi->win);
+  int           int_height = Tk_Height(wi->win);
 
   /*SET(wi->flags, ZN_CONFIGURE_EVENT);*/
   if (wi->render) {
@@ -8333,7 +8356,7 @@ Repair(ZnWInfo	*wi)
        */
       ZnAddBBoxToBBox(&wi->damaged_area, &wi->exposed_area);
       if (ZnIsEmptyBBox(&wi->damaged_area)) {
-	return;
+        return;
       }
     }
 #endif
@@ -8353,7 +8376,7 @@ Repair(ZnWInfo	*wi)
     glClearStencil(0);    
     color = ZnGetGradientColor(wi->back_color, 0.0, NULL);
     glClearColor((GLfloat) color->red/65536, (GLfloat) color->green/65536,
-		 (GLfloat) color->blue/65536, 0.0);
+                 (GLfloat) color->blue/65536, 0.0);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -8380,9 +8403,9 @@ Repair(ZnWInfo	*wi)
       wi->damaged_area.corner.x = ZnNearestInt(wi->damaged_area.corner.x);
       wi->damaged_area.corner.y = ZnNearestInt(wi->damaged_area.corner.y);
       glScissor((int) wi->damaged_area.orig.x,
-		int_height - (int) wi->damaged_area.corner.y,
-		(int) (wi->damaged_area.corner.x - wi->damaged_area.orig.x),
-		(int) (wi->damaged_area.corner.y - wi->damaged_area.orig.y));
+                int_height - (int) wi->damaged_area.corner.y,
+                (int) (wi->damaged_area.corner.x - wi->damaged_area.orig.x),
+                (int) (wi->damaged_area.corner.y - wi->damaged_area.orig.y));
     }
     else {
       glDisable(GL_SCISSOR_TEST);
@@ -8424,55 +8447,55 @@ Repair(ZnWInfo	*wi)
 
 #ifdef GL_DAMAGE
       if (ISCLEAR(wi->flags, ZN_CONFIGURE_EVENT)) {
-	glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_SCISSOR_TEST);
       }
 #endif
       if (wi->highlight_width > 0) {
-	color = ZnGetGradientColor(ISSET(wi->flags, ZN_GOT_FOCUS)?wi->highlight_color:
-				   wi->highlight_bg_color, 0.0, &alpha);
-	alpha = ZnComposeAlpha(alpha, 100);
-	glColor4us(color->red, color->green, color->blue, alpha);
-	
-	glBegin(GL_QUAD_STRIP);
-	glVertex2d(0.0, 0.0);
-	glVertex2i(wi->highlight_width, wi->highlight_width);
-	glVertex2i(int_width, 0);
-	glVertex2i(int_width - wi->highlight_width, wi->highlight_width);
-	glVertex2i(int_width, int_height);
-	glVertex2i(int_width - wi->highlight_width, int_height - wi->highlight_width);
-	glVertex2i(0, int_height);
-	glVertex2i(wi->highlight_width, int_height - wi->highlight_width);
-	glVertex2i(0, 0);
-	glVertex2i(wi->highlight_width, wi->highlight_width);
-	glEnd();
+        color = ZnGetGradientColor(ISSET(wi->flags, ZN_GOT_FOCUS)?wi->highlight_color:
+                                   wi->highlight_bg_color, 0.0, &alpha);
+        alpha = ZnComposeAlpha(alpha, 100);
+        glColor4us(color->red, color->green, color->blue, alpha);
+        
+        glBegin(GL_QUAD_STRIP);
+        glVertex2d(0.0, 0.0);
+        glVertex2i(wi->highlight_width, wi->highlight_width);
+        glVertex2i(int_width, 0);
+        glVertex2i(int_width - wi->highlight_width, wi->highlight_width);
+        glVertex2i(int_width, int_height);
+        glVertex2i(int_width - wi->highlight_width, int_height - wi->highlight_width);
+        glVertex2i(0, int_height);
+        glVertex2i(wi->highlight_width, int_height - wi->highlight_width);
+        glVertex2i(0, 0);
+        glVertex2i(wi->highlight_width, wi->highlight_width);
+        glEnd();
       }
       if (wi->border_width > 0) {
-	if (wi->relief != ZN_RELIEF_FLAT) {
-	  p[4].x = p[4].y = p[3].y = p[1].x = wi->highlight_width;
-	  p[0] = p[4];
-	  p[3].x = p[2].x = int_width - wi->highlight_width;
-	  p[2].y = p[1].y = int_height - wi->highlight_width;
-	  ZnRenderPolygonRelief(wi, wi->relief, wi->relief_grad,
-				False, p, 5, (ZnReal) wi->border_width);
-	}
-	else {
-	  color = ZnGetGradientColor(wi->back_color, 0.0, &alpha);
-	  alpha = ZnComposeAlpha(alpha, 100);
-	  glColor4us(color->red, color->green, color->blue, alpha);
-	  
-	  glBegin(GL_QUAD_STRIP);
-	  glVertex2d(0.0, 0.0);
-	  glVertex2i(wi->highlight_width, wi->highlight_width);
-	  glVertex2i(int_width, 0);
-	  glVertex2i(int_width - wi->highlight_width, wi->highlight_width);
-	  glVertex2i(int_width, int_height);
-	  glVertex2i(int_width - wi->highlight_width, int_height - wi->highlight_width);
-	  glVertex2i(0, int_height);
-	  glVertex2i(wi->highlight_width, int_height - wi->highlight_width);
-	  glVertex2i(0, 0);
-	  glVertex2i(wi->highlight_width, wi->highlight_width);
-	  glEnd();
-	}
+        if (wi->relief != ZN_RELIEF_FLAT) {
+          p[4].x = p[4].y = p[3].y = p[1].x = wi->highlight_width;
+          p[0] = p[4];
+          p[3].x = p[2].x = int_width - wi->highlight_width;
+          p[2].y = p[1].y = int_height - wi->highlight_width;
+          ZnRenderPolygonRelief(wi, wi->relief, wi->relief_grad,
+                                False, p, 5, (ZnReal) wi->border_width);
+        }
+        else {
+          color = ZnGetGradientColor(wi->back_color, 0.0, &alpha);
+          alpha = ZnComposeAlpha(alpha, 100);
+          glColor4us(color->red, color->green, color->blue, alpha);
+          
+          glBegin(GL_QUAD_STRIP);
+          glVertex2d(0.0, 0.0);
+          glVertex2i(wi->highlight_width, wi->highlight_width);
+          glVertex2i(int_width, 0);
+          glVertex2i(int_width - wi->highlight_width, wi->highlight_width);
+          glVertex2i(int_width, int_height);
+          glVertex2i(int_width - wi->highlight_width, int_height - wi->highlight_width);
+          glVertex2i(0, int_height);
+          glVertex2i(wi->highlight_width, int_height - wi->highlight_width);
+          glVertex2i(0, 0);
+          glVertex2i(wi->highlight_width, wi->highlight_width);
+          glEnd();
+        }
       }
 
       CLEAR(wi->flags, ZN_CONFIGURE_EVENT);
@@ -8502,8 +8525,8 @@ Repair(ZnWInfo	*wi)
 #endif
   }
   else {
-    XRectangle	r, rs[4];
-    ZnBBox	merge;
+    XRectangle  r, rs[4];
+    ZnBBox      merge;
 
     ClampDamageArea(wi);
     /*
@@ -8528,17 +8551,17 @@ m     * Merge the damaged area with the exposed area.
       
       /* Fill the background of the double buffer pixmap. */
       if (wi->tile == ZnUnspecifiedImage) {
-	values.foreground = ZnGetGradientPixel(wi->back_color, 0.0);
-	values.fill_style = FillSolid;
-	XChangeGC(wi->dpy, wi->gc, GCFillStyle|GCForeground, &values);
+        values.foreground = ZnGetGradientPixel(wi->back_color, 0.0);
+        values.fill_style = FillSolid;
+        XChangeGC(wi->dpy, wi->gc, GCFillStyle|GCForeground, &values);
       }
       else {
-	values.fill_style = FillTiled;
-	values.tile = ZnImagePixmap(wi->tile, wi->win);
-	values.ts_x_origin = values.ts_y_origin = 0;
-	XChangeGC(wi->dpy, wi->gc,
-		  GCFillStyle|GCTile|GCTileStipXOrigin|GCTileStipYOrigin,
-		  &values);
+        values.fill_style = FillTiled;
+        values.tile = ZnImagePixmap(wi->tile, wi->win);
+        values.ts_x_origin = values.ts_y_origin = 0;
+        XChangeGC(wi->dpy, wi->gc,
+                  GCFillStyle|GCTile|GCTileStipXOrigin|GCTileStipYOrigin,
+                  &values);
       }
       XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc, r.x, r.y, r.width, r.height);
       
@@ -8556,8 +8579,8 @@ m     * Merge the damaged area with the exposed area.
       merge.corner.y = MIN(merge.corner.y, int_height-wi->inset);
       ZnBBox2XRect(&merge, &r);
       XCopyArea(wi->dpy,
-		wi->draw_buffer, Tk_WindowId(wi->win), wi->gc,
-		r.x, r.y, r.width, r.height, r.x, r.y);
+                wi->draw_buffer, Tk_WindowId(wi->win), wi->gc,
+                r.x, r.y, r.width, r.height, r.x, r.y);
     }
     
     /*
@@ -8569,37 +8592,37 @@ m     * Merge the damaged area with the exposed area.
       save = wi->draw_buffer;
       wi->draw_buffer = Tk_WindowId(wi->win);
       if (wi->relief_grad != ZN_RELIEF_FLAT) {
-	r.x = r.y = wi->highlight_width;
-	r.width = int_width - 2*wi->highlight_width;
-	r.height = int_height - 2*wi->highlight_width;
-	ZnDrawRectangleRelief(wi, wi->relief, wi->relief_grad, &r,
-			      (ZnDim) wi->border_width);
+        r.x = r.y = wi->highlight_width;
+        r.width = int_width - 2*wi->highlight_width;
+        r.height = int_height - 2*wi->highlight_width;
+        ZnDrawRectangleRelief(wi, wi->relief, wi->relief_grad, &r,
+                              (ZnDim) wi->border_width);
       }
       else {
-	XSetForeground(wi->dpy, wi->gc, ZnGetGradientPixel(wi->back_color, 0.0));
-	XSetFillStyle(wi->dpy, wi->gc, FillSolid);
-	rs[0].x = rs[0].y = wi->highlight_width;
-	rs[0].width = int_width - 2*wi->highlight_width;
-	rs[0].height = wi->border_width;
-	rs[1].x = int_width - wi->highlight_width - wi->border_width;
-	rs[1].y = 0;
-	rs[1].width = wi->border_width;
-	rs[1].height = int_height - 2*wi->highlight_width;
-	rs[2].x = 0;
-	rs[2].y = int_height - wi->highlight_width - wi->border_width;
-	rs[2].width = rs[0].width;
-	rs[2].height = wi->border_width;
-	rs[3].x = rs[3].y = wi->highlight_width;
-	rs[3].width = wi->border_width;
-	rs[3].height = rs[1].height;
-	XFillRectangles(wi->dpy, Tk_WindowId(wi->win), wi->gc, rs, 4);
+        XSetForeground(wi->dpy, wi->gc, ZnGetGradientPixel(wi->back_color, 0.0));
+        XSetFillStyle(wi->dpy, wi->gc, FillSolid);
+        rs[0].x = rs[0].y = wi->highlight_width;
+        rs[0].width = int_width - 2*wi->highlight_width;
+        rs[0].height = wi->border_width;
+        rs[1].x = int_width - wi->highlight_width - wi->border_width;
+        rs[1].y = 0;
+        rs[1].width = wi->border_width;
+        rs[1].height = int_height - 2*wi->highlight_width;
+        rs[2].x = 0;
+        rs[2].y = int_height - wi->highlight_width - wi->border_width;
+        rs[2].width = rs[0].width;
+        rs[2].height = wi->border_width;
+        rs[3].x = rs[3].y = wi->highlight_width;
+        rs[3].width = wi->border_width;
+        rs[3].height = rs[1].height;
+        XFillRectangles(wi->dpy, Tk_WindowId(wi->win), wi->gc, rs, 4);
       }
       wi->draw_buffer = save;
     }
     if (wi->highlight_width > 0) {
       XSetForeground(wi->dpy, wi->gc,
-		     ZnGetGradientPixel(ISSET(wi->flags, ZN_GOT_FOCUS)?wi->highlight_color:
-					wi->highlight_bg_color, 0.0));
+                     ZnGetGradientPixel(ISSET(wi->flags, ZN_GOT_FOCUS)?wi->highlight_color:
+                                        wi->highlight_bg_color, 0.0));
       XSetFillStyle(wi->dpy, wi->gc, FillSolid);
       rs[0].x = rs[0].y = 0;
       rs[0].width = int_width;
@@ -8626,23 +8649,23 @@ m     * Merge the damaged area with the exposed area.
  *
  * Redisplay --
  *
- *	This procedure redraws the contents of a Zinc window.
- *	It is invoked as a do-when-idle handler, so it only runs
- *	when there's nothing else for the application to do.
+ *      This procedure redraws the contents of a Zinc window.
+ *      It is invoked as a do-when-idle handler, so it only runs
+ *      when there's nothing else for the application to do.
  *
  * Results:
- *	None.
+ *      None.
  *
  * Side effects:
- *	Information appears on the screen.
+ *      Information appears on the screen.
  *
  *----------------------------------------------------------------------
  */
 
 static void
-Redisplay(ClientData client_data)	/* Information about the widget. */
+Redisplay(ClientData client_data)       /* Information about the widget. */
 {
-  ZnWInfo	*wi = (ZnWInfo *) client_data;
+  ZnWInfo       *wi = (ZnWInfo *) client_data;
   
   CLEAR(wi->flags, ZN_UPDATE_PENDING);
   if (ISCLEAR(wi->flags, ZN_REALIZED) || !Tk_IsMapped(wi->win)) {
@@ -8672,29 +8695,29 @@ Redisplay(ClientData client_data)	/* Information about the widget. */
      * for Tcl_Preserve/Tcl_Release.
      */
     if (ISSET(wi->flags, ZN_INTERNAL_NEED_REPICK)) {
-      Tk_Window	tkwin;
+      Tk_Window tkwin;
 
       if (wi->follow_pointer) {
-	Tcl_Preserve((ClientData) wi);
-	CLEAR(wi->flags, ZN_INTERNAL_NEED_REPICK);
-	PickCurrentItem(wi, &wi->pick_event);
-	tkwin = wi->win;
-	Tcl_Release((ClientData) wi);
-	if (tkwin == NULL) {
-	  return;
-	}
+        Tcl_Preserve((ClientData) wi);
+        CLEAR(wi->flags, ZN_INTERNAL_NEED_REPICK);
+        PickCurrentItem(wi, &wi->pick_event);
+        tkwin = wi->win;
+        Tcl_Release((ClientData) wi);
+        if (tkwin == NULL) {
+          return;
+        }
       }
       else if (ISCLEAR(wi->top_group->inv_flags, ZN_COORDS_FLAG) &&
-	       ISCLEAR(wi->top_group->inv_flags, ZN_TRANSFO_FLAG)) {
-	/* Don't repick now but escape the loop if
-	 * the geometry is updated. */
-	break;
+               ISCLEAR(wi->top_group->inv_flags, ZN_TRANSFO_FLAG)) {
+        /* Don't repick now but escape the loop if
+         * the geometry is updated. */
+        break;
       }
     }
   }
   while (ISSET(wi->top_group->inv_flags, ZN_COORDS_FLAG) ||
-	 ISSET(wi->top_group->inv_flags, ZN_TRANSFO_FLAG) ||
-	 ISSET(wi->flags, ZN_INTERNAL_NEED_REPICK));
+         ISSET(wi->top_group->inv_flags, ZN_TRANSFO_FLAG) ||
+         ISSET(wi->flags, ZN_INTERNAL_NEED_REPICK));
   
   /*
    * Repair the scene where it is no longer up to date,
@@ -8720,68 +8743,72 @@ Redisplay(ClientData client_data)	/* Information about the widget. */
   }
 }
 
-static void
-ZnTessBegin(GLenum	type,
-	    void	*data)
+#ifndef _WIN32
+#define CALLBACK
+#endif
+
+static void CALLBACK
+ZnTessBegin(GLenum      type,
+            void        *data)
 {
-  ZnPoly	*outlines = data;
-  ZnTriStrip	*tristrips = data;
+  ZnPoly        *outlines = data;
+  ZnTriStrip    *tristrips = data;
 
   ZnListEmpty(ZnWorkPoints);
   ZnTesselator.type = type;
   if (type == GL_LINE_LOOP) {
     outlines->num_contours++;
     outlines->contours = ZnRealloc(outlines->contours,
-				   outlines->num_contours * sizeof(ZnContour));
+                                   outlines->num_contours * sizeof(ZnContour));
   }
   else {
     tristrips->num_strips++;
     tristrips->strips = ZnRealloc(tristrips->strips,
-				  tristrips->num_strips * sizeof(ZnStrip));
+                                  tristrips->num_strips * sizeof(ZnStrip));
     tristrips->strips[tristrips->num_strips-1].fan = (type==GL_TRIANGLE_FAN);
   }
-  /*printf("Début de fragment de type: %s\n",
-	 (type == GL_TRIANGLE_FAN) ? "FAN" : 
-	 (type == GL_TRIANGLE_STRIP) ? "STRIP" :
-	 (type == GL_TRIANGLES) ? "TRIANGLES" :
-	 (type == GL_LINE_LOOP) ? "LINE LOOP" : "");*/
+  //printf("Début de fragment de type: %s\n",
+         //(type == GL_TRIANGLE_FAN) ? "FAN" : 
+         //(type == GL_TRIANGLE_STRIP) ? "STRIP" :
+         //(type == GL_TRIANGLES) ? "TRIANGLES" :
+         //(type == GL_LINE_LOOP) ? "LINE LOOP" : "");
 }
 
-static void
-ZnTessVertex(void	*vertex_data,
-	     void	*data)
+static void CALLBACK
+ZnTessVertex(void       *vertex_data,
+             void       *data)
 {
-  ZnTriStrip	*tristrips = data;
-  ZnPoint	p;
-  int		size;
+  ZnTriStrip    *tristrips = data;
+  ZnPoint       p;
+  int           size;
 
   p.x = ((GLdouble *) vertex_data)[0];
   p.y = ((GLdouble *) vertex_data)[1];
-  /*printf("Sommet en %g %g\n", p.x, p.y);*/
+  //printf("Sommet en %g %g\n", p.x, p.y);
   size = ZnListSize(ZnWorkPoints);
   if ((ZnTesselator.type == GL_TRIANGLES) && (size == 3)) {
     tristrips->strips[tristrips->num_strips-1].num_points = size;
     tristrips->strips[tristrips->num_strips-1].points = ZnMalloc(size * sizeof(ZnPoint));
     memcpy(tristrips->strips[tristrips->num_strips-1].points,
-	   ZnListArray(ZnWorkPoints), size * sizeof(ZnPoint));
-    /*printf("Fin de fragment intermediaire %d, num points: %d\n", tristrips->num_strips-1, size);*/
+           ZnListArray(ZnWorkPoints), size * sizeof(ZnPoint));
+    //printf("Fin de fragment intermediaire %d, num points: %d\n", tristrips->num_strips-1, size);
     /* Allocate a new fragment */
     ZnListEmpty(ZnWorkPoints);
     tristrips->num_strips++;
     tristrips->strips = ZnRealloc(tristrips->strips,
-				    tristrips->num_strips * sizeof(ZnStrip));
+                                    tristrips->num_strips * sizeof(ZnStrip));
     tristrips->strips[tristrips->num_strips-1].fan = False;
   }
   ZnListAdd(ZnWorkPoints, &p, ZnListTail);
 }
 
-static void
-ZnTessEnd(void	*data)
+static void CALLBACK
+ZnTessEnd(void  *data)
 {
-  ZnPoly	*outlines = data;
-  ZnTriStrip	*tristrips = data;
-  unsigned int	size = ZnListSize(ZnWorkPoints);
-  unsigned int	num;
+  ZnPoly        *outlines = data;
+  ZnTriStrip    *tristrips = data;
+  unsigned int  size = ZnListSize(ZnWorkPoints);
+  unsigned int  num;
 
   if (ZnTesselator.type == GL_LINE_LOOP) {
     /* Add the last point to close the outline */
@@ -8790,7 +8817,7 @@ ZnTessEnd(void	*data)
     outlines->contours[num-1].num_points = size;
     outlines->contours[num-1].points = ZnMalloc(size * sizeof(ZnPoint));
     memcpy(outlines->contours[num-1].points,
-	   ZnListArray(ZnWorkPoints), size * sizeof(ZnPoint));
+           ZnListArray(ZnWorkPoints), size * sizeof(ZnPoint));
     outlines->contours[num-1].points[size-1] = outlines->contours[num-1].points[0];
     outlines->contours[num-1].cw = !ZnTestCCW(outlines->contours[num-1].points, size);
   }
@@ -8799,19 +8826,19 @@ ZnTessEnd(void	*data)
     tristrips->strips[num-1].num_points = size;
     tristrips->strips[num-1].points = ZnMalloc(size * sizeof(ZnPoint));
     memcpy(tristrips->strips[num-1].points,
-	   ZnListArray(ZnWorkPoints), size * sizeof(ZnPoint));
+           ZnListArray(ZnWorkPoints), size * sizeof(ZnPoint));
   }
-  /*printf("Fin de fragment %d, num points: %d\n", num, size);*/
+  //printf("Fin de fragment %d, num points: %d\n", num, size);
 }
 
-static void
-ZnTessCombine(GLdouble	coords[3],
-	      void	*vertex_data[4] __unused,
-	      GLfloat	weight[4] __unused,
-	      void	**out_data,
-	      void	*data __unused)
+static void CALLBACK
+ZnTessCombine(GLdouble  coords[3],
+              void      *vertex_data[4],
+              GLfloat   weight[4],
+              void      **out_data,
+              void      *data)
 {
-  ZnCombineData	*cdata;
+  ZnCombineData *cdata;
   
   cdata = ZnMalloc(sizeof(ZnCombineData));
   cdata->v[0] = coords[0];
@@ -8819,13 +8846,14 @@ ZnTessCombine(GLdouble	coords[3],
   cdata->next = ZnTesselator.combine_list;
   ZnTesselator.combine_list = cdata;
   *out_data = &cdata->v;
-  /*printf("Création d'un nouveau sommet en %g %g\n",
-    cdata->v[0], cdata->v[1]);*/
+        ZnTesselator.combine_length++;
+  //printf("Création d'un nouveau sommet en %g %g\n",
+    //cdata->v[0], cdata->v[1]);
 }
 
-static void
-ZnTessError(GLenum	errno,
-	    void	*data __unused)
+static void CALLBACK
+ZnTessError(GLenum      errno,
+            void        *data)
 {
   fprintf(stderr, "Tesselation error in curve item: %d\n", errno);
 }
@@ -8833,9 +8861,9 @@ ZnTessError(GLenum	errno,
 
 static void
 InitZinc(Tcl_Interp *interp) {
-  static ZnBool	inited = False;
-  unsigned int	i, x, y, bit;
-  char		name[TCL_INTEGER_SPACE + 20];
+  static ZnBool inited = False;
+  unsigned int  i, x, y, bit;
+  char          name[TCL_INTEGER_SPACE + 20];
   
   if (inited) {
     return;
@@ -8847,25 +8875,25 @@ InitZinc(Tcl_Interp *interp) {
   for (i = 0; i < sizeof(SYMBOLS_BITS)/(SYMBOL_WIDTH*SYMBOL_HEIGHT/8); i++) {
     sprintf(name, "AtcSymbol%d", i+1);
     Tk_DefineBitmap(interp, Tk_GetUid(name),
-		    SYMBOLS_BITS[i], SYMBOL_WIDTH, SYMBOL_HEIGHT);
+                    SYMBOLS_BITS[i], SYMBOL_WIDTH, SYMBOL_HEIGHT);
   }
   
   for (i = 0; i < ZN_NUM_ALPHA_STEPS; i++) {
     for (y = 0; y < 4; y++) {
       bitmaps[i][y][0] = 0;
       for (x = 0; x < 4; x++) {
-	/*
-	 * Use the dither4x4 matrix to determine if this bit is on
-	 */
-	bit = (i >= dither4x4[y][x]) ? 1 : 0;
-	/*
-	 * set the bit in the array used to make the X Bitmap
-	 * mirror the pattern in x & y to make an 8x8 bitmap.
-	 */
-	if (bit) {
-	  bitmaps[i][y][0] |= (1 << x);
-	  bitmaps[i][y][0] |= (1 << (4 + x));
-	} 
+        /*
+         * Use the dither4x4 matrix to determine if this bit is on
+         */
+        bit = (i >= dither4x4[y][x]) ? 1 : 0;
+        /*
+         * set the bit in the array used to make the X Bitmap
+         * mirror the pattern in x & y to make an 8x8 bitmap.
+         */
+        if (bit) {
+          bitmaps[i][y][0] |= (1 << x);
+          bitmaps[i][y][0] |= (1 << (4 + x));
+        } 
       }
       bitmaps[i][y][1] = bitmaps[i][y][2] = bitmaps[i][y][3] = bitmaps[i][y][0];
       bitmaps[i][y+4][0] = bitmaps[i][y+4][1] = bitmaps[i][y][0];
@@ -8899,16 +8927,12 @@ InitZinc(Tcl_Interp *interp) {
    */
   ZnTesselator.tess = gluNewTess();
   ZnTesselator.combine_list = NULL;
-  gluTessCallback(ZnTesselator.tess, GLU_TESS_BEGIN_DATA,
-		  (_GLUfuncptr) ZnTessBegin);
-  gluTessCallback(ZnTesselator.tess, GLU_TESS_VERTEX_DATA,
-		  (_GLUfuncptr) ZnTessVertex);
-  gluTessCallback(ZnTesselator.tess, GLU_TESS_END_DATA,
-		  (_GLUfuncptr) ZnTessEnd);
-  gluTessCallback(ZnTesselator.tess, GLU_TESS_COMBINE_DATA,
-		  (_GLUfuncptr) ZnTessCombine);
-  gluTessCallback(ZnTesselator.tess, GLU_TESS_ERROR_DATA,
-		  (_GLUfuncptr) ZnTessError);
+        ZnTesselator.combine_length = 0;
+  gluTessCallback(ZnTesselator.tess, GLU_TESS_BEGIN_DATA, ZnTessBegin);
+  gluTessCallback(ZnTesselator.tess, GLU_TESS_VERTEX_DATA, ZnTessVertex);
+  gluTessCallback(ZnTesselator.tess, GLU_TESS_END_DATA, ZnTessEnd);
+  gluTessCallback(ZnTesselator.tess, GLU_TESS_COMBINE_DATA, ZnTessCombine);
+  gluTessCallback(ZnTesselator.tess, GLU_TESS_ERROR_DATA, ZnTessError);
   gluTessNormal(ZnTesselator.tess, 0.0, 0.0, -1.0);
 
   /*
@@ -8932,7 +8956,7 @@ InitZinc(Tcl_Interp *interp) {
   /*
    * Initialise Overlap manager library.
    */
-#ifdef OM
+#ifdef ATC
   OmInit();
 #endif
 
@@ -8949,13 +8973,13 @@ InitZinc(Tcl_Interp *interp) {
  *
  * Tkzinc_Init --
  *
- *	This procedure is invoked by Tcl_AppInit in tkAppInit.c to
- *	initialize the widget.
+ *      This procedure is invoked by Tcl_AppInit in tkAppInit.c to
+ *      initialize the widget.
  *
  *----------------------------------------------------------------------
  */
 EXTERN int
-Tkzinc_Init(Tcl_Interp *interp)	/* Used for error reporting. */
+Tkzinc_Init(Tcl_Interp *interp) /* Used for error reporting. */
 {
 #ifndef PTK
   if (
@@ -8982,13 +9006,14 @@ Tkzinc_Init(Tcl_Interp *interp)	/* Used for error reporting. */
    * Create additional commands
    */
   Tcl_CreateObjCommand(interp, "zinc", ZincObjCmd,
-		       (ClientData) Tk_MainWindow(interp),
-		       (Tcl_CmdDeleteProc *) NULL);
+                       (ClientData) Tk_MainWindow(interp),
+                       (Tcl_CmdDeleteProc *) NULL);
+#ifdef ATC
   Tcl_CreateObjCommand(interp, "mapinfo", ZnMapInfoObjCmd,
-		       (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);
+                       (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);
   Tcl_CreateObjCommand(interp, "videomap", ZnVideomapObjCmd,
-		       (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);
-
+                       (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);
+#endif
     
 #ifndef PTK
   if (Tcl_PkgProvide(interp, "Tkzinc", VERSION) == TCL_ERROR) {
@@ -9000,7 +9025,7 @@ Tkzinc_Init(Tcl_Interp *interp)	/* Used for error reporting. */
 }
 
 EXTERN int
-Tkzinc_debug_Init(Tcl_Interp *interp)	/* Used for error reporting. */
+Tkzinc_debug_Init(Tcl_Interp *interp)   /* Used for error reporting. */
 {
   return Tkzinc_Init(interp);
 }
@@ -9011,23 +9036,23 @@ Tkzinc_debug_Init(Tcl_Interp *interp)	/* Used for error reporting. */
  *
  * DllEntryPoint --
  *
- *	This wrapper function is used by Windows to invoke the
- *	initialization code for the DLL.  If we are compiling
- *	with Visual C++, this routine will be renamed to DllMain.
- *	routine.
+ *      This wrapper function is used by Windows to invoke the
+ *      initialization code for the DLL.  If we are compiling
+ *      with Visual C++, this routine will be renamed to DllMain.
+ *      routine.
  *
  * Results:
- *	Returns TRUE;
+ *      Returns TRUE;
  *
  * Side effects:
- *	None.
+ *      None.
  *
  *----------------------------------------------------------------------
  */
 BOOL APIENTRY
-DllEntryPoint(HINSTANCE	hInst __unused,	   /* Library instance handle. */
-	      DWORD	reason __unused,   /* Reason this function is being called. */
-	      LPVOID	reserved __unused) /* Not used. */
+DllEntryPoint(HINSTANCE hInst,     /* Library instance handle. */
+              DWORD     reason,   /* Reason this function is being called. */
+              LPVOID    reserved) /* Not used. */
 {
     return TRUE;
 }

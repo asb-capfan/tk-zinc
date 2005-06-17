@@ -1,26 +1,15 @@
 /*
  * Window.c -- Implementation of Window item.
  *
- * Authors		: Patrick LECOANET
- * Creation date	: Fri May 12 11:25:53 2000
+ * Authors              : Patrick LECOANET
+ * Creation date        : Fri May 12 11:25:53 2000
  */
 
 /*
- *  Copyright (c) 1993 - 2000 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -32,7 +21,7 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Window.c,v 1.14 2004/04/30 12:03:32 lecoanet Exp $";
+static const char rcsid[] = "$Id: Window.c,v 1.20 2005/05/25 08:28:10 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -43,24 +32,24 @@ static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__
  **********************************************************************************
  */
 typedef struct _WindowItemStruct {
-  ZnItemStruct	header;
+  ZnItemStruct  header;
 
   /* Public data */
-  ZnPoint	pos;
-  Tk_Anchor	anchor;
-  Tk_Anchor	connection_anchor;
-  Tk_Window	win;
-  int		width;
-  int		height;
+  ZnPoint       pos;
+  Tk_Anchor     anchor;
+  Tk_Anchor     connection_anchor;
+  Tk_Window     win;
+  int           width;
+  int           height;
   
   /* Private data */
-  ZnPoint	pos_dev;
-  int		real_width;
-  int		real_height;
+  ZnPoint       pos_dev;
+  int           real_width;
+  int           real_height;
 } WindowItemStruct, *WindowItem;
 
 
-static ZnAttrConfig	wind_attrs[] = {
+static ZnAttrConfig     wind_attrs[] = {
   { ZN_CONFIG_ANCHOR, "-anchor", NULL,
     Tk_Offset(WindowItemStruct, anchor), 0, ZN_COORDS_FLAG, False },
   { ZN_CONFIG_BOOL, "-composealpha", NULL,
@@ -107,13 +96,13 @@ static ZnAttrConfig	wind_attrs[] = {
  *
  * WindowDeleted --
  *
- *	Do the bookeeping after a managed window deletion.
+ *      Do the bookeeping after a managed window deletion.
  *
  **********************************************************************************
  */
 static void
-WindowDeleted(ClientData	client_data,
-	      XEvent		*event)
+WindowDeleted(ClientData        client_data,
+              XEvent            *event)
 {
   WindowItem wind = (WindowItem) client_data;
 
@@ -135,8 +124,8 @@ WindowDeleted(ClientData	client_data,
  * A managed window changes requested dimensions.
  */
 static void
-WindowItemRequest(ClientData	client_data,
-		  Tk_Window	win __unused)
+WindowItemRequest(ClientData    client_data,
+                  Tk_Window     win)
 {
   WindowItem wind = (WindowItem) client_data;
 
@@ -148,14 +137,14 @@ WindowItemRequest(ClientData	client_data,
  * to another geometry manager.
  */
 static void
-WindowItemLostSlave(ClientData	client_data,
-		    Tk_Window	win __unused)
+WindowItemLostSlave(ClientData  client_data,
+                    Tk_Window   win)
 {
   WindowItem wind = (WindowItem) client_data;
   ZnWInfo *wi = ((ZnItem) wind)->wi;
   
   Tk_DeleteEventHandler(wi->win, StructureNotifyMask, WindowDeleted,
-			(ClientData) wind);
+                        (ClientData) wind);
   if (wi->win != Tk_Parent(wind->win)) {
     Tk_UnmaintainGeometry(wind->win, wi->win);
   }
@@ -164,9 +153,9 @@ WindowItemLostSlave(ClientData	client_data,
 }
 
 static Tk_GeomMgr wind_geom_type = {
-    "zincwindow",		/* name */
-    WindowItemRequest,		/* requestProc */
-    WindowItemLostSlave,	/* lostSlaveProc */
+    "zincwindow",               /* name */
+    WindowItemRequest,          /* requestProc */
+    WindowItemLostSlave,        /* lostSlaveProc */
 };
 
 
@@ -178,11 +167,11 @@ static Tk_GeomMgr wind_geom_type = {
  **********************************************************************************
  */
 static int
-Init(ZnItem		item,
-     int		*argc __unused,
-     Tcl_Obj *CONST	*args[] __unused)
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])
 {
-  WindowItem	wind = (WindowItem) item;
+  WindowItem    wind = (WindowItem) item;
 
   /* Init attributes */
   SET(item->flags, ZN_VISIBLE_BIT);
@@ -210,9 +199,9 @@ Init(ZnItem		item,
  **********************************************************************************
  */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  WindowItem	wind = (WindowItem) item;
+  WindowItem    wind = (WindowItem) item;
 
   /*
    * The same Tk widget can't be shared by to Window items.
@@ -229,17 +218,17 @@ Clone(ZnItem	item)
  **********************************************************************************
  */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
-  ZnWInfo	*wi = item->wi;
-  WindowItem	wind = (WindowItem) item;
+  ZnWInfo       *wi = item->wi;
+  WindowItem    wind = (WindowItem) item;
 
   /*
    * Unmanage the widget.
    */
   if (wind->win) {
     Tk_DeleteEventHandler(wind->win, StructureNotifyMask, WindowDeleted,
-			  (ClientData) item);
+                          (ClientData) item);
     Tk_ManageGeometry(wind->win, (Tk_GeomMgr *) NULL, (ClientData) NULL);
     if (wi->win != Tk_Parent(wind->win)) {
       Tk_UnmaintainGeometry(wind->win, wi->win);
@@ -257,15 +246,15 @@ Destroy(ZnItem	item)
  **********************************************************************************
  */
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
-  WindowItem	wind = (WindowItem) item;
-  ZnWInfo	*wi = item->wi;
-  ZnItem	old_connected;
-  Tk_Window	old_win;
+  WindowItem    wind = (WindowItem) item;
+  ZnWInfo       *wi = item->wi;
+  ZnItem        old_connected;
+  Tk_Window     old_win;
   
   old_connected = item->connected_item;
   old_win = wind->win;
@@ -279,8 +268,8 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
-	 (item->parent == item->connected_item->parent))) {
+        (ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
+         (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
     else {
@@ -291,14 +280,14 @@ Configure(ZnItem	item,
   if (ISSET(*flags, ZN_WINDOW_FLAG)) {
     if (old_win != NULL) {
       Tk_DeleteEventHandler(old_win, StructureNotifyMask,
-			    WindowDeleted, (ClientData) item);
+                            WindowDeleted, (ClientData) item);
       Tk_ManageGeometry(old_win, (Tk_GeomMgr *) NULL, (ClientData) NULL);
       Tk_UnmaintainGeometry(old_win, wi->win);
       Tk_UnmapWindow(old_win);
     }
     if (wind->win != NULL) {
       Tk_CreateEventHandler(wind->win, StructureNotifyMask,
-			    WindowDeleted, (ClientData) item);
+                            WindowDeleted, (ClientData) item);
       Tk_ManageGeometry(wind->win, &wind_geom_type, (ClientData) item);
     }
   }
@@ -321,9 +310,9 @@ Configure(ZnItem	item,
  **********************************************************************************
  */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, wind_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -332,6 +321,54 @@ Query(ZnItem		item,
   return TCL_OK;
 }
 
+/*
+ * Compute the transformation to be used and the origin
+ * of the window (upper left point in item coordinates).
+ */
+static ZnTransfo *
+ComputeTransfoAndOrigin(ZnItem    item,
+                        ZnPoint   *origin)
+{
+  WindowItem wind = (WindowItem) item;
+  ZnTransfo  *t;
+
+  /*
+   * The connected item support anchors, this is checked by configure.
+   */
+  if (item->connected_item != ZN_NO_ITEM) {
+    ZnTransfo inv;
+
+    item->connected_item->class->GetAnchor(item->connected_item,
+                                           wind->connection_anchor,
+                                           origin);
+
+    /* GetAnchor return a position in device coordinates not in
+     * the item coordinate space. To compute the icon origin
+     * (upper left corner), we must apply the inverse transform
+     * to the ref point before calling anchor2origin.
+     */
+    ZnTransfoInvert(item->transfo, &inv);
+    ZnTransformPoint(&inv, origin, origin);
+    /*
+     * The relevant transform in case of an attachment is the item
+     * transform alone. This is case of local coordinate space where
+     * only the translation is a function of the whole transform
+     * stack, scale and rotation are reset.
+     */
+    t = item->transfo;
+  }
+  else {
+    origin->x = origin->y = 0;
+    t = item->wi->current_transfo;
+  }
+
+  ZnAnchor2Origin(origin, (ZnReal) wind->real_width, (ZnReal) wind->real_height,
+                  wind->anchor, origin);
+  //origin->x = ZnNearestInt(origin->x);
+  //origin->y = ZnNearestInt(origin->y);
+
+  return t;
+}
 
 /*
  **********************************************************************************
@@ -341,11 +378,13 @@ Query(ZnItem		item,
  **********************************************************************************
  */
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force __unused)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  ZnWInfo	*wi = item->wi;
-  WindowItem	wind = (WindowItem) item;
+  ZnWInfo    *wi = item->wi;
+  WindowItem wind = (WindowItem) item;
+  ZnPoint    origin;
+  ZnTransfo  *t;
 
   ZnResetBBox(&item->item_bounding_box);
   
@@ -368,23 +407,8 @@ ComputeCoordinates(ZnItem	item,
     }
   }
 
-  /*
-   * The connected item support anchors, this is checked by
-   * configure.
-   */
-  if (item->connected_item != ZN_NO_ITEM) {
-    item->connected_item->class->GetAnchor(item->connected_item,
-					   wind->connection_anchor,
-					   &wind->pos_dev);
-  }
-  else {
-    ZnPoint pos;
-    pos.x = pos.y = 0.0;
-    ZnTransformPoint(wi->current_transfo, &pos, &wind->pos_dev);
-  }
-  
-  ZnAnchor2Origin(&wind->pos_dev, (ZnReal) wind->real_width, (ZnReal) wind->real_height,
-		  wind->anchor, &wind->pos_dev);
+  t = ComputeTransfoAndOrigin(item, &origin);
+  ZnTransformPoint(wi->current_transfo, &origin, &wind->pos_dev);
   wind->pos_dev.x = ZnNearestInt(wind->pos_dev.x);
   wind->pos_dev.y = ZnNearestInt(wind->pos_dev.y);
 
@@ -393,7 +417,7 @@ ComputeCoordinates(ZnItem	item,
    */
   ZnAddPointToBBox(&item->item_bounding_box, wind->pos_dev.x, wind->pos_dev.y);
   ZnAddPointToBBox(&item->item_bounding_box, wind->pos_dev.x+wind->real_width,
-		   wind->pos_dev.y+wind->real_height);
+                   wind->pos_dev.y+wind->real_height);
   item->item_bounding_box.orig.x -= 1.0;
   item->item_bounding_box.orig.y -= 1.0;
   item->item_bounding_box.corner.x += 1.0;
@@ -410,18 +434,18 @@ ComputeCoordinates(ZnItem	item,
  **********************************************************************************
  *
  * ToArea --
- *	Tell if the object is entirely outside (-1),
- *	entirely inside (1) or in between (0).
+ *      Tell if the object is entirely outside (-1),
+ *      entirely inside (1) or in between (0).
  *
  **********************************************************************************
  */
 static int
-ToArea(ZnItem	item,
-       ZnToArea	ta)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
-  WindowItem	wind = (WindowItem) item;
-  ZnBBox	box;
-  int		w=0, h=0;
+  WindowItem    wind = (WindowItem) item;
+  ZnBBox        box;
+  int           w=0, h=0;
   
   box.orig = wind->pos_dev;
   if (wind->win != NULL) {
@@ -442,10 +466,10 @@ ToArea(ZnItem	item,
  **********************************************************************************
  */
 static void
-Draw(ZnItem	item)
+Draw(ZnItem     item)
 {
-  ZnWInfo	*wi = item->wi;
-  WindowItem	wind = (WindowItem) item;
+  ZnWInfo       *wi = item->wi;
+  WindowItem    wind = (WindowItem) item;
 
   if (wind->win == NULL) {
     return;
@@ -472,19 +496,19 @@ Draw(ZnItem	item)
    */
   if (wi->win == Tk_Parent(wind->win)) {
     if ((wind->pos_dev.x != Tk_X(wind->win)) ||
-	(wind->pos_dev.y != Tk_Y(wind->win)) ||
-	(wind->real_width != Tk_Width(wind->win)) ||
-	(wind->real_height != Tk_Height(wind->win))) {
+        (wind->pos_dev.y != Tk_Y(wind->win)) ||
+        (wind->real_width != Tk_Width(wind->win)) ||
+        (wind->real_height != Tk_Height(wind->win))) {
       Tk_MoveResizeWindow(wind->win,
-			  (int) wind->pos_dev.x, (int) wind->pos_dev.y,
-			  wind->real_width, wind->real_height);
+                          (int) wind->pos_dev.x, (int) wind->pos_dev.y,
+                          wind->real_width, wind->real_height);
     }
     Tk_MapWindow(wind->win);
   }
   else {
     Tk_MaintainGeometry(wind->win, wi->win,
-			(int) wind->pos_dev.x, (int) wind->pos_dev.y,
-			wind->real_width, wind->real_height);
+                        (int) wind->pos_dev.x, (int) wind->pos_dev.y,
+                        wind->real_width, wind->real_height);
   }
   
 }
@@ -498,8 +522,8 @@ Draw(ZnItem	item)
  **********************************************************************************
  */
 static ZnBool
-IsSensitive(ZnItem	item __unused,
-	    int		item_part __unused)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
   /*
    * Sensitivity can't be controlled.
@@ -516,13 +540,13 @@ IsSensitive(ZnItem	item __unused,
  **********************************************************************************
  */
 static double
-Pick(ZnItem	item,
-     ZnPick	ps)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
-  WindowItem	wind = (WindowItem) item;
-  ZnBBox	box;
-  ZnReal	dist = 1e40;
-  ZnPoint	*p = ps->point;
+  WindowItem    wind = (WindowItem) item;
+  ZnBBox        box;
+  ZnReal        dist = 1e40;
+  ZnPoint       *p = ps->point;
 
   box.orig = wind->pos_dev;
   if (wind->win != NULL) {
@@ -544,10 +568,102 @@ Pick(ZnItem	item,
  *
  **********************************************************************************
  */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+#ifdef X_GetImage
+static int
+xerrorhandler(ClientData  client_data,
+              XErrorEvent *e)
 {
+	return 0;
+}
+#endif
+
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
+{
+  ZnWInfo         *wi = item->wi;
+  WindowItem      wind = (WindowItem) item;
+  char            path[256];
+  XImage          *ximage;
+  int             result;
+  ZnPoint         origin;
+  Tcl_DString     buffer1, buffer2;
+#ifdef X_GetImage
+  Tk_ErrorHandler	handle;
+#endif
+
+  sprintf(path, "\n%%%% %s item (%s, %d x %d)\n%.15g %.15g translate\n",
+          Tk_Class(wind->win), Tk_PathName(wind->win), wind->real_width, wind->real_height,
+          wind->pos_dev.x, wind->pos_dev.y);
+  Tcl_AppendResult(wi->interp, path, NULL);
+
+  ComputeTransfoAndOrigin(item, &origin);
+  
+  sprintf(path, "/InitialTransform load setmatrix\n"
+          "%.15g %.15g translate\n"
+          "1 -1 scale\n",
+          wind->pos_dev.x, wind->pos_dev.y + wind->real_height);
+  Tcl_AppendResult(wi->interp, path, NULL);
+
+  /* first try if the widget has its own "postscript" command. If it
+   * exists, this will produce much better postscript than
+   * when a pixmap is used.
+   */
+#ifndef PTK
+  Tcl_DStringInit(&buffer1);
+  Tcl_DStringInit(&buffer2);
+  Tcl_DStringGetResult(wi->interp, &buffer2);
+  sprintf(path, "%s postscript -prolog 0\n", Tk_PathName(wind->win));
+  result = Tcl_Eval(wi->interp, path);
+  Tcl_DStringGetResult(wi->interp, &buffer1);
+  Tcl_DStringResult(wi->interp, &buffer2);
+  Tcl_DStringFree(&buffer2);
+
+  if (result == TCL_OK) {
+    Tcl_AppendResult(wi->interp, "50 dict begin\nsave\ngsave\n", NULL);
+    sprintf (path, "0 %d moveto %d 0 rlineto 0 -%d rlineto -%d",
+             wind->real_height, wind->real_width, wind->real_height, wind->real_width);
+    Tcl_AppendResult(wi->interp, path, NULL);
+    Tcl_AppendResult(wi->interp, " 0 rlineto closepath\n",
+                     "1.000 1.000 1.000 setrgbcolor AdjustColor\nfill\ngrestore\n",
+                     Tcl_DStringValue(&buffer1), "\nrestore\nend\n\n\n", NULL);
+    Tcl_DStringFree(&buffer1);
+
+    return result;
+  }
+  Tcl_DStringFree(&buffer1);
+#endif
+
+  /*
+   * If the window is off the screen it will generate an BadMatch/XError
+   * We catch any BadMatch errors here
+   */
+#ifdef X_GetImage
+  handle = Tk_CreateErrorHandler(wi->dpy, BadMatch, X_GetImage, -1,
+                                 xerrorhandler, (ClientData) wind->win);
+#endif
+
+  /*
+   * Generate an XImage from the window.  We can then read pixel 
+   * values out of the XImage.
+   */
+  ximage = XGetImage(wi->dpy, Tk_WindowId(wind->win), 0, 0, (unsigned int) wind->real_width,
+                     (unsigned int) wind->real_height, AllPlanes, ZPixmap);
+
+#ifdef X_GetImage
+  Tk_DeleteErrorHandler(handle);
+#endif
+
+  if (ximage == NULL) { 
+    return TCL_OK;
+  }
+
+  result = ZnPostscriptXImage(wi->interp, wind->win, wi->ps_info, ximage,
+                              0, 0, wind->real_width, wind->real_height);
+  XDestroyImage(ximage);
+
+  return result;
 }
 
 
@@ -559,15 +675,15 @@ PostScript(ZnItem	item __unused,
  **********************************************************************************
  */
 static void
-GetAnchor(ZnItem	item,
-	  Tk_Anchor	anchor,
-	  ZnPoint	*p)
+GetAnchor(ZnItem        item,
+          Tk_Anchor     anchor,
+          ZnPoint       *p)
 {
-  WindowItem	wind = (WindowItem) item;
+  WindowItem    wind = (WindowItem) item;
   
   if (wind->win != NULL) {
     ZnOrigin2Anchor(&wind->pos_dev, (ZnReal) wind->real_width,
-		    (ZnReal) wind->real_height, anchor, p);
+                    (ZnReal) wind->real_height, anchor, p);
   }
   else {
     p->x = p->y = 0.0;
@@ -579,17 +695,17 @@ GetAnchor(ZnItem	item,
  **********************************************************************************
  *
  * GetClipVertices --
- *	Get the clipping shape.
+ *      Get the clipping shape.
  *
  **********************************************************************************
  */
 static ZnBool
-GetClipVertices(ZnItem		item,
-		ZnTriStrip	*tristrip)
+GetClipVertices(ZnItem          item,
+                ZnTriStrip      *tristrip)
 {
-  WindowItem	wind = (WindowItem) item;
-  int		w=0, h=0;
-  ZnPoint	*points;
+  WindowItem    wind = (WindowItem) item;
+  int           w=0, h=0;
+  ZnPoint       *points;
   
   ZnListAssertSize(ZnWorkPoints, 2);
   if (wind->win != NULL) {
@@ -610,32 +726,32 @@ GetClipVertices(ZnItem		item,
  **********************************************************************************
  *
  * Coords --
- *	Return or edit the item origin. This doesn't take care of
- *	the possible attachment. The change will be effective at the
- *	end of the attachment.
+ *      Return or edit the item origin. This doesn't take care of
+ *      the possible attachment. The change will be effective at the
+ *      end of the attachment.
  *
  **********************************************************************************
  */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index __unused,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
-  WindowItem	wind = (WindowItem) item;
+  WindowItem    wind = (WindowItem) item;
   
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp,
-		     " windows can't add or remove vertices", NULL);
+                     " windows can't add or remove vertices", NULL);
     return TCL_ERROR;
   }
   else if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
     if (*num_pts == 0) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need 1 point on windows", NULL);
+                       " coords command need 1 point on windows", NULL);
       return TCL_ERROR;
     }
     wind->pos = (*pts)[0];
@@ -660,7 +776,7 @@ static ZnItemClassStruct WINDOW_ITEM_CLASS = {
   "window",
   sizeof(WindowItemStruct),
   wind_attrs,
-  0,			/* num_parts */
+  0,                    /* num_parts */
   ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   Tk_Offset(WindowItemStruct, pos),
   Init,
@@ -668,25 +784,25 @@ static ZnItemClassStruct WINDOW_ITEM_CLASS = {
   Destroy,
   Configure,
   Query,
-  NULL,			/* GetFieldSet */
+  NULL,                 /* GetFieldSet */
   GetAnchor,
   GetClipVertices,
-  NULL,			/* GetContours */
+  NULL,                 /* GetContours */
   Coords,
-  NULL,			/* InsertChars */
-  NULL,			/* DeleteChars */
-  NULL,			/* Cursor */
-  NULL,			/* Index */
-  NULL,			/* Part */
-  NULL,			/* Selection */
-  NULL,			/* Contour */
+  NULL,                 /* InsertChars */
+  NULL,                 /* DeleteChars */
+  NULL,                 /* Cursor */
+  NULL,                 /* Index */
+  NULL,                 /* Part */
+  NULL,                 /* Selection */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
-  Draw,			/* Render use the same code as Draw. */
+  Draw,                 /* Render use the same code as Draw. */
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 

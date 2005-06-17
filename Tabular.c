@@ -1,28 +1,17 @@
 /*
  * Tabular.c -- Implementation of Tabular item.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	:
+ * Authors              : Patrick Lecoanet.
+ * Creation date        :
  *
- * $Id: Tabular.c,v 1.24 2004/05/07 09:37:42 lecoanet Exp $
+ * $Id: Tabular.c,v 1.30 2005/05/10 07:59:48 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -37,7 +26,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Tabular.c,v 1.24 2004/05/07 09:37:42 lecoanet Exp $";
+static const char rcsid[] = "$Id: Tabular.c,v 1.30 2005/05/10 07:59:48 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -49,19 +38,19 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  **********************************************************************************
  */
 typedef struct _TabularItemStruct {
-  ZnItemStruct		header;
+  ZnItemStruct          header;
 
   /* Public data */
-  ZnPoint		pos;
-  Tk_Anchor		anchor;
-  Tk_Anchor		connection_anchor;
+  ZnPoint               pos;
+  Tk_Anchor             anchor;
+  Tk_Anchor             connection_anchor;
 
   /* Private data */
-  ZnFieldSetStruct	field_set;
+  ZnFieldSetStruct      field_set;
 } TabularItemStruct, *TabularItem;
 
 
-static ZnAttrConfig	tabular_attrs[] = {
+static ZnAttrConfig     tabular_attrs[] = {
   { ZN_CONFIG_ANCHOR, "-anchor", NULL,
     Tk_Offset(TabularItemStruct, anchor), 0, ZN_COORDS_FLAG, False },
   { ZN_CONFIG_BOOL, "-composealpha", NULL,
@@ -109,14 +98,14 @@ static ZnAttrConfig	tabular_attrs[] = {
  **********************************************************************************
  */
 static int
-Init(ZnItem		item,
-     int		*argc,
-     Tcl_Obj *CONST	*args[])
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])
 {
-  ZnWInfo	*wi = item->wi;
-  TabularItem	tab = (TabularItem) item;
-  ZnFieldSet	field_set = &tab->field_set;
-  int		num_fields;
+  ZnWInfo       *wi = item->wi;
+  TabularItem   tab = (TabularItem) item;
+  ZnFieldSet    field_set = &tab->field_set;
+  int           num_fields;
 
   item->priority = 1;
 
@@ -162,9 +151,9 @@ Init(ZnItem		item,
  **********************************************************************************
  */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  ZnFieldSet	fs = &((TabularItem) item)->field_set;
+  ZnFieldSet    fs = &((TabularItem) item)->field_set;
 
   ZnFIELD.CloneFields(fs);
   fs->item = item;
@@ -179,7 +168,7 @@ Clone(ZnItem	item)
  **********************************************************************************
  */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
   ZnFIELD.FreeFields(&((TabularItem) item)->field_set);
 }
@@ -193,16 +182,16 @@ Destroy(ZnItem	item)
  **********************************************************************************
  */
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
-  ZnItem	old_connected;
+  ZnItem        old_connected;
 
   old_connected = item->connected_item;
   if (ZnConfigureAttributes(item->wi, item, item, tabular_attrs,
-			    argc, argv, flags) == TCL_ERROR) {
+                            argc, argv, flags) == TCL_ERROR) {
     return TCL_ERROR;
   }
   if (ISSET(*flags, ZN_ITEM_FLAG)) {
@@ -211,8 +200,8 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
-	 (item->parent == item->connected_item->parent))) {
+        (ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
+         (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
     else {
@@ -232,9 +221,9 @@ Configure(ZnItem	item,
  **********************************************************************************
  */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, tabular_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -252,13 +241,13 @@ Query(ZnItem		item,
  **********************************************************************************
  */
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force __unused)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  TabularItem	tab = (TabularItem) item;
-  ZnWInfo	*wi = item->wi;
-  ZnFieldSet	field_set = &tab->field_set;
-  ZnDim		width, height;
+  TabularItem   tab = (TabularItem) item;
+  ZnWInfo       *wi = item->wi;
+  ZnFieldSet    field_set = &tab->field_set;
+  ZnDim         width, height;
   
   ZnResetBBox(&item->item_bounding_box);
   if (field_set->label_format && field_set->num_fields) {
@@ -270,18 +259,18 @@ ComputeCoordinates(ZnItem	item,
      */
     if (item->connected_item != ZN_NO_ITEM) {
       item->connected_item->class->GetAnchor(item->connected_item,
-					     tab->connection_anchor,
-					     &field_set->label_pos);
+                                             tab->connection_anchor,
+                                             &field_set->label_pos);
     }
     else {
       ZnPoint pos;
       pos.x = pos.y = 0;
       ZnTransformPoint(wi->current_transfo, &pos,
-			  &field_set->label_pos);
+                          &field_set->label_pos);
     }
 
     ZnAnchor2Origin(&field_set->label_pos, width, height, tab->anchor,
-		    &field_set->label_pos);
+                    &field_set->label_pos);
 
     /*
      * Setup the item bounding box.
@@ -289,6 +278,15 @@ ComputeCoordinates(ZnItem	item,
     item->item_bounding_box.orig = field_set->label_pos;
     item->item_bounding_box.corner.x = field_set->label_pos.x + width;
     item->item_bounding_box.corner.y = field_set->label_pos.y + height;
+    /*
+     * Need to slightly increase the bbox for GL thick lines
+     */
+#ifdef GL
+    item->item_bounding_box.orig.x -= 1;
+    item->item_bounding_box.orig.y -= 1;
+    item->item_bounding_box.corner.x += 1;
+    item->item_bounding_box.corner.y += 1;
+#endif
 
     /*
      * Update connected items.
@@ -302,14 +300,14 @@ ComputeCoordinates(ZnItem	item,
  **********************************************************************************
  *
  * ToArea --
- *	Tell if the object is entirely outside (-1),
- *	entirely inside (1) or in between (0).
+ *      Tell if the object is entirely outside (-1),
+ *      entirely inside (1) or in between (0).
  *
  **********************************************************************************
  */
 static int
-ToArea(ZnItem	item,
-       ZnToArea	ta)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
   return ZnFIELD.FieldsToArea(&((TabularItem) item)->field_set, ta->area);
 }
@@ -323,7 +321,7 @@ ToArea(ZnItem	item,
  **********************************************************************************
  */
 static void
-Draw(ZnItem 	item)
+Draw(ZnItem     item)
 {
   ZnFIELD.DrawFields(&((TabularItem) item)->field_set);
 }
@@ -337,7 +335,7 @@ Draw(ZnItem 	item)
  **********************************************************************************
  */
 static void
-Render(ZnItem 	item)
+Render(ZnItem   item)
 {
   ZnFIELD.RenderFields(&((TabularItem) item)->field_set);
 }
@@ -351,8 +349,8 @@ Render(ZnItem 	item)
  **********************************************************************************
  */
 static ZnBool
-IsSensitive(ZnItem	item,
-	    int		item_part)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
   if (ISCLEAR(item->flags, ZN_SENSITIVE_BIT) ||
       !item->parent->class->IsSensitive(item->parent, ZN_NO_PART)) {
@@ -371,13 +369,13 @@ IsSensitive(ZnItem	item,
  **********************************************************************************
  *
  * Pick --
- *	We tell what our label tells.
+ *      We tell what our label tells.
  *
  **********************************************************************************
  */
 static double
-Pick(ZnItem	item,
-     ZnPick	ps)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
   int best_part;
   double dist;
@@ -401,10 +399,12 @@ Pick(ZnItem	item,
  *
  **********************************************************************************
  */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
 {
+  return ZnFIELD.PostScriptFields(&((TabularItem) item)->field_set, prepass, area);
 }
 
 
@@ -416,7 +416,7 @@ PostScript(ZnItem	item __unused,
  **********************************************************************************
  */
 static ZnFieldSet
-GetFieldSet(ZnItem	item)
+GetFieldSet(ZnItem      item)
 {
   return &((TabularItem) item)->field_set;
 }
@@ -430,12 +430,12 @@ GetFieldSet(ZnItem	item)
  **********************************************************************************
  */
 static void
-GetAnchor(ZnItem	item,
-	  Tk_Anchor	anchor,
-	  ZnPoint	*p)
+GetAnchor(ZnItem        item,
+          Tk_Anchor     anchor,
+          ZnPoint       *p)
 {
-  ZnFieldSet	field_set = &((TabularItem) item)->field_set;
-  ZnDim	width, height;
+  ZnFieldSet    field_set = &((TabularItem) item)->field_set;
+  ZnDim width, height;
   
   if (field_set->label_format) {
     ZnFIELD.GetLabelBBox(field_set, &width, &height);
@@ -451,18 +451,18 @@ GetAnchor(ZnItem	item,
  **********************************************************************************
  *
  * GetClipVertices --
- *	Get the clipping shape.
- *	Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
+ *      Get the clipping shape.
+ *      Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
  *
  **********************************************************************************
  */
 static ZnBool
-GetClipVertices(ZnItem		item,
-		ZnTriStrip	*tristrip)
+GetClipVertices(ZnItem          item,
+                ZnTriStrip      *tristrip)
 {
-  ZnFieldSet	field_set = &((TabularItem) item)->field_set;
-  ZnDim		width, height;
-  ZnPoint	*points;
+  ZnFieldSet    field_set = &((TabularItem) item)->field_set;
+  ZnDim         width, height;
+  ZnPoint       *points;
   
   if (field_set->label_format) {
     ZnFIELD.GetLabelBBox(field_set, &width, &height);
@@ -482,32 +482,32 @@ GetClipVertices(ZnItem		item,
  **********************************************************************************
  *
  * Coords --
- *	Return or edit the item origin. This doesn't take care of
- *	the possible attachment. The change will be effective at the
- *	end of the attachment.
+ *      Return or edit the item origin. This doesn't take care of
+ *      the possible attachment. The change will be effective at the
+ *      end of the attachment.
  *
  **********************************************************************************
  */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index __unused,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
-  TabularItem	tabular = (TabularItem) item;
+  TabularItem   tabular = (TabularItem) item;
   
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp,
-		     " tabulars can't add or remove vertices", NULL);
+                     " tabulars can't add or remove vertices", NULL);
     return TCL_ERROR;
   }
   else if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
     if (*num_pts == 0) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need 1 point on tabulars", NULL);
+                       " coords command need 1 point on tabulars", NULL);
       return TCL_ERROR;
     }
     tabular->pos = (*pts)[0];
@@ -525,17 +525,17 @@ Coords(ZnItem		item,
  **********************************************************************************
  *
  * Part --
- *	Convert a private part from/to symbolic representation.
+ *      Convert a private part from/to symbolic representation.
  *
  **********************************************************************************
  */
 static int
-Part(ZnItem	item,
-     Tcl_Obj	**part_spec,
-     int	*part)
+Part(ZnItem     item,
+     Tcl_Obj    **part_spec,
+     int        *part)
 {
-  char	*part_str;
-  char	*end;
+  char  *part_str;
+  char  *end;
   
   if (*part_spec) {
     part_str = Tcl_GetString(*part_spec);
@@ -545,14 +545,14 @@ Part(ZnItem	item,
     else if (isdigit(part_str[0])) {
       *part = strtol(part_str, &end, 0);
       if ((*end != 0) || (*part < 0) ||
-	  ((unsigned int) *part >= ((TabularItem) item)->field_set.num_fields)) {
-	goto part_error;
+          ((unsigned int) *part >= ((TabularItem) item)->field_set.num_fields)) {
+        goto part_error;
       }
     }
     else {
     part_error:
       Tcl_AppendResult(item->wi->interp, " invalid item part specification", NULL);
-      return TCL_ERROR;	
+      return TCL_ERROR; 
     }
   }
   else {
@@ -571,19 +571,19 @@ Part(ZnItem	item,
  **********************************************************************************
  *
  * Index --
- *	Parse a text index and return its value and aa
- *	error status (standard Tcl result).
+ *      Parse a text index and return its value and aa
+ *      error status (standard Tcl result).
  *
  **********************************************************************************
  */
 static int
-Index(ZnItem	item,
-      int	field,
-      Tcl_Obj	*index_spec,
-      int	*index)
+Index(ZnItem    item,
+      int       field,
+      Tcl_Obj   *index_spec,
+      int       *index)
 {
   return ZnFIELD.FieldIndex(&((TabularItem) item)->field_set, field,
-			  index_spec, index);
+                          index_spec, index);
 }
 
 
@@ -595,13 +595,13 @@ Index(ZnItem	item,
  **********************************************************************************
  */
 static void
-InsertChars(ZnItem	item,
-	    int		field,
-	    int		*index,
-	    char	*chars)
+InsertChars(ZnItem      item,
+            int         field,
+            int         *index,
+            char        *chars)
 {
   if (ZnFIELD.FieldInsertChars(&((TabularItem) item)->field_set,
-			     field, index, chars)) {
+                             field, index, chars)) {
     ZnITEM.Invalidate(item, ZN_COORDS_FLAG);
   }
 }
@@ -615,13 +615,13 @@ InsertChars(ZnItem	item,
  **********************************************************************************
  */
 static void
-DeleteChars(ZnItem	item,
-	    int		field,
-	    int		*first,
-	    int		*last)
+DeleteChars(ZnItem      item,
+            int         field,
+            int         *first,
+            int         *last)
 {
   if (ZnFIELD.FieldDeleteChars(&((TabularItem) item)->field_set,
-			     field, first, last)) {
+                             field, first, last)) {
     ZnITEM.Invalidate(item, ZN_COORDS_FLAG);
   }
 }
@@ -635,9 +635,9 @@ DeleteChars(ZnItem	item,
  **********************************************************************************
  */
 static void
-TabularCursor(ZnItem	item,
-	      int	field,
-	      int	index)
+TabularCursor(ZnItem    item,
+              int       field,
+              int       index)
 {
   ZnFIELD.FieldCursor(&((TabularItem) item)->field_set, field, index);
 }
@@ -651,14 +651,14 @@ TabularCursor(ZnItem	item,
  **********************************************************************************
  */
 static int
-Selection(ZnItem	item,
-	  int		field,
-	  int		offset,
-	  char		*chars,
-	  int		max_chars)
+Selection(ZnItem        item,
+          int           field,
+          int           offset,
+          char          *chars,
+          int           max_chars)
 {
   return ZnFIELD.FieldSelection(&((TabularItem) item)->field_set, field,
-			      offset, chars, max_chars);
+                              offset, chars, max_chars);
 }
 
 
@@ -684,7 +684,7 @@ static ZnItemClassStruct TABULAR_ITEM_CLASS = {
   GetFieldSet,
   GetAnchor,
   GetClipVertices,
-  NULL,			/* GetContours */
+  NULL,                 /* GetContours */
   Coords,
   InsertChars,
   DeleteChars,
@@ -692,14 +692,14 @@ static ZnItemClassStruct TABULAR_ITEM_CLASS = {
   Index,
   Part,
   Selection,
-  NULL,			/* Contour */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 

@@ -1,28 +1,17 @@
 /*
  * Types.h -- Some types and macros used by the Zinc widget.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Mon Feb  1 12:13:24 1999
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Mon Feb  1 12:13:24 1999
  *
- * $Id: Types.h,v 1.44 2004/05/14 09:11:24 lecoanet Exp $
+ * $Id: Types.h,v 1.47 2005/04/27 07:32:03 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -38,6 +27,11 @@
 #  if defined(_MSC_VER)
 #    define DllEntryPoint DllMain
 #  endif
+// Suppress complaints about deprecated standard C functions
+// like strcpy and strcat
+#  ifndef __GNUC__
+#    pragma warning(disable : 4996)
+#  endif
 #endif
 
 #ifdef GL
@@ -47,8 +41,6 @@
 #    include <GL/glx.h>
 #  endif
 #endif
-
-#include "private.h"
 
 #define NEED_REAL_STDIO
 
@@ -85,24 +77,24 @@ extern "C" {
 #endif
 
 
-typedef double	ZnReal;	/* Keep it a double for GL and Tcl. */
-typedef int	ZnBool;	/* Keep it an int to keep Tk happy */
-typedef ZnReal	ZnPos;
-typedef ZnReal	ZnDim;
-typedef void	*ZnPtr;
+typedef double  ZnReal; /* Keep it a double for GL and Tcl. */
+typedef int     ZnBool; /* Keep it an int to keep Tk happy */
+typedef ZnReal  ZnPos;
+typedef ZnReal  ZnDim;
+typedef void    *ZnPtr;
 
 
-#define ZnPixel(color)		((color)->pixel)
-#define ZnMalloc(size)		((void *)ckalloc(size))
-#define ZnFree(ptr)		(ckfree((char *)(ptr)))
-#define ZnRealloc(ptr, size)	((void *)ckrealloc((void *)(ptr), size))
-#define ZnWarning(msg)		(fprintf(stderr, "%s", (msg)))
+#define ZnPixel(color)          ((color)->pixel)
+#define ZnMalloc(size)          ((void *)ckalloc(size))
+#define ZnFree(ptr)             (ckfree((char *)(ptr)))
+#define ZnRealloc(ptr, size)    ((void *)ckrealloc((void *)(ptr), size))
+#define ZnWarning(msg)          (fprintf(stderr, "%s", (msg)))
   
-#define ZnUnspecifiedImage	None
-#define ZnUnspecifiedColor	NULL
+#define ZnUnspecifiedImage      None
+#define ZnUnspecifiedColor      NULL
 
 #ifndef TCL_INTEGER_SPACE
-#  define TCL_INTEGER_SPACE	24
+#  define TCL_INTEGER_SPACE     24
 #endif
 
 #ifdef PTK_800
@@ -136,36 +128,41 @@ Tk_GetScrollInfo(interp, argc, (Tcl_Obj **) args, fract, count)
 #    define TCL_STORAGE_CLASS DLLIMPORT
 #  endif
 
-#  undef XFillRectangle
+#  ifndef __GNUC__
+// Okay, Those Xlib functions will bring inconsistancy errors
+// as they are already provided by Tk portability layer, shut them up.
+#  pragma warning(disable : 4273)
+#  endif
+#undef XFillRectangle
 void XFillRectangle(Display *display, Drawable d, GC gc, int x, int y,
-		    unsigned int width, unsigned int height);
+                    unsigned int width, unsigned int height);
 #  undef XFillRectangles
 void XFillRectangles(Display *display, Drawable d, GC gc,
-		     XRectangle* rectangles, int nrectangles);
+                     XRectangle* rectangles, int nrectangles);
 #  undef XFillArc
 void XFillArc(Display *display, Drawable d, GC gc, int x, int y, unsigned int width,
-	      unsigned int height, int start, int extent);
+              unsigned int height, int start, int extent);
 #  undef XFillPolygon
 void XFillPolygon(Display *display, Drawable d, GC gc, XPoint *points, int npoints,
-		  int shape, int mode);
+                  int shape, int mode);
 #  undef XDrawRectangle
 void XDrawRectangle(Display *display, Drawable d, GC gc, int x, int y,
-		    unsigned int width, unsigned int height);
+                    unsigned int width, unsigned int height);
 #  undef XDrawArc
 void XDrawArc(Display *display, Drawable d, GC gc, int x, int y,
-	      unsigned int width, unsigned int height, int start, int extent);
+              unsigned int width, unsigned int height, int start, int extent);
 #  undef XDrawLine
 void XDrawLine(Display *display, Drawable d, GC gc, int x1, int y1, int x2, int y2);
 #  undef XDrawLines
 void XDrawLines(Display *display, Drawable d, GC gc, XPoint* points,
-		int npoints, int mode);
+                int npoints, int mode);
 
 ZnBool ZnPointInRegion(TkRegion reg, int x, int y);
 void ZnUnionRegion(TkRegion sra, TkRegion srb, 
-		   TkRegion dr_return);
+                   TkRegion dr_return);
 void ZnOffsetRegion(TkRegion reg, int dx, int dy);
 TkRegion ZnPolygonRegion(XPoint *points, int n,
-			 int fill_rule);
+                         int fill_rule);
 #  ifdef GL
 #    define ZnGLContext HGLRC
 #    define ZnGLWaitX()

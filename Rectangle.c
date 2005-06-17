@@ -1,28 +1,17 @@
 /*
  * Rectangle.c -- Implementation of rectangle item.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Fri Dec  2 14:47:42 1994
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Fri Dec  2 14:47:42 1994
  *
- * $Id: Rectangle.c,v 1.66 2004/04/30 12:08:17 lecoanet Exp $
+ * $Id: Rectangle.c,v 1.71 2005/05/10 07:59:48 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1994 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -37,14 +26,14 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Rectangle.c,v 1.66 2004/04/30 12:08:17 lecoanet Exp $";
+static const char rcsid[] = "$Id: Rectangle.c,v 1.71 2005/05/10 07:59:48 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
  * Bit offset of flags.
  */
-#define	FILLED_BIT	1	/* If the rectangle is filled with color/pattern */
-#define ALIGNED_BIT	2
+#define FILLED_BIT      1       /* If the rectangle is filled with color/pattern */
+#define ALIGNED_BIT     2
 
 
 /*
@@ -56,27 +45,27 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  */
 
 typedef struct _RectangleItemStruct {
-  ZnItemStruct	header;
+  ZnItemStruct  header;
 
   /* Public data */
-  ZnPoint	coords[2];
+  ZnPoint       coords[2];
   unsigned short flags;
-  ZnReliefStyle	relief;
-  ZnLineStyle	line_style;
-  ZnDim		line_width;
-  ZnGradient	*line_color;
-  ZnImage	line_pattern;
-  ZnGradient	*fill_color;
-  ZnImage	tile;
+  ZnReliefStyle relief;
+  ZnLineStyle   line_style;
+  ZnDim         line_width;
+  ZnGradient    *line_color;
+  ZnImage       line_pattern;
+  ZnGradient    *fill_color;
+  ZnImage       tile;
   
   /* Private data */
-  ZnPoint	dev[4];
-  ZnGradient	*gradient;
-  ZnPoint	*grad_geo;
+  ZnPoint       dev[4];
+  ZnGradient    *gradient;
+  ZnPoint       *grad_geo;
 } RectangleItemStruct, *RectangleItem;
 
 
-static ZnAttrConfig	rect_attrs[] = {
+static ZnAttrConfig     rect_attrs[] = {
   { ZN_CONFIG_BOOL, "-composealpha", NULL,
     Tk_Offset(RectangleItemStruct, header.flags), ZN_COMPOSE_ALPHA_BIT,
     ZN_DRAW_FLAG, False },
@@ -131,14 +120,14 @@ static ZnAttrConfig	rect_attrs[] = {
  **********************************************************************************
  */
 static int
-Init(ZnItem		item,
-     int		*argc,
-     Tcl_Obj *CONST	*args[])
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])
 {
-  ZnWInfo	*wi = item->wi;
-  RectangleItem	rect = (RectangleItem) item;
-  unsigned int	num_points;
-  ZnPoint	*points;
+  ZnWInfo       *wi = item->wi;
+  RectangleItem rect = (RectangleItem) item;
+  unsigned int  num_points;
+  ZnPoint       *points;
 
   rect->gradient = NULL;
   rect->grad_geo = NULL;
@@ -156,7 +145,7 @@ Init(ZnItem		item,
     return TCL_ERROR;
   }
   if (ZnParseCoordList(wi, (*args)[0], &points,
-		       NULL, &num_points, NULL) == TCL_ERROR) {
+                       NULL, &num_points, NULL) == TCL_ERROR) {
     return TCL_ERROR;
   }
   if (num_points != 2) {
@@ -189,9 +178,9 @@ Init(ZnItem		item,
  **********************************************************************************
  */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  RectangleItem	rect = (RectangleItem) item;
+  RectangleItem rect = (RectangleItem) item;
 
   if (rect->gradient) {
     rect->gradient = ZnGetGradientByValue(rect->gradient);
@@ -216,9 +205,9 @@ Clone(ZnItem	item)
  **********************************************************************************
  */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
-  RectangleItem	rect = (RectangleItem) item;
+  RectangleItem rect = (RectangleItem) item;
 
   if (rect->tile != ZnUnspecifiedImage) {
     ZnFreeImage(rect->tile, ZnUpdateItemImage, item);
@@ -247,15 +236,15 @@ Destroy(ZnItem	item)
  **********************************************************************************
  */
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
-  ZnWInfo	*wi = item->wi;
-  RectangleItem	rect = (RectangleItem) item;
-  int		status = TCL_OK;
-  XColor	*color;
+  ZnWInfo       *wi = item->wi;
+  RectangleItem rect = (RectangleItem) item;
+  int           status = TCL_OK;
+  XColor        *color;
   unsigned short alpha;
   
   status = ZnConfigureAttributes(wi, item, item, rect_attrs, argc, argv, flags);
@@ -268,7 +257,7 @@ Configure(ZnItem	item,
   if ((rect->relief != ZN_RELIEF_FLAT) && !rect->gradient) {
     color = ZnGetGradientColor(rect->line_color, 51.0, &alpha);
     rect->gradient = ZnGetReliefGradient(wi->interp, wi->win,
-					 Tk_NameOfColor(color), alpha);
+                                         Tk_NameOfColor(color), alpha);
     if (rect->gradient == NULL) {
       status = TCL_ERROR;
     }
@@ -286,9 +275,9 @@ Configure(ZnItem	item,
  **********************************************************************************
  */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, rect_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -306,15 +295,15 @@ Query(ZnItem		item,
  **********************************************************************************
  */
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force __unused)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  ZnWInfo	*wi = item->wi;
-  RectangleItem	rect = (RectangleItem) item;
-  ZnPoint	p[4];
-  int		i;
-  ZnBool	aligned;
-  ZnDim		delta, lw2;
+  ZnWInfo       *wi = item->wi;
+  RectangleItem rect = (RectangleItem) item;
+  ZnPoint       p[4];
+  int           i;
+  ZnBool        aligned;
+  ZnDim         delta, lw2;
   
   ZnResetBBox(&item->item_bounding_box);
   if (!rect->line_width && ISCLEAR(rect->flags, FILLED_BIT)) {
@@ -363,31 +352,31 @@ ComputeCoordinates(ZnItem	item,
    * Compute the gradient geometry
    */
   if (!ZnGradientFlat(rect->fill_color)) {
-    ZnPoly	shape;
+    ZnPoly      shape;
     
     if (rect->fill_color->type == ZN_AXIAL_GRADIENT) {
-      int	angle = rect->fill_color->angle;
+      int       angle = rect->fill_color->angle;
       
       if ((angle != 0) && (angle != 90) && (angle != 180) && (angle != 270)) {
-	if (!rect->grad_geo) {
-	  rect->grad_geo = ZnMalloc(6*sizeof(ZnPoint));
-	}
-	ZnPolyContour1(&shape, p, 4, False);
-	ZnComputeGradient(rect->fill_color, wi, &shape, rect->grad_geo);
+        if (!rect->grad_geo) {
+          rect->grad_geo = ZnMalloc(6*sizeof(ZnPoint));
+        }
+        ZnPolyContour1(&shape, p, 4, False);
+        ZnComputeGradient(rect->fill_color, wi, &shape, rect->grad_geo);
       }
       else {
-	goto free_ggeo;
+        goto free_ggeo;
       }
     }
     else {
       if (!rect->grad_geo) {
-	rect->grad_geo = ZnMalloc(6*sizeof(ZnPoint));
+        rect->grad_geo = ZnMalloc(6*sizeof(ZnPoint));
       }
       if (rect->fill_color->type == ZN_PATH_GRADIENT) {
-	ZnPolyContour1(&shape, rect->coords, 2, False);
+        ZnPolyContour1(&shape, rect->coords, 2, False);
       }
       else {
-	ZnPolyContour1(&shape, p, 4, False);
+        ZnPolyContour1(&shape, p, 4, False);
       }
       ZnComputeGradient(rect->fill_color, wi, &shape, rect->grad_geo);
     }
@@ -407,18 +396,18 @@ ComputeCoordinates(ZnItem	item,
  **********************************************************************************
  *
  * ToArea --
- *	Tell if the object is entirely outside (-1),
- *	entirely inside (1) or in between (0).
+ *      Tell if the object is entirely outside (-1),
+ *      entirely inside (1) or in between (0).
  *
  **********************************************************************************
  */
 static int
-ToArea(ZnItem	item,
-       ZnToArea	ta)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
-  RectangleItem	rect = (RectangleItem) item;
-  int		result, result2;
-  ZnBBox	*area = ta->area;
+  RectangleItem rect = (RectangleItem) item;
+  int           result, result2;
+  ZnBBox        *area = ta->area;
 
   result = -1;
 
@@ -429,18 +418,18 @@ ToArea(ZnItem	item,
     }
   }
   if (rect->line_width > 0) {
-    int		i;
-    ZnPoint	pts[5];
+    int         i;
+    ZnPoint     pts[5];
 
     for (i = 0; i < 4; i++) {
       pts[i] = rect->dev[i];
     }
     pts[4] = pts[0];
     result2 = ZnPolylineInBBox(pts, 5, rect->line_width,
-			       CapProjecting, JoinMiter, area);
+                               CapProjecting, JoinMiter, area);
     if (ISCLEAR(rect->flags, FILLED_BIT)) {
       if (result2 == 0) {
-	return 0;
+        return 0;
       }
       result = result2;
     }
@@ -461,14 +450,14 @@ ToArea(ZnItem	item,
  **********************************************************************************
  */
 static void
-Draw(ZnItem	item)
+Draw(ZnItem     item)
 {
-  ZnWInfo	*wi  = item->wi;
-  RectangleItem	rect = (RectangleItem) item;
-  XGCValues  	values;
-  unsigned int	i, gc_mask;
-  XRectangle	r;
-  XPoint	xp[5];
+  ZnWInfo       *wi  = item->wi;
+  RectangleItem rect = (RectangleItem) item;
+  XGCValues     values;
+  unsigned int  i, gc_mask;
+  XRectangle    r;
+  XPoint        xp[5];
   
   if (ISSET(rect->flags, ALIGNED_BIT)) {
     if (rect->dev[0].x < rect->dev[2].x) {
@@ -503,33 +492,33 @@ Draw(ZnItem	item)
     values.foreground = ZnGetGradientPixel(rect->fill_color, 0.0);
     if (rect->tile != ZnUnspecifiedImage) {
       if (!ZnImageIsBitmap(rect->tile)) { /* Fill tiled */
-	values.fill_style = FillTiled;
-	values.tile = ZnImagePixmap(rect->tile, wi->win);
-	if (ISSET(rect->flags, ALIGNED_BIT)) {
-	  values.ts_x_origin = (int) r.x;
-	  values.ts_y_origin = (int) r.y;
-	}
-	else {
-	  values.ts_x_origin = (int) item->item_bounding_box.orig.x;
-	  values.ts_y_origin = (int) item->item_bounding_box.orig.y;
-	}
-	XChangeGC(wi->dpy, wi->gc,
-		  GCTileStipXOrigin|GCTileStipYOrigin|GCFillStyle|GCTile, &values);
+        values.fill_style = FillTiled;
+        values.tile = ZnImagePixmap(rect->tile, wi->win);
+        if (ISSET(rect->flags, ALIGNED_BIT)) {
+          values.ts_x_origin = (int) r.x;
+          values.ts_y_origin = (int) r.y;
+        }
+        else {
+          values.ts_x_origin = (int) item->item_bounding_box.orig.x;
+          values.ts_y_origin = (int) item->item_bounding_box.orig.y;
+        }
+        XChangeGC(wi->dpy, wi->gc,
+                  GCTileStipXOrigin|GCTileStipYOrigin|GCFillStyle|GCTile, &values);
       }
       else {
-	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(rect->tile, wi->win);
-	if (ISSET(rect->flags, ALIGNED_BIT)) {
-	  values.ts_x_origin = (int) r.x;
-	  values.ts_y_origin = (int) r.y;
-	}
-	else {
-	  values.ts_x_origin = (int) item->item_bounding_box.orig.x;
-	  values.ts_y_origin = (int) item->item_bounding_box.orig.y;
-	}
-	XChangeGC(wi->dpy, wi->gc,
-		  GCTileStipXOrigin|GCTileStipYOrigin|GCFillStyle|GCStipple|GCForeground,
-		  &values);
+        values.fill_style = FillStippled;
+        values.stipple = ZnImagePixmap(rect->tile, wi->win);
+        if (ISSET(rect->flags, ALIGNED_BIT)) {
+          values.ts_x_origin = (int) r.x;
+          values.ts_y_origin = (int) r.y;
+        }
+        else {
+          values.ts_x_origin = (int) item->item_bounding_box.orig.x;
+          values.ts_y_origin = (int) item->item_bounding_box.orig.y;
+        }
+        XChangeGC(wi->dpy, wi->gc,
+                  GCTileStipXOrigin|GCTileStipYOrigin|GCFillStyle|GCStipple|GCForeground,
+                  &values);
       }
     }
     else { /* Fill solid */
@@ -538,7 +527,7 @@ Draw(ZnItem	item)
     }
     if (ISSET(rect->flags, ALIGNED_BIT)) {
       XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc, r.x, r.y,
-		     r.width, r.height);
+                     r.width, r.height);
     }
     else {
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc, xp, 4, Convex, CoordModeOrigin);
@@ -549,18 +538,18 @@ Draw(ZnItem	item)
   if (rect->line_width) {
     if (rect->relief != ZN_RELIEF_FLAT) {
       if (ISSET(rect->flags, ALIGNED_BIT)) {
- 	ZnDrawRectangleRelief(wi, rect->relief, rect->gradient,
-			      &r, rect->line_width);
+        ZnDrawRectangleRelief(wi, rect->relief, rect->gradient,
+                              &r, rect->line_width);
       }
       else {
-	ZnPoint p[5];
-	for (i = 0; i < 4; i++) {
-	  p[4-i].x = rect->dev[i].x;
-	  p[4-i].y = rect->dev[i].y;
-	}
-	p[0] = p[4];
-	ZnDrawPolygonRelief(wi, rect->relief, rect->gradient,
-			    p, 5, rect->line_width);
+        ZnPoint p[5];
+        for (i = 0; i < 4; i++) {
+          p[4-i].x = rect->dev[i].x;
+          p[4-i].y = rect->dev[i].y;
+        }
+        p[0] = p[4];
+        ZnDrawPolygonRelief(wi, rect->relief, rect->gradient,
+                            p, 5, rect->line_width);
       }
     }
     else {
@@ -570,25 +559,25 @@ Draw(ZnItem	item)
       values.line_width = (rect->line_width == 1) ? 0 : (int) rect->line_width;
       values.join_style = JoinMiter;
       if (ISCLEAR(rect->flags, ALIGNED_BIT)) {
-	gc_mask |= GCCapStyle;
-	values.cap_style = CapProjecting;
+        gc_mask |= GCCapStyle;
+        values.cap_style = CapProjecting;
       }
       if (rect->line_pattern == ZnUnspecifiedImage) {
-	values.fill_style = FillSolid;
-	XChangeGC(wi->dpy, wi->gc, gc_mask, &values);
+        values.fill_style = FillSolid;
+        XChangeGC(wi->dpy, wi->gc, gc_mask, &values);
       }
       else {
-	values.fill_style = FillStippled;
-	values.stipple = ZnImagePixmap(rect->line_pattern, wi->win);
-	gc_mask |= GCStipple;
-	XChangeGC(wi->dpy, wi->gc, gc_mask, &values);
+        values.fill_style = FillStippled;
+        values.stipple = ZnImagePixmap(rect->line_pattern, wi->win);
+        gc_mask |= GCStipple;
+        XChangeGC(wi->dpy, wi->gc, gc_mask, &values);
       }
       if (ISSET(rect->flags, ALIGNED_BIT)) {
-	XDrawRectangle(wi->dpy, wi->draw_buffer, wi->gc, r.x, r.y,
-		       r.width, r.height);
+        XDrawRectangle(wi->dpy, wi->draw_buffer, wi->gc, r.x, r.y,
+                       r.width, r.height);
       }
       else {
-	XDrawLines(wi->dpy, wi->draw_buffer, wi->gc, xp, 5, CoordModeOrigin);
+        XDrawLines(wi->dpy, wi->draw_buffer, wi->gc, xp, 5, CoordModeOrigin);
       }
     }
   }
@@ -606,7 +595,7 @@ Draw(ZnItem	item)
 static void
 RectRenderCB(void *closure)
 {
-  RectangleItem	rect = (RectangleItem) closure;
+  RectangleItem rect = (RectangleItem) closure;
 
   glBegin(GL_TRIANGLE_STRIP);
   glVertex2d(rect->dev[0].x, rect->dev[0].y);
@@ -619,11 +608,11 @@ RectRenderCB(void *closure)
 
 #ifdef GL
 static void
-Render(ZnItem	item)
+Render(ZnItem   item)
 {
-  ZnWInfo	*wi  = item->wi;
-  RectangleItem	rect = (RectangleItem) item;
-  int		i;
+  ZnWInfo       *wi  = item->wi;
+  RectangleItem rect = (RectangleItem) item;
+  int           i;
 
 #ifdef GL_LIST
   if (!item->gl_list) {
@@ -634,51 +623,51 @@ Render(ZnItem	item)
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
       
       if (!ZnGradientFlat(rect->fill_color)) {
-	ZnBool	fast = (rect->fill_color->type == ZN_AXIAL_GRADIENT) && !rect->grad_geo;
-	ZnPoly	poly;
-	
-	ZnPolyContour1(&poly, rect->dev, 4, False);
-	ZnRenderGradient(wi, rect->fill_color,
-			 fast ? NULL: RectRenderCB, rect,
-			 fast ? rect->dev : rect->grad_geo, &poly);
+        ZnBool  fast = (rect->fill_color->type == ZN_AXIAL_GRADIENT) && !rect->grad_geo;
+        ZnPoly  poly;
+        
+        ZnPolyContour1(&poly, rect->dev, 4, False);
+        ZnRenderGradient(wi, rect->fill_color,
+                         fast ? NULL: RectRenderCB, rect,
+                         fast ? rect->dev : rect->grad_geo, &poly);
       }
       else if (rect->tile != ZnUnspecifiedImage) { /* Fill tiled/patterned */
-	if (ISSET(rect->flags, ALIGNED_BIT)) {
-	  ZnBBox bbox;
+        if (ISSET(rect->flags, ALIGNED_BIT)) {
+          ZnBBox bbox;
 
-	  bbox.orig = rect->dev[0];
-	  bbox.corner = rect->dev[2];
-	  ZnRenderTile(wi, rect->tile, rect->fill_color, NULL, NULL, (ZnPoint *) &bbox);
-	}
-	else {
-	  ZnRenderTile(wi, rect->tile, rect->fill_color, RectRenderCB,
-		       rect, (ZnPoint *) &item->item_bounding_box);
-	}
+          bbox.orig = rect->dev[0];
+          bbox.corner = rect->dev[2];
+          ZnRenderTile(wi, rect->tile, rect->fill_color, NULL, NULL, (ZnPoint *) &bbox);
+        }
+        else {
+          ZnRenderTile(wi, rect->tile, rect->fill_color, RectRenderCB,
+                       rect, (ZnPoint *) &item->item_bounding_box);
+        }
       }
       else {
-	unsigned short alpha;
-	XColor *color = ZnGetGradientColor(rect->fill_color, 0.0, &alpha);
-	alpha = ZnComposeAlpha(alpha, wi->alpha);
-	glColor4us(color->red, color->green, color->blue, alpha);
-	RectRenderCB(rect);
+        unsigned short alpha;
+        XColor *color = ZnGetGradientColor(rect->fill_color, 0.0, &alpha);
+        alpha = ZnComposeAlpha(alpha, wi->alpha);
+        glColor4us(color->red, color->green, color->blue, alpha);
+        RectRenderCB(rect);
       }
     }
     
     if (rect->line_width) {
       ZnPoint p[5];
       for (i = 0; i < 4; i++) {
-	p[4-i].x = rect->dev[i].x;
-	p[4-i].y = rect->dev[i].y;
+        p[4-i].x = rect->dev[i].x;
+        p[4-i].y = rect->dev[i].y;
       }
       p[0] = p[4];
       if (rect->relief != ZN_RELIEF_FLAT) {
-	ZnRenderPolygonRelief(wi, rect->relief, rect->gradient, False,
-			      p, 5, rect->line_width);
+        ZnRenderPolygonRelief(wi, rect->relief, rect->gradient, False,
+                              p, 5, rect->line_width);
       }
       else {
-	ZnRenderPolyline(wi, p, 5, rect->line_width,
-			 rect->line_style, CapRound, JoinMiter,
-			 NULL, NULL, rect->line_color);
+        ZnRenderPolyline(wi, p, 5, rect->line_width,
+                         rect->line_style, CapRound, JoinMiter,
+                         NULL, NULL, rect->line_color);
       }
     }
 #ifdef GL_LIST    
@@ -690,7 +679,7 @@ Render(ZnItem	item)
 }
 #else
 static void
-Render(ZnItem	item __unused)
+Render(ZnItem   item)
 {
 }
 #endif
@@ -704,11 +693,11 @@ Render(ZnItem	item __unused)
  **********************************************************************************
  */
 static ZnBool
-IsSensitive(ZnItem	item,
-	    int		item_part __unused)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
   return (ISSET(item->flags, ZN_SENSITIVE_BIT) &&
-	  item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
+          item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
 }
 
 
@@ -720,12 +709,12 @@ IsSensitive(ZnItem	item,
  **********************************************************************************
  */
 static double
-Pick(ZnItem	item,
-     ZnPick	ps)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
-  RectangleItem	rect = (RectangleItem) item;
-  double	best_dist;
-  ZnPoint	*p = ps->point;
+  RectangleItem rect = (RectangleItem) item;
+  double        best_dist;
+  ZnPoint       *p = ps->point;
 
   best_dist = ZnPolygonToPointDist(rect->dev, 4, p);
 
@@ -737,16 +726,16 @@ Pick(ZnItem	item,
   best_dist = ABS(best_dist);
   
   if (rect->line_width > 1) {
-    double	dist;
-    int		i;
-    ZnPoint	pts[5];
+    double      dist;
+    int         i;
+    ZnPoint     pts[5];
 
     for (i = 0; i < 4; i++) {
       pts[i] = rect->dev[i];
     }
     pts[4] = pts[0];
     dist = ZnPolylineToPointDist(pts, 5, rect->line_width,
-				 CapProjecting, JoinMiter, p);
+                                 CapProjecting, JoinMiter, p);
     if (dist <= 0.0) {
       return 0.0;
     }
@@ -764,10 +753,87 @@ Pick(ZnItem	item,
  *
  **********************************************************************************
  */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
 {
+  ZnWInfo       *wi = item->wi;
+  RectangleItem rect = (RectangleItem) item;
+  char          path[500];
+
+  if (ISCLEAR(rect->flags, FILLED_BIT) && (rect->line_width == 0)) {
+    return TCL_OK;
+  }
+
+  /*
+   * Create the rectangle path.
+   */
+  sprintf(path, "%.15g %.15g moveto %.15g %.15g lineto %.15g %.15g lineto %.15g %.15g lineto closepath\n",
+          rect->dev[0].x, rect->dev[0].y, rect->dev[1].x, rect->dev[1].y,
+          rect->dev[2].x, rect->dev[2].y, rect->dev[3].x, rect->dev[3].y);
+  Tcl_AppendResult(wi->interp, path, NULL);
+
+  /*
+   * Emit code to draw the filled area.
+   */
+  if (ISSET(rect->flags, FILLED_BIT)) {
+    if (rect->line_width) {
+      Tcl_AppendResult(wi->interp, "gsave\n", NULL);
+    }
+    if (!ZnGradientFlat(rect->fill_color)) {
+      if (ZnPostscriptGradient(wi->interp, wi->ps_info, rect->fill_color,
+                               rect->grad_geo ? rect->grad_geo : rect->dev, NULL) != TCL_OK) {
+        return TCL_ERROR;
+      }
+    }
+    else if (rect->tile != ZnUnspecifiedImage) {
+      if (!ZnImageIsBitmap(rect->tile)) { /* Fill tiled */
+        if (ZnPostscriptTile(wi->interp, wi->win, wi->ps_info, rect->tile) != TCL_OK) {
+          return TCL_ERROR;
+        }
+      }
+      else { /* Fill stippled */
+        if (Tk_PostscriptColor(wi->interp, wi->ps_info,
+                               ZnGetGradientColor(rect->fill_color, 0.0, NULL)) != TCL_OK) {
+          return TCL_ERROR;
+        }
+        Tcl_AppendResult(wi->interp, "clip ", NULL);
+        if (ZnPostscriptStipple(wi->interp, wi->win, wi->ps_info, rect->tile) != TCL_OK) {
+          return TCL_ERROR;
+        }
+      }
+    }
+    else { /* Fill solid */
+      if (Tk_PostscriptColor(wi->interp, wi->ps_info,
+                             ZnGetGradientColor(rect->fill_color, 0.0, NULL)) != TCL_OK) {
+        return TCL_ERROR;
+      }
+      Tcl_AppendResult(wi->interp, "fill\n", NULL);
+    }
+    if (rect->line_width) {
+      Tcl_AppendResult(wi->interp, "grestore\n", NULL);
+    }
+  }
+
+  /*
+   * Then emit code code to stroke the outline.
+   */
+  if (rect->line_width) {
+    if (rect->relief != ZN_RELIEF_FLAT) {
+      /* TODO No support yet */
+    }
+    else {
+      Tcl_AppendResult(wi->interp, "0 setlinejoin 2 setlinecap\n", NULL);
+      if (ZnPostscriptOutline(wi->interp, wi->ps_info, wi->win,
+                              rect->line_width, rect->line_style,
+                              rect->line_color, rect->line_pattern) != TCL_OK) {
+        return TCL_ERROR;
+      }
+    }
+  }
+
+  return TCL_OK;
 }
 
 
@@ -775,17 +841,17 @@ PostScript(ZnItem	item __unused,
  **********************************************************************************
  *
  * GetClipVertices --
- *	Get the clipping shape.
- *	Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
+ *      Get the clipping shape.
+ *      Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
  *
  **********************************************************************************
  */
 static ZnBool
-GetClipVertices(ZnItem		item,
-		ZnTriStrip	*tristrip)
+GetClipVertices(ZnItem          item,
+                ZnTriStrip      *tristrip)
 {
-  RectangleItem	rect = (RectangleItem) item;
-  ZnPoint	*points;
+  RectangleItem rect = (RectangleItem) item;
+  ZnPoint       *points;
 
   if (ISSET(rect->flags, ALIGNED_BIT)) {
     ZnListAssertSize(ZnWorkPoints, 2);
@@ -828,30 +894,30 @@ GetClipVertices(ZnItem		item,
  **********************************************************************************
  *
  * Coords --
- *	Return or edit the item vertices.
+ *      Return or edit the item vertices.
  *
  **********************************************************************************
  */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
-  RectangleItem	rect = (RectangleItem) item;
+  RectangleItem rect = (RectangleItem) item;
 
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp,
-		     " rectangles can't add or remove vertices", NULL);
+                     " rectangles can't add or remove vertices", NULL);
     return TCL_ERROR;
   }
   else if (cmd == ZN_COORDS_REPLACE_ALL) {
     if (*num_pts != 2) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need 2 points on rectangles", NULL);
+                       " coords command need 2 points on rectangles", NULL);
       return TCL_ERROR;
     }
     rect->coords[0] = (*pts)[0];
@@ -861,7 +927,7 @@ Coords(ZnItem		item,
   else if (cmd == ZN_COORDS_REPLACE) {
     if (*num_pts < 1) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need at least 1 point", NULL);
+                       " coords command need at least 1 point", NULL);
       return TCL_ERROR;
     }
     if (index < 0) {
@@ -870,7 +936,7 @@ Coords(ZnItem		item,
     if ((index < 0) || (index > 1)) {
     range_err:
       Tcl_AppendResult(item->wi->interp,
-		       " incorrect coord index, should be between -2 and 1", NULL);
+                       " incorrect coord index, should be between -2 and 1", NULL);
       return TCL_ERROR;
     }
     rect->coords[index] = (*pts)[0];
@@ -903,16 +969,16 @@ Coords(ZnItem		item,
  **********************************************************************************
  */
 static void
-GetAnchor(ZnItem	item,
-	  Tk_Anchor	anchor,
-	  ZnPoint	*p)
+GetAnchor(ZnItem        item,
+          Tk_Anchor     anchor,
+          ZnPoint       *p)
 {
   ZnBBox *bbox = &item->item_bounding_box;
 
   ZnOrigin2Anchor(&bbox->orig,
-		  bbox->corner.x - bbox->orig.x,
-		  bbox->corner.y - bbox->orig.y,
-		  anchor, p);
+                  bbox->corner.x - bbox->orig.x,
+                  bbox->corner.y - bbox->orig.y,
+                  anchor, p);
 }
 
 
@@ -927,33 +993,33 @@ static ZnItemClassStruct RECTANGLE_ITEM_CLASS = {
   "rectangle",
   sizeof(RectangleItemStruct),
   rect_attrs,
-  0,			/* num_parts */
-  0,			/* flags */
+  0,                    /* num_parts */
+  0,                    /* flags */
   -1,
   Init,
   Clone,
   Destroy,
   Configure,
   Query,
-  NULL,			/* GetFieldSet */
+  NULL,                 /* GetFieldSet */
   GetAnchor,
   GetClipVertices,
-  NULL,			/* GetContours */
+  NULL,                 /* GetContours */
   Coords,
-  NULL,			/* InsertChars */
-  NULL,			/* DeleteChars */
-  NULL,			/* Cursor */
-  NULL,			/* Index */
-  NULL,			/* Part */
-  NULL,			/* Selection */
-  NULL,			/* Contour */
+  NULL,                 /* InsertChars */
+  NULL,                 /* DeleteChars */
+  NULL,                 /* Cursor */
+  NULL,                 /* Index */
+  NULL,                 /* Part */
+  NULL,                 /* Selection */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 

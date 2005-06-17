@@ -1,28 +1,17 @@
 /*
  * Attrs.c -- Various attributes manipulation routines.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Fri Dec 31 10:03:34 1999
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Fri Dec 31 10:03:34 1999
  *
- * $Id: Attrs.c,v 1.10 2004/04/30 14:28:08 lecoanet Exp $
+ * $Id: Attrs.c,v 1.13 2005/04/27 07:32:03 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -32,13 +21,13 @@
 #include "List.h"
 #include "Geo.h"
 #include "WidgetInfo.h"
-#include "glu.h"
 
+#include <GL/glu.h>
 #include <memory.h>
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Attrs.c,v 1.10 2004/04/30 14:28:08 lecoanet Exp $";
+static const char rcsid[] = "$Id: Attrs.c,v 1.13 2005/04/27 07:32:03 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -49,22 +38,22 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  *
  ****************************************************************
  */
-#define RELIEF_FLAT_SPEC	"flat"
-#define RELIEF_RAISED_SPEC	"raised"
-#define RELIEF_SUNKEN_SPEC	"sunken"
-#define RELIEF_GROOVE_SPEC	"groove"
-#define RELIEF_RIDGE_SPEC	"ridge"
+#define RELIEF_FLAT_SPEC        "flat"
+#define RELIEF_RAISED_SPEC      "raised"
+#define RELIEF_SUNKEN_SPEC      "sunken"
+#define RELIEF_GROOVE_SPEC      "groove"
+#define RELIEF_RIDGE_SPEC       "ridge"
 #define RELIEF_ROUND_RAISED_SPEC "roundraised"
 #define RELIEF_ROUND_SUNKEN_SPEC "roundsunken"
 #define RELIEF_ROUND_GROOVE_SPEC "roundgroove"
-#define RELIEF_ROUND_RIDGE_SPEC	"roundridge"
+#define RELIEF_ROUND_RIDGE_SPEC "roundridge"
 #define RELIEF_SUNKEN_RULE_SPEC "sunkenrule"
-#define RELIEF_RAISED_RULE_SPEC	"raisedrule"
+#define RELIEF_RAISED_RULE_SPEC "raisedrule"
 
 int
-ZnGetRelief(ZnWInfo		*wi,
-	    char		*name,
-	    ZnReliefStyle	*relief)
+ZnGetRelief(ZnWInfo             *wi,
+            char                *name,
+            ZnReliefStyle       *relief)
 {
   size_t length;
   
@@ -104,18 +93,18 @@ ZnGetRelief(ZnWInfo		*wi,
   }
   else {
     Tcl_AppendResult(wi->interp, "bad relief \"", name, "\": must be ",
-		     RELIEF_FLAT_SPEC, ", ",
-		     RELIEF_RAISED_SPEC, ", ",
-		     RELIEF_SUNKEN_SPEC, ", ",
-		     RELIEF_GROOVE_SPEC, ", ",
-		     RELIEF_RIDGE_SPEC, ", ",
-		     RELIEF_ROUND_RAISED_SPEC, ", ",
-		     RELIEF_ROUND_SUNKEN_SPEC, ", ",
-		     RELIEF_ROUND_GROOVE_SPEC, ", ",
-		     RELIEF_ROUND_RIDGE_SPEC, ", ",
-		     RELIEF_SUNKEN_RULE_SPEC, ", ",
-		     RELIEF_RAISED_RULE_SPEC,
-		     NULL);
+                     RELIEF_FLAT_SPEC, ", ",
+                     RELIEF_RAISED_SPEC, ", ",
+                     RELIEF_SUNKEN_SPEC, ", ",
+                     RELIEF_GROOVE_SPEC, ", ",
+                     RELIEF_RIDGE_SPEC, ", ",
+                     RELIEF_ROUND_RAISED_SPEC, ", ",
+                     RELIEF_ROUND_SUNKEN_SPEC, ", ",
+                     RELIEF_ROUND_GROOVE_SPEC, ", ",
+                     RELIEF_ROUND_RIDGE_SPEC, ", ",
+                     RELIEF_SUNKEN_RULE_SPEC, ", ",
+                     RELIEF_RAISED_RULE_SPEC,
+                     NULL);
     return TCL_ERROR;
   }
   if (!wi->render) {
@@ -163,39 +152,39 @@ ZnNameOfRelief(ZnReliefStyle relief)
  *
  ****************************************************************
  */
-#define BORDER_LEFT_SPEC	"left"
-#define BORDER_RIGHT_SPEC	"right"
-#define	BORDER_TOP_SPEC		"top"
-#define BORDER_BOTTOM_SPEC	"bottom"
-#define BORDER_CONTOUR_SPEC	"contour"
-#define BORDER_COUNTER_OBLIQUE_SPEC	"counteroblique"
-#define BORDER_OBLIQUE_SPEC	"oblique"
-#define NO_BORDER_SPEC		"noborder"
+#define BORDER_LEFT_SPEC        "left"
+#define BORDER_RIGHT_SPEC       "right"
+#define BORDER_TOP_SPEC         "top"
+#define BORDER_BOTTOM_SPEC      "bottom"
+#define BORDER_CONTOUR_SPEC     "contour"
+#define BORDER_COUNTER_OBLIQUE_SPEC     "counteroblique"
+#define BORDER_OBLIQUE_SPEC     "oblique"
+#define NO_BORDER_SPEC          "noborder"
 
 int
-ZnGetBorder(ZnWInfo	*wi,
-	    Tcl_Obj	*name,
-	    ZnBorder	*border)
+ZnGetBorder(ZnWInfo     *wi,
+            Tcl_Obj     *name,
+            ZnBorder    *border)
 {
   unsigned int j, len, largc;
   Tcl_Obj      **largv;
-  char	       *str;
+  char         *str;
 
   *border = ZN_NO_BORDER;
   if (Tcl_ListObjGetElements(wi->interp, name,
-			     &largc, &largv) == TCL_ERROR) {
+                             &largc, &largv) == TCL_ERROR) {
   border_error:
     Tcl_AppendResult(wi->interp, "bad line shape \"", Tcl_GetString(name),
-		     "\": must be a list of ",
-		     BORDER_LEFT_SPEC, ", ",
-		     BORDER_RIGHT_SPEC, ", ",
-		     BORDER_TOP_SPEC, ", ",
-		     BORDER_BOTTOM_SPEC, ", ",
-		     BORDER_COUNTER_OBLIQUE_SPEC, ", ",
-		     BORDER_OBLIQUE_SPEC, " or ",
-		     BORDER_CONTOUR_SPEC, ", ",
-		     NO_BORDER_SPEC, " alone",
-		     NULL);
+                     "\": must be a list of ",
+                     BORDER_LEFT_SPEC, ", ",
+                     BORDER_RIGHT_SPEC, ", ",
+                     BORDER_TOP_SPEC, ", ",
+                     BORDER_BOTTOM_SPEC, ", ",
+                     BORDER_COUNTER_OBLIQUE_SPEC, ", ",
+                     BORDER_OBLIQUE_SPEC, " or ",
+                     BORDER_CONTOUR_SPEC, ", ",
+                     NO_BORDER_SPEC, " alone",
+                     NULL);
     return TCL_ERROR;
   }
   for (j = 0; j < largc; j++) {
@@ -238,7 +227,7 @@ ZnGetBorder(ZnWInfo	*wi,
  */
 void
 ZnNameOfBorder(ZnBorder border,
-	       char	*name)
+               char     *name)
 {
   if (border == ZN_NO_BORDER) {
     strcpy(name, NO_BORDER_SPEC);
@@ -254,19 +243,19 @@ ZnNameOfBorder(ZnBorder border,
     }
     if (border & ZN_RIGHT_BORDER) {  
       if (name[0] != 0) {
-	strcat(name, " ");
+        strcat(name, " ");
       }
       strcat(name, BORDER_RIGHT_SPEC);
     }
     if (border & ZN_TOP_BORDER) {
       if (name[0] != 0) {
-	strcat(name, " ");
+        strcat(name, " ");
       }
       strcat(name, BORDER_TOP_SPEC);
     }
     if (border & ZN_BOTTOM_BORDER) {
       if (name[0] != 0) {
-	    strcat(name, " ");
+            strcat(name, " ");
       }
       strcat(name, BORDER_BOTTOM_SPEC);
     }
@@ -292,18 +281,18 @@ ZnNameOfBorder(ZnBorder border,
  *
  ****************************************************************
  */
-#define STRAIGHT_SPEC		"straight"
-#define RIGHT_LIGHTNING_SPEC	"rightlightning"
-#define LEFT_LIGHTNING_SPEC	"leftlightning"
-#define RIGHT_CORNER_SPEC	"rightcorner"
-#define LEFT_CORNER_SPEC	"leftcorner"
+#define STRAIGHT_SPEC           "straight"
+#define RIGHT_LIGHTNING_SPEC    "rightlightning"
+#define LEFT_LIGHTNING_SPEC     "leftlightning"
+#define RIGHT_CORNER_SPEC       "rightcorner"
+#define LEFT_CORNER_SPEC        "leftcorner"
 #define DOUBLE_RIGHT_CORNER_SPEC  "doublerightcorner"
-#define DOUBLE_LEFT_CORNER_SPEC	"doubleleftcorner"
+#define DOUBLE_LEFT_CORNER_SPEC "doubleleftcorner"
 
 int
-ZnGetLineShape(ZnWInfo		*wi,
-	       char		*name,
-	       ZnLineShape	*line_shape)
+ZnGetLineShape(ZnWInfo          *wi,
+               char             *name,
+               ZnLineShape      *line_shape)
 {
   unsigned int  len;
 
@@ -331,14 +320,14 @@ ZnGetLineShape(ZnWInfo		*wi,
   }
   else  {
     Tcl_AppendResult(wi->interp, "bad line shape \"", name, "\": must be ",
-		     STRAIGHT_SPEC, ", ",
-		     RIGHT_LIGHTNING_SPEC, ", ",
-		     LEFT_LIGHTNING_SPEC, ", ",
-		     RIGHT_CORNER_SPEC, ", ",
-		     LEFT_CORNER_SPEC, ", ",
-		     DOUBLE_RIGHT_CORNER_SPEC, ", ",
-		     DOUBLE_LEFT_CORNER_SPEC,
-		     NULL);
+                     STRAIGHT_SPEC, ", ",
+                     RIGHT_LIGHTNING_SPEC, ", ",
+                     LEFT_LIGHTNING_SPEC, ", ",
+                     RIGHT_CORNER_SPEC, ", ",
+                     LEFT_CORNER_SPEC, ", ",
+                     DOUBLE_RIGHT_CORNER_SPEC, ", ",
+                     DOUBLE_LEFT_CORNER_SPEC,
+                     NULL);
     return TCL_ERROR;
   }
   return TCL_OK;
@@ -374,15 +363,15 @@ ZnNameOfLineShape(ZnLineShape line_shape)
  *
  ****************************************************************
  */
-#define SIMPLE_SPEC		"simple"
-#define	DASHED_SPEC		"dashed"
-#define DOTTED_SPEC		"dotted"
-#define	MIXED_SPEC		"mixed"
+#define SIMPLE_SPEC             "simple"
+#define DASHED_SPEC             "dashed"
+#define DOTTED_SPEC             "dotted"
+#define MIXED_SPEC              "mixed"
 
 int
-ZnGetLineStyle(ZnWInfo		*wi,
-	       char		*name,
-	       ZnLineStyle	*line_style)
+ZnGetLineStyle(ZnWInfo          *wi,
+               char             *name,
+               ZnLineStyle      *line_style)
 {
   unsigned int len;
 
@@ -397,12 +386,12 @@ ZnGetLineStyle(ZnWInfo		*wi,
     *line_style = ZN_LINE_DOTTED;
   else  {
     Tcl_AppendResult(wi->interp, "bad line style \"", name, "\": must be ",
-		     SIMPLE_SPEC, ", ",
-		     DASHED_SPEC, ", ",
-		     DOTTED_SPEC, ", ",
-		     MIXED_SPEC,
-		     NULL);
-    return TCL_ERROR;	      
+                     SIMPLE_SPEC, ", ",
+                     DASHED_SPEC, ", ",
+                     DOTTED_SPEC, ", ",
+                     MIXED_SPEC,
+                     NULL);
+    return TCL_ERROR;         
   }
   return TCL_OK;
 }
@@ -445,12 +434,12 @@ ZnNameOfLineStyle(ZnLineStyle line_style)
  ****************************************************************
  */
 int
-ZnGetLeaderAnchors(ZnWInfo		*wi,
-		   char			*name,
-		   ZnLeaderAnchors	*leader_anchors)
+ZnGetLeaderAnchors(ZnWInfo              *wi,
+                   char                 *name,
+                   ZnLeaderAnchors      *leader_anchors)
 {
-  int	anchors[4];
-  int	index, num_tok, anchor_index=0;
+  int   anchors[4];
+  int   index, num_tok, anchor_index=0;
 
   *leader_anchors = NULL;
   while (*name && (*name == ' ')) {
@@ -462,29 +451,29 @@ ZnGetLeaderAnchors(ZnWInfo		*wi,
       num_tok = sscanf(name, "|%d%n", &anchors[anchor_index], &index);
       if (num_tok != 1) {
       la_error:
-	Tcl_AppendResult(wi->interp, " incorrect leader anchors \"",
-			 name, "\"", NULL);
-	return TCL_ERROR;
+        Tcl_AppendResult(wi->interp, " incorrect leader anchors \"",
+                         name, "\"", NULL);
+        return TCL_ERROR;
       }
       anchors[anchor_index+1] = -1;
       break;
     case '%':
       num_tok = sscanf(name, "%%%dx%d%n", &anchors[anchor_index],
-		       &anchors[anchor_index+1], &index);
+                       &anchors[anchor_index+1], &index);
       if (num_tok != 2) {
-	goto la_error;
+        goto la_error;
       }
       if (anchors[anchor_index] < 0) {
-	anchors[anchor_index] = 0;
+        anchors[anchor_index] = 0;
       }
       if (anchors[anchor_index] > 100) {
-	anchors[anchor_index] = 100;
+        anchors[anchor_index] = 100;
       }
       if (anchors[anchor_index+1] < 0) {
-	anchors[anchor_index+1] = 0;
+        anchors[anchor_index+1] = 0;
       }
       if (anchors[anchor_index+1] > 100) {
-	anchors[anchor_index+1] = 100;
+        anchors[anchor_index+1] = 100;
       }
       break;
     default:
@@ -517,9 +506,9 @@ ZnGetLeaderAnchors(ZnWInfo		*wi,
  */
 void
 ZnNameOfLeaderAnchors(ZnLeaderAnchors leader_anchors,
-		      char	      *name)
+                      char            *name)
 {
-  unsigned int	count;
+  unsigned int  count;
   
   if (!leader_anchors) {
     strcpy(name, "%50x50");
@@ -530,7 +519,7 @@ ZnNameOfLeaderAnchors(ZnLeaderAnchors leader_anchors,
     }
     else {
       count = sprintf(name, "%%%dx%d", leader_anchors->left_x,
-		      leader_anchors->left_y);
+                      leader_anchors->left_y);
     }
     name += count;
     if (leader_anchors->right_y < 0) {
@@ -549,8 +538,8 @@ ZnNameOfLeaderAnchors(ZnLeaderAnchors leader_anchors,
  *
  ******************************************************************
  */
-static Tcl_HashTable	format_cache;
-static ZnBool		format_inited = False;
+static Tcl_HashTable    format_cache;
+static ZnBool           format_inited = False;
 
 
 static char
@@ -572,7 +561,7 @@ CharToAttach(int attach)
 }
 
 static char
-CharToDim(int	dim)
+CharToDim(int   dim)
 {
   switch (dim) {
   case 'f':
@@ -594,7 +583,7 @@ CharToDim(int	dim)
  * optional and take default values when omitted. The spaces can appear
  * between blocks but not inside.
  *
- *	[ WidthxHeight ] [ field0Spec ][ field1Spec ]...[ fieldnSpec ]
+ *      [ WidthxHeight ] [ field0Spec ][ field1Spec ]...[ fieldnSpec ]
  *
  * Width and Height set the size of the clipping box surrounding
  * the label. If it is not specified, there will be no clipping.
@@ -602,7 +591,7 @@ CharToDim(int	dim)
  * field (0).
  *
  * fieldSpec is:
- *	sChar fieldWidth sChar fieldHeight [pChar fieldX pChar fieldY].
+ *      sChar fieldWidth sChar fieldHeight [pChar fieldX pChar fieldY].
  *
  * Each field description refers to the field of same index in the field
  * array.
@@ -623,21 +612,21 @@ CharToDim(int	dim)
  *
  */
 ZnLabelFormat
-ZnLFCreate(Tcl_Interp	*interp,
-	   char		*format_str,
-	   unsigned int	num_fields)
+ZnLFCreate(Tcl_Interp   *interp,
+           char         *format_str,
+           unsigned int num_fields)
 {
-  ZnList	fields;
-  Tcl_HashEntry	*entry;
+  ZnList        fields;
+  Tcl_HashEntry *entry;
   ZnFieldFormatStruct field_struct;
-  ZnFieldFormat	field_array;
-  ZnLabelFormat	format;
-  int		width, height;
-  ZnDim		c_width=0.0, c_height=0.0;
-  int		index, num_tok, num_ffs, new;
-  unsigned int	field_index=0;
-  char		*ptr = format_str, *next_ptr;
-  char		x_char, y_char;
+  ZnFieldFormat field_array;
+  ZnLabelFormat format;
+  int           width, height;
+  ZnDim         c_width=0.0, c_height=0.0;
+  int           index, num_tok, num_ffs, new;
+  unsigned int  field_index=0;
+  char          *ptr = format_str, *next_ptr;
+  char          x_char, y_char;
 
   if (!format_inited) {
     Tcl_InitHashTable(&format_cache, TCL_STRING_KEYS);
@@ -652,7 +641,7 @@ ZnLFCreate(Tcl_Interp	*interp,
     }
     else {
       Tcl_AppendResult(interp, "too many fields in label format: \"",
-		       format_str, "\"", NULL);
+                       format_str, "\"", NULL);
       return NULL;
     }
   }
@@ -674,7 +663,7 @@ ZnLFCreate(Tcl_Interp	*interp,
     if ((ptr == next_ptr) || (*next_ptr != 'x')) {
     lf_error_syn:
       Tcl_AppendResult(interp, "invalid label format specification \"",
-		       ptr, "\"", NULL);
+                       ptr, "\"", NULL);
     lf_error:
       Tcl_DeleteHashEntry(entry);
       ZnListFree(fields);
@@ -716,7 +705,7 @@ ZnLFCreate(Tcl_Interp	*interp,
   if ((*ptr == 'x') || (*ptr == 'f') || (*ptr == 'i') ||
       (*ptr == 'a') || (*ptr == 'l')) {
     num_tok = sscanf(ptr, "%c%d%c%d%n", &x_char, &width,
-		     &y_char, &height, &index);
+                     &y_char, &height, &index);
     if (num_tok != 4) {
       goto lf_error_syn;
     }
@@ -731,11 +720,11 @@ ZnLFCreate(Tcl_Interp	*interp,
 
     ptr += index;
     if ((*ptr == '>') || (*ptr == '<') || (*ptr == '+') ||
-	(*ptr == '^') || (*ptr == '$')) {
+        (*ptr == '^') || (*ptr == '$')) {
       num_tok = sscanf(ptr, "%c%d%c%d%n", &x_char, &field_struct.x_spec,
-		       &y_char, &field_struct.y_spec, &index);
+                       &y_char, &field_struct.y_spec, &index);
       if (num_tok != 4) {
-	goto lf_error_syn;
+        goto lf_error_syn;
       }
       field_struct.x_attach = CharToAttach(x_char);
       field_struct.y_attach = CharToAttach(y_char);
@@ -745,12 +734,12 @@ ZnLFCreate(Tcl_Interp	*interp,
     else if (!*ptr || (field_index != 0)) {
       /* An incomplete field spec is an error if there are several fields. */
       Tcl_AppendResult(interp, "incomplete field in label format: \"",
-		       ptr-index, "\"", NULL);
-      goto lf_error;		
+                       ptr-index, "\"", NULL);
+      goto lf_error;            
     }
     if (field_index >= num_fields) {
       Tcl_AppendResult(interp, "too many fields in label format: \"",
-		       format_str, "\"", NULL);
+                       format_str, "\"", NULL);
       goto lf_error;
     }
     field_struct.width_spec = (short) width;
@@ -768,7 +757,7 @@ ZnLFCreate(Tcl_Interp	*interp,
   num_ffs = ZnListSize(fields);
   
   format = (ZnLabelFormat) ZnMalloc(sizeof(ZnLabelFormatStruct) +
-				    (num_ffs-1) * sizeof(ZnFieldFormatStruct));
+                                    (num_ffs-1) * sizeof(ZnFieldFormatStruct));
   format->clip_width = (short) c_width;
   format->clip_height = (short) c_height;
   format->num_fields = num_ffs;
@@ -784,7 +773,7 @@ ZnLFCreate(Tcl_Interp	*interp,
 
 
 ZnLabelFormat
-ZnLFDuplicate(ZnLabelFormat	lf)
+ZnLFDuplicate(ZnLabelFormat     lf)
 {
   lf->ref_count++;
   return lf;
@@ -792,7 +781,7 @@ ZnLFDuplicate(ZnLabelFormat	lf)
 
 
 void
-ZnLFDelete(ZnLabelFormat	lf)
+ZnLFDelete(ZnLabelFormat        lf)
 {
   lf->ref_count--;
   if (lf->ref_count == 0) {
@@ -803,15 +792,15 @@ ZnLFDelete(ZnLabelFormat	lf)
 
 
 char *
-ZnLFGetString(ZnLabelFormat	lf)
+ZnLFGetString(ZnLabelFormat     lf)
 {
   return Tcl_GetHashKey(&format_cache, lf->entry);
 
 #if 0
-  ZnFieldFormat	ff;
-  char		*ptr;
-  char		x_char, y_char, w_char, h_char;
-  unsigned int	i, count;
+  ZnFieldFormat ff;
+  char          *ptr;
+  char          x_char, y_char, w_char, h_char;
+  unsigned int  i, count;
   
   ptr = str;
   if ((lf->clip_width != 0) || (lf->clip_height != 0)) {
@@ -839,8 +828,8 @@ ZnLFGetString(ZnLabelFormat	lf)
     w_char = DimToChar(ff->x_dim);
     h_char = DimToChar(ff->y_dim);
     count = sprintf(ptr, "%c%d%c%d%c%d%c%d",
-		    w_char, ff->width_spec, h_char, ff->height_spec,
-		    x_char, ff->x_spec, y_char, ff->y_spec);
+                    w_char, ff->width_spec, h_char, ff->height_spec,
+                    x_char, ff->x_spec, y_char, ff->y_spec);
     ptr += count;
   }
   *ptr = 0;
@@ -853,9 +842,9 @@ ZnLFGetString(ZnLabelFormat	lf)
  * set to zero, it means that there is no clipbox.
  */
 ZnBool
-ZnLFGetClipBox(ZnLabelFormat	lf,
-	       ZnDim		*w,
-	       ZnDim		*h)
+ZnLFGetClipBox(ZnLabelFormat    lf,
+               ZnDim            *w,
+               ZnDim            *h)
 {
   if ((lf->clip_width == 0) && (lf->clip_height == 0)) {
     return False;
@@ -869,18 +858,18 @@ ZnLFGetClipBox(ZnLabelFormat	lf,
 
 
 void
-ZnLFGetField(ZnLabelFormat	lf,
-	     unsigned int	field,
-	     char		*x_attach,
-	     char		*y_attach,
-	     char		*x_dim,
-	     char		*y_dim,
-	     int		*x_spec,
-	     int		*y_spec,
-	     short		*width_spec,
-	     short		*height_spec)
+ZnLFGetField(ZnLabelFormat      lf,
+             unsigned int       field,
+             char               *x_attach,
+             char               *y_attach,
+             char               *x_dim,
+             char               *y_dim,
+             int                *x_spec,
+             int                *y_spec,
+             short              *width_spec,
+             short              *height_spec)
 {
-  ZnFieldFormat	fptr;
+  ZnFieldFormat fptr;
 
   fptr = &lf->fields[field];
   *x_attach = fptr->x_attach;
@@ -901,18 +890,18 @@ ZnLFGetField(ZnLabelFormat	lf,
  *
  ****************************************************************
  */
-static Tcl_HashTable	line_end_cache;
-static ZnBool		line_end_inited = False;
+static Tcl_HashTable    line_end_cache;
+static ZnBool           line_end_inited = False;
 
 
 ZnLineEnd
-ZnLineEndCreate(Tcl_Interp	*interp,
-		char		*line_end_str)
+ZnLineEndCreate(Tcl_Interp      *interp,
+                char            *line_end_str)
 {
-  Tcl_HashEntry	*entry;
-  ZnLineEnd	le;
-  int		new, argc;
-  ZnReal	a, b, c;
+  Tcl_HashEntry *entry;
+  ZnLineEnd     le;
+  int           new, argc;
+  ZnReal        a, b, c;
   
   if (!line_end_inited) {
     Tcl_InitHashTable(&line_end_cache, TCL_STRING_KEYS);
@@ -939,21 +928,21 @@ ZnLineEndCreate(Tcl_Interp	*interp,
   }
   else {
     Tcl_AppendResult(interp, "incorrect line end spec: \"",
-		     line_end_str, "\", should be: shapeA shapeB shapeC", NULL);
+                     line_end_str, "\", should be: shapeA shapeB shapeC", NULL);
     return NULL;
   }
 }
 
 
 char *
-ZnLineEndGetString(ZnLineEnd	le)
+ZnLineEndGetString(ZnLineEnd    le)
 {
   return Tcl_GetHashKey(&line_end_cache, le->entry);
 }
 
 
 void
-ZnLineEndDelete(ZnLineEnd	le)
+ZnLineEndDelete(ZnLineEnd       le)
 {
   le->ref_count--;
   if (le->ref_count == 0) {
@@ -964,7 +953,7 @@ ZnLineEndDelete(ZnLineEnd	le)
 
 
 ZnLineEnd
-ZnLineEndDuplicate(ZnLineEnd	le)
+ZnLineEndDuplicate(ZnLineEnd    le)
 {
   le->ref_count++;
   return le;
@@ -979,16 +968,16 @@ ZnLineEndDuplicate(ZnLineEnd	le)
  *
  ******************************************************************
  */
-#define FILL_RULE_ODD_SPEC	 "odd"
-#define FILL_RULE_NON_ZERO_SPEC	 "nonzero"
-#define FILL_RULE_POSITIVE_SPEC	 "positive"
-#define FILL_RULE_NEGATIVE_SPEC	 "negative"
+#define FILL_RULE_ODD_SPEC       "odd"
+#define FILL_RULE_NON_ZERO_SPEC  "nonzero"
+#define FILL_RULE_POSITIVE_SPEC  "positive"
+#define FILL_RULE_NEGATIVE_SPEC  "negative"
 #define FILL_RULE_ABS_GEQ_2_SPEC "abs_geq_2"
 
 int
-ZnGetFillRule(ZnWInfo	 *wi,
-	      char	 *name,
-	      ZnFillRule *fill_rule)
+ZnGetFillRule(ZnWInfo    *wi,
+              char       *name,
+              ZnFillRule *fill_rule)
 {
   unsigned int len;
 
@@ -1010,12 +999,12 @@ ZnGetFillRule(ZnWInfo	 *wi,
   }
   else  {
     Tcl_AppendResult(wi->interp, "bad fill rule \"", name, "\": must be ",
-		     FILL_RULE_ODD_SPEC, ", ",
-		     FILL_RULE_NON_ZERO_SPEC, ", ",
-		     FILL_RULE_POSITIVE_SPEC, ", ",
-		     FILL_RULE_NEGATIVE_SPEC, ", ",
-		     FILL_RULE_ABS_GEQ_2_SPEC,
-		     NULL);
+                     FILL_RULE_ODD_SPEC, ", ",
+                     FILL_RULE_NON_ZERO_SPEC, ", ",
+                     FILL_RULE_POSITIVE_SPEC, ", ",
+                     FILL_RULE_NEGATIVE_SPEC, ", ",
+                     FILL_RULE_ABS_GEQ_2_SPEC,
+                     NULL);
     return TCL_ERROR;
   }
   return TCL_OK;
@@ -1049,9 +1038,9 @@ ZnNameOfFillRule(ZnFillRule fill_rule)
  ******************************************************************
  */
 int
-ZnGetAutoAlign(ZnWInfo		*wi,
-	       char		*name,
-	       ZnAutoAlign	*aa)
+ZnGetAutoAlign(ZnWInfo          *wi,
+               char             *name,
+               ZnAutoAlign      *aa)
 {
   int       j;
   
@@ -1064,25 +1053,25 @@ ZnGetAutoAlign(ZnWInfo		*wi,
       switch(name[j]) {
       case 'l':
       case 'L':
-	aa->align[j] = TK_JUSTIFY_LEFT;
-	break;
+        aa->align[j] = TK_JUSTIFY_LEFT;
+        break;
       case 'c':
       case 'C':
-	aa->align[j] = TK_JUSTIFY_CENTER;
-	break;
+        aa->align[j] = TK_JUSTIFY_CENTER;
+        break;
       case 'r':
       case 'R':
-	aa->align[j] = TK_JUSTIFY_RIGHT;
-	break;
+        aa->align[j] = TK_JUSTIFY_RIGHT;
+        break;
       default:
-	goto aa_error;
+        goto aa_error;
       }
     }
   }
   else {
   aa_error:
     Tcl_AppendResult(wi->interp, "invalid auto alignment specification \"", name,
-		     "\" should be - or a triple of lcr", NULL);
+                     "\" should be - or a triple of lcr", NULL);
     return TCL_ERROR;
   }
   return TCL_OK;
@@ -1094,7 +1083,7 @@ ZnGetAutoAlign(ZnWInfo		*wi,
  */
 void
 ZnNameOfAutoAlign(ZnAutoAlign *aa,
-		  char	      *name)
+                  char        *name)
 {
   unsigned int i;
   
@@ -1106,14 +1095,14 @@ ZnNameOfAutoAlign(ZnAutoAlign *aa,
     for (i = 0; i < 3; i++) {
       switch (aa->align[i]) {
       case TK_JUSTIFY_LEFT:
-	strcat(name, "l");
-	break;
+        strcat(name, "l");
+        break;
       case TK_JUSTIFY_CENTER:
-	strcat(name, "c");
-	break;
+        strcat(name, "c");
+        break;
       case TK_JUSTIFY_RIGHT:
-	strcat(name, "r");
-	break;
+        strcat(name, "r");
+        break;
       }
     }
   }

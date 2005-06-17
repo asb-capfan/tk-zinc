@@ -1,28 +1,17 @@
 /*
  * Triangles.c -- Implementation of Triangle fan/strips  item.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Tue Dec 11 10:52:01 2001
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Tue Dec 11 10:52:01 2001
  *
- * $Id: Triangles.c,v 1.17 2004/04/30 12:03:56 lecoanet Exp $
+ * $Id: Triangles.c,v 1.22 2005/05/10 07:59:48 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 2001 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -46,7 +35,7 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
 /*
  * Bit offset of flags.
  */
-#define FAN_BIT		1<<0	/* Tell if the triangles are arranged in fan or strips. */
+#define FAN_BIT         1<<0    /* Tell if the triangles are arranged in fan or strips. */
 
 
 /*
@@ -57,19 +46,19 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  **********************************************************************************
  */
 typedef struct _TrianglesItemStruct {
-  ZnItemStruct	header;
+  ZnItemStruct  header;
 
   /* Public data */
-  ZnList	points;
+  ZnList        points;
   unsigned short flags;
-  ZnList	colors;
+  ZnList        colors;
   
   /* Private data */
-  ZnTriStrip	dev_points;
+  ZnTriStrip    dev_points;
 } TrianglesItemStruct, *TrianglesItem;
 
 
-static ZnAttrConfig	tr_attrs[] = {
+static ZnAttrConfig     tr_attrs[] = {
   { ZN_CONFIG_GRADIENT_LIST, "-colors", NULL,
     Tk_Offset(TrianglesItemStruct, colors), 0, ZN_DRAW_FLAG, False },
   { ZN_CONFIG_BOOL, "-composealpha", NULL,
@@ -107,16 +96,16 @@ static ZnAttrConfig	tr_attrs[] = {
  **********************************************************************************
  */
 static int
-Init(ZnItem		item,
-     int		*argc,
-     Tcl_Obj *CONST	*args[])
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])
 {
-  ZnWInfo	*wi = item->wi;
-  TrianglesItem	tr = (TrianglesItem) item;
-  unsigned int	num_points;
-  ZnPoint	*points;
-  ZnList	l;
-  ZnGradient	**grads;
+  ZnWInfo       *wi = item->wi;
+  TrianglesItem tr = (TrianglesItem) item;
+  unsigned int  num_points;
+  ZnPoint       *points;
+  ZnList        l;
+  ZnGradient    **grads;
   
   tr->dev_points.num_strips = 0;
 
@@ -134,7 +123,7 @@ Init(ZnItem		item,
     return TCL_ERROR;
   }
   if (ZnParseCoordList(wi, (*args)[0], &points,
-		       NULL, &num_points, NULL) == TCL_ERROR) {
+                       NULL, &num_points, NULL) == TCL_ERROR) {
     return TCL_ERROR;
   }
   if (num_points < 3) {
@@ -167,13 +156,13 @@ Init(ZnItem		item,
  **********************************************************************************
  */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  TrianglesItem	tr = (TrianglesItem) item;
+  TrianglesItem tr = (TrianglesItem) item;
 
   if (tr->colors) {
-    int		i, num_grads;
-    ZnGradient	**grads;
+    int         i, num_grads;
+    ZnGradient  **grads;
 
     tr->colors = ZnListDuplicate(tr->colors);
     num_grads = ZnListSize(tr->colors);
@@ -196,17 +185,17 @@ Clone(ZnItem	item)
  **********************************************************************************
  */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
-  TrianglesItem	tr = (TrianglesItem) item;
+  TrianglesItem tr = (TrianglesItem) item;
 
   ZnListFree(tr->points);
   if (tr->dev_points.num_strips) {
     ZnFree(tr->dev_points.strips->points);
   }
   if (tr->colors) {
-    int		i, num_grads;
-    ZnGradient	**grads;
+    int         i, num_grads;
+    ZnGradient  **grads;
 
     num_grads = ZnListSize(tr->colors);
     grads = ZnListArray(tr->colors);
@@ -226,12 +215,12 @@ Destroy(ZnItem	item)
  **********************************************************************************
  */
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
-  int		status = TCL_OK;
+  int           status = TCL_OK;
   
   status = ZnConfigureAttributes(item->wi, item, item, tr_attrs, argc, argv, flags);
 
@@ -247,9 +236,9 @@ Configure(ZnItem	item,
  **********************************************************************************
  */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, tr_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -267,14 +256,14 @@ Query(ZnItem		item,
  **********************************************************************************
  */
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force __unused)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  ZnWInfo	*wi = item->wi;
-  TrianglesItem	tr = (TrianglesItem) item;
-  ZnPoint	*points;
-  ZnPoint	*dev_points;
-  unsigned int	num_points;
+  ZnWInfo       *wi = item->wi;
+  TrianglesItem tr = (TrianglesItem) item;
+  ZnPoint       *points;
+  ZnPoint       *dev_points;
+  unsigned int  num_points;
   
   ZnResetBBox(&item->item_bounding_box);
 
@@ -294,7 +283,7 @@ ComputeCoordinates(ZnItem	item,
     }
   }
   ZnTriStrip1(&tr->dev_points, dev_points, num_points,
-	      ISSET(tr->flags, FAN_BIT));
+              ISSET(tr->flags, FAN_BIT));
 
   /*
    * Compute device coordinates.
@@ -322,20 +311,20 @@ ComputeCoordinates(ZnItem	item,
  **********************************************************************************
  *
  * ToArea --
- *	Tell if the object is entirely outside (-1),
- *	entirely inside (1) or in between (0).
+ *      Tell if the object is entirely outside (-1),
+ *      entirely inside (1) or in between (0).
  *
  **********************************************************************************
  */
 static int
-ToArea(ZnItem	item,
-       ZnToArea	ta)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
-  TrianglesItem	tr = (TrianglesItem) item;
-  ZnPoint	*points;
-  unsigned int	i, num_points;
-  int		 result=-1, result2;
-  ZnBBox	*area = ta->area;
+  TrianglesItem tr = (TrianglesItem) item;
+  ZnPoint       *points;
+  unsigned int  i, num_points;
+  int            result=-1, result2;
+  ZnBBox        *area = ta->area;
 
   if (tr->dev_points.num_strips == 0) {
     return -1;
@@ -353,12 +342,12 @@ ToArea(ZnItem	item,
     for (i = 0; i < num_points-3; i++, points++) {
       result2 = ZnPolygonInBBox(points, 3, area, NULL);
       if (result2 != result) {
-	return 0;
+        return 0;
       }
     }
   }
   else {
-    ZnPoint	tri[3];
+    ZnPoint     tri[3];
 
     tri[0] = points[0];
     tri[1] = points[1];
@@ -373,7 +362,7 @@ ToArea(ZnItem	item,
       tri[2] = *points;
       result2 = ZnPolygonInBBox(points, num_points, area, NULL);
       if (result2 != result) {
-	return 0;
+        return 0;
       }   
     }
   }
@@ -390,13 +379,13 @@ ToArea(ZnItem	item,
  **********************************************************************************
  */
 static void
-Draw(ZnItem	item)
+Draw(ZnItem     item)
 {
-  ZnWInfo	*wi = item->wi;
-  TrianglesItem	tr = (TrianglesItem) item;
-  unsigned int	i, num_points, last_color_index;
-  ZnPoint	*points;
-  ZnGradient	**grads;
+  ZnWInfo       *wi = item->wi;
+  TrianglesItem tr = (TrianglesItem) item;
+  unsigned int  i, num_points, last_color_index;
+  ZnPoint       *points;
+  ZnGradient    **grads;
   
   if (tr->dev_points.num_strips == 0) {
     return;
@@ -410,7 +399,7 @@ Draw(ZnItem	item)
   XSetFillStyle(wi->dpy, wi->gc, FillSolid);  
   
   if (ISCLEAR(tr->flags, FAN_BIT)) {
-    XPoint	*xpoints;
+    XPoint      *xpoints;
     ZnListAssertSize(ZnWorkXPoints, num_points);
     xpoints = ZnListArray(ZnWorkXPoints);
     for (i = 0; i < num_points; i++) {
@@ -419,14 +408,14 @@ Draw(ZnItem	item)
     }
     for (i = 0; i < num_points-2; i++, xpoints++) {
       if (i <= last_color_index) {
-	XSetForeground(wi->dpy, wi->gc, ZnGetGradientPixel(grads[i], 0.0));
+        XSetForeground(wi->dpy, wi->gc, ZnGetGradientPixel(grads[i], 0.0));
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc,
-		   xpoints, 3, Convex, CoordModeOrigin);
+                   xpoints, 3, Convex, CoordModeOrigin);
     }
   }
   else {
-    XPoint	tri[3];
+    XPoint      tri[3];
 
     tri[0].x = ZnNearestInt(points[0].x);
     tri[0].y = ZnNearestInt(points[0].y);
@@ -437,10 +426,10 @@ Draw(ZnItem	item)
     points += 3;
     for (i = 0; i < num_points-2; i++, points++) {
       if (i <= last_color_index) {
-	XSetForeground(wi->dpy, wi->gc, ZnGetGradientPixel(grads[i], 0.0));
+        XSetForeground(wi->dpy, wi->gc, ZnGetGradientPixel(grads[i], 0.0));
       }
       XFillPolygon(wi->dpy, wi->draw_buffer, wi->gc,
-		   tri, 3, Convex, CoordModeOrigin);
+                   tri, 3, Convex, CoordModeOrigin);
       tri[1] = tri[2];
       tri[2].x = ZnNearestInt(points->x);
       tri[2].y = ZnNearestInt(points->y);
@@ -458,15 +447,15 @@ Draw(ZnItem	item)
  */
 #ifdef GL
 static void
-Render(ZnItem	item)
+Render(ZnItem   item)
 {
-  ZnWInfo	*wi = item->wi;
-  TrianglesItem	tr = (TrianglesItem) item;
-  int		i, num_points, last_color_index;
-  ZnPoint	*points;
-  ZnGradient	**grads;
+  ZnWInfo       *wi = item->wi;
+  TrianglesItem tr = (TrianglesItem) item;
+  int           i, num_points, last_color_index;
+  ZnPoint       *points;
+  ZnGradient    **grads;
   unsigned short alpha;
-  XColor	*color;
+  XColor        *color;
 
   if (tr->dev_points.num_strips == 0) {
     return;
@@ -498,7 +487,7 @@ Render(ZnItem	item)
 }
 #else
 static void
-Render(ZnItem	item __unused)
+Render(ZnItem   item)
 {
 }
 #endif
@@ -512,11 +501,11 @@ Render(ZnItem	item __unused)
  **********************************************************************************
  */
 static ZnBool
-IsSensitive(ZnItem	item,
-	    int		item_part __unused)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
   return (ISSET(item->flags, ZN_SENSITIVE_BIT) &&
-	  item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
+          item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
 }
 
 
@@ -528,13 +517,13 @@ IsSensitive(ZnItem	item,
  **********************************************************************************
  */
 static double
-Pick(ZnItem	item,
-     ZnPick	ps)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
-  TrianglesItem	tr = (TrianglesItem) item;
-  double	dist=1.0e40, new_dist;
-  ZnPoint	*points, *p = ps->point;
-  int		i, num_points;
+  TrianglesItem tr = (TrianglesItem) item;
+  double        dist=1.0e40, new_dist;
+  ZnPoint       *points, *p = ps->point;
+  int           i, num_points;
 
   if (tr->dev_points.num_strips == 0) {
     return dist;
@@ -547,15 +536,15 @@ Pick(ZnItem	item,
     for (i = 0; i < num_points-2; i++, points++) {
       new_dist = ZnPolygonToPointDist(points, 3, p);
       if (new_dist <= 0.0) {
-	return 0.0;
+        return 0.0;
       }
       if (new_dist < dist) {
-	dist = new_dist;
+        dist = new_dist;
       }
     }
   }
   else {
-    ZnPoint	tri[3];
+    ZnPoint     tri[3];
 
     tri[0] = points[0];
     tri[1] = points[1];
@@ -563,10 +552,10 @@ Pick(ZnItem	item,
     for (i = 0; i < num_points-2; i++, points++) {
       new_dist = ZnPolygonToPointDist(tri, 3, p);
       if (new_dist <= 0.0) {
-	return 0.0;
+        return 0.0;
       }
       if (new_dist < dist) {
-	dist = new_dist;
+        dist = new_dist;
       }
       tri[1] = tri[2];
       tri[2] = *points;
@@ -584,10 +573,62 @@ Pick(ZnItem	item,
  *
  **********************************************************************************
  */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
 {
+  ZnWInfo       *wi = item->wi;
+  TrianglesItem tr = (TrianglesItem) item;
+  ZnPoint       *points;
+  int           i, num_points, last_color_index;
+  int           edge;
+  ZnGradient    **grads;
+  XColor        *color = NULL;
+  double        red, green, blue;
+  ZnBBox        bbox;
+  char          path[150];
+
+  points = tr->dev_points.strips->points;
+  num_points = tr->dev_points.strips->num_points;
+  ZnResetBBox(&bbox);
+  ZnAddPointsToBBox(&bbox, points, num_points);
+  
+  grads = ZnListArray(tr->colors);
+  last_color_index = ZnListSize(tr->colors)-1;
+
+  Tcl_AppendResult(wi->interp,
+                   "/ShadingDict <<\n  /ShadingType 4\n  /ColorSpace /DeviceRGB\n",
+                   "  /DataSource [", NULL);
+  for (i = 0; i < num_points; i++) {
+    if (i <= last_color_index) {
+      color = ZnGetGradientColor(grads[i], 0.0, NULL);
+    }
+    if (i < 3) {
+      edge = 0;
+    }
+    else if (ISCLEAR(tr->flags, FAN_BIT)) {
+      edge = 1;
+    }
+    else {
+      edge = 2;
+    }
+    red = ((double) (color->red >> 8)) / 255.0;
+    green = ((double) (color->green >> 8)) / 255.0;
+    blue = ((double) (color->blue >> 8)) / 255.0;
+
+    sprintf(path, "%d %.15g %.15g %.4g %.4g %.4g ",
+            edge, points[i].x, points[i].y, red, green, blue);
+    Tcl_AppendResult(wi->interp, path, NULL);
+  }
+  Tcl_AppendResult(wi->interp, "]\n>> def\n", NULL);
+  Tcl_AppendResult(wi->interp, "<<\n  /PatternType 2\n  /Shading ShadingDict\n>>\n", NULL);
+  Tcl_AppendResult(wi->interp, "matrix identmatrix makepattern setpattern\n", NULL);
+  sprintf(path, "%.15g %.15g %.15g %.15g rectfill\n", bbox.orig.x, bbox.orig.y,
+          bbox.corner.x - bbox.orig.x, bbox.corner.y - bbox.orig.y);
+  Tcl_AppendResult(wi->interp, path, NULL);
+
+  return TCL_OK;
 }
 
 
@@ -595,16 +636,16 @@ PostScript(ZnItem	item __unused,
  **********************************************************************************
  *
  * GetClipVertices --
- *	Get the clipping shape.
- *	Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
+ *      Get the clipping shape.
+ *      Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
  *
  **********************************************************************************
  */
 static ZnBool
-GetClipVertices(ZnItem		item,
-		ZnTriStrip	*tristrip)
+GetClipVertices(ZnItem          item,
+                ZnTriStrip      *tristrip)
 {
-  TrianglesItem	tr = (TrianglesItem) item;
+  TrianglesItem tr = (TrianglesItem) item;
 
   if (tr->dev_points.num_strips == 0) {
     tristrip->num_strips = 0;
@@ -612,8 +653,8 @@ GetClipVertices(ZnItem		item,
   }
 
   ZnTriStrip1(tristrip, tr->dev_points.strips->points,
-	      tr->dev_points.strips->num_points,
-	      tr->dev_points.strips[0].fan);
+              tr->dev_points.strips->num_points,
+              tr->dev_points.strips[0].fan);
   return False;
 }
 
@@ -622,19 +663,19 @@ GetClipVertices(ZnItem		item,
  **********************************************************************************
  *
  * GetContours --
- *	Get the external contour(s).
- *	Never ever call ZnPolyFree on the poly returned by GetContours.
+ *      Get the external contour(s).
+ *      Never ever call ZnPolyFree on the poly returned by GetContours.
  *
  **********************************************************************************
  */
 static ZnBool
-GetContours(ZnItem	item,
-	   ZnPoly	*poly)
+GetContours(ZnItem      item,
+           ZnPoly       *poly)
 {
-  TrianglesItem	tr = (TrianglesItem) item;
-  ZnPoint	*points;
-  unsigned int	k, j, num_points;
-  int		i;
+  TrianglesItem tr = (TrianglesItem) item;
+  ZnPoint       *points;
+  unsigned int  k, j, num_points;
+  int           i;
 
   if (tr->dev_points.num_strips == 0) {
     poly->num_contours = 0;
@@ -672,30 +713,30 @@ GetContours(ZnItem	item,
  **********************************************************************************
  *
  * Coords --
- *	Return or edit the item vertices.
+ *      Return or edit the item vertices.
  *
  **********************************************************************************
  */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
-  TrianglesItem	tr = (TrianglesItem) item;
-  unsigned int	num_points, i;
-  ZnPoint	*points;
+  TrianglesItem tr = (TrianglesItem) item;
+  unsigned int  num_points, i;
+  ZnPoint       *points;
 
   if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
     if (cmd == ZN_COORDS_REPLACE_ALL) {
-      ZnList	tmp;
+      ZnList    tmp;
       if (*num_pts == 0) {
-	Tcl_AppendResult(item->wi->interp,
-			 " coords command need at least 3 points on triangles", NULL);
-	return TCL_ERROR;
+        Tcl_AppendResult(item->wi->interp,
+                         " coords command need at least 3 points on triangles", NULL);
+        return TCL_ERROR;
       }
       tmp = ZnListFromArray(*pts, *num_pts, sizeof(ZnPoint));
       ZnListEmpty(tr->points);
@@ -704,19 +745,19 @@ Coords(ZnItem		item,
     }
     else {
       if (*num_pts == 0) {
-	Tcl_AppendResult(item->wi->interp,
-			 " coords command need at least 1 point on triangles", NULL);
-	return TCL_ERROR;
+        Tcl_AppendResult(item->wi->interp,
+                         " coords command need at least 1 point on triangles", NULL);
+        return TCL_ERROR;
       }
       points = ZnListArray(tr->points);
       num_points = ZnListSize(tr->points);
       if (index < 0) {
-	index += num_points;
+        index += num_points;
       }
       if ((index < 0) || ((unsigned int) index >= num_points)) {
       range_err:
-	Tcl_AppendResult(item->wi->interp, " coord index out of range", NULL);
-	return TCL_ERROR;
+        Tcl_AppendResult(item->wi->interp, " coord index out of range", NULL);
+        return TCL_ERROR;
       }
       points[index] = (*pts)[0];
     }
@@ -731,10 +772,10 @@ Coords(ZnItem		item,
     }
     else {
       if (index < 0) {
-	index += num_points;
+        index += num_points;
       }
       if ((index < 0) || ((unsigned int)index >= num_points)) {
-	goto range_err;
+        goto range_err;
       }
       *num_pts = 1;
       *pts = &points[index];
@@ -744,17 +785,17 @@ Coords(ZnItem		item,
     if (cmd == ZN_COORDS_ADD) {
       num_points = ZnListSize(tr->points);
       if (index < 0) {
-	index += num_points;
+        index += num_points;
       }
       if ((index < 0) || ((unsigned int)index >= num_points)) {
-	goto range_err;
+        goto range_err;
       }
       for (i = 0; i < *num_pts; i++, index++) {
-	ZnListAdd(tr->points, &(*pts)[i], (unsigned int) index);
+        ZnListAdd(tr->points, &(*pts)[i], (unsigned int) index);
       }
     }
     else {
-      ZnList	tmp;
+      ZnList    tmp;
       tmp = ZnListFromArray(*pts, *num_pts, sizeof(ZnPoint));
       ZnListAppend(tr->points, tmp);
       ZnListFree(tmp);
@@ -764,7 +805,7 @@ Coords(ZnItem		item,
   else if (cmd == ZN_COORDS_REMOVE) {
     if (ZnListSize(tr->points) < 4) {
       Tcl_AppendResult(item->wi->interp,
-		       " triangles should keep at least 3 points", NULL);
+                       " triangles should keep at least 3 points", NULL);
       return TCL_ERROR;
     }
     points = ZnListArray(tr->points);
@@ -787,23 +828,23 @@ Coords(ZnItem		item,
  **********************************************************************************
  *
  * PickVertex --
- *	Return in 'vertex' the vertex closest to p and in 'o_vertex' the
- *	opposite vertex on the closest edge, if such an edge exists or -1
- *	in the other case.
+ *      Return in 'vertex' the vertex closest to p and in 'o_vertex' the
+ *      opposite vertex on the closest edge, if such an edge exists or -1
+ *      in the other case.
  *
  **********************************************************************************
  */
 static void
-PickVertex(ZnItem	item,
-	   ZnPoint	*p,
-	   int		*contour,
-	   int		*vertex,
-	   int		*o_vertex)
+PickVertex(ZnItem       item,
+           ZnPoint      *p,
+           int          *contour,
+           int          *vertex,
+           int          *o_vertex)
 {
-  TrianglesItem	tr = (TrianglesItem) item;
-  int		i, k, num_points;
-  ZnPoint	*points;
-  ZnReal	dist=1.0e40, new_dist, dist2;
+  TrianglesItem tr = (TrianglesItem) item;
+  int           i, k, num_points;
+  ZnPoint       *points;
+  ZnReal        dist=1.0e40, new_dist, dist2;
 
   *contour = *vertex = *o_vertex = -1;
   
@@ -844,8 +885,8 @@ static ZnItemClassStruct TRIANGLES_ITEM_CLASS = {
   "triangles",
   sizeof(TrianglesItemStruct),
   tr_attrs,
-  0,			/* num_parts */
-  0,			/* flags */
+  0,                    /* num_parts */
+  0,                    /* flags */
   -1,
   Init,
   Clone,
@@ -857,20 +898,20 @@ static ZnItemClassStruct TRIANGLES_ITEM_CLASS = {
   GetClipVertices,
   GetContours,
   Coords,
-  NULL,			/* InsertChars */
-  NULL,			/* DeleteChars */
-  NULL,			/* Cursor */
-  NULL,			/* Index */
-  NULL,			/* Part */
-  NULL,			/* Selection */
-  NULL,			/* Contour */
+  NULL,                 /* InsertChars */
+  NULL,                 /* DeleteChars */
+  NULL,                 /* Cursor */
+  NULL,                 /* Index */
+  NULL,                 /* Part */
+  NULL,                 /* Selection */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  PickVertex,		/* PickVertex */
+  PickVertex,           /* PickVertex */
   PostScript
 };
 

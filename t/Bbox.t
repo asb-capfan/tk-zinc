@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Bbox.t,v 1.6 2004/09/17 11:51:10 mertz Exp $
+# $Id: Bbox.t,v 1.7 2004/11/16 20:46:14 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -59,9 +59,10 @@ my $txt1 = $zinc->add('text', 1,
                      );
 #print "bbox=(", join(',', $zinc->bbox($txt1)),")\n";
 
+# from v3.30 the bbox of an empty text is ()
 ok(&similarFlatArray ([$zinc->bbox($txt1)],
-                      [30,25, 30,25+$linespace],
-                      [4,  4,  4, 4],
+                      [],
+                      [],
                      ),
    "bbox of empty text");
 

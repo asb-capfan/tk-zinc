@@ -1,28 +1,17 @@
 /*
  * List.c -- Implementation of list module.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	: Tue Mar 15 17:18:17 1994
+ * Authors              : Patrick Lecoanet.
+ * Creation date        : Tue Mar 15 17:18:17 1994
  *
- * $Id: List.c,v 1.11 2003/04/16 09:49:22 lecoanet Exp $
+ * $Id: List.c,v 1.13 2005/04/27 07:32:03 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -31,25 +20,25 @@
  **********************************************************************************
  * 
  * This modules exports the following functions:
- *	- ZnListNew
- *	- ZnListDuplicate
- *	- ZnListEmpty
- *	- ZnListFromArray
- *	- ZnListArray
- *	- ZnListFree
- *	- ZnListSize
- *	- ZnListAssertSize
- *	- ZnListAdd
- *	- ZnListAt
- *	- ZnListAtPut
- *	- ZnListDelete
- *	- ZnListTruncate
- *	- ZnListDetect
- *	- ZnListDo
+ *      - ZnListNew
+ *      - ZnListDuplicate
+ *      - ZnListEmpty
+ *      - ZnListFromArray
+ *      - ZnListArray
+ *      - ZnListFree
+ *      - ZnListSize
+ *      - ZnListAssertSize
+ *      - ZnListAdd
+ *      - ZnListAt
+ *      - ZnListAtPut
+ *      - ZnListDelete
+ *      - ZnListTruncate
+ *      - ZnListDetect
+ *      - ZnListDo
  *
  * To appear soon:
- *	- ZnListCollect
- *	- ZnListReject
+ *      - ZnListCollect
+ *      - ZnListReject
  *
  * And the following variables:
  *
@@ -79,13 +68,13 @@
  *
  **********************************************************************************
  */
-static const char rcs_id[]="$Id: List.c,v 1.11 2003/04/16 09:49:22 lecoanet Exp $";
+static const char rcs_id[]="$Id: List.c,v 1.13 2005/04/27 07:32:03 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
-#define MAX_CHUNCK_SIZE		1024
+#define MAX_CHUNCK_SIZE         1024
 
-#define	MAX(a, b)		((a) > (b) ? (a) : (b))
-#define	MIN(a, b)		((a) < (b) ? (a) : (b))
+#define MAX(a, b)               ((a) > (b) ? (a) : (b))
+#define MIN(a, b)               ((a) < (b) ? (a) : (b))
 
 
 /*
@@ -97,10 +86,10 @@ static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ "
  */
 
 typedef struct {
-  char		*list;
-  unsigned long	elem_size;
-  unsigned long	alloc_size;
-  unsigned long	used_size;
+  char          *list;
+  unsigned long elem_size;
+  unsigned long alloc_size;
+  unsigned long used_size;
 } _ZnList;
 
 
@@ -108,15 +97,15 @@ typedef struct {
  **********************************************************************************
  *
  * GrowIfNeeded --
- *	Enlarge a list so that it has min_size available. Take care of
- *	static storage.
+ *      Enlarge a list so that it has min_size available. Take care of
+ *      static storage.
  *
  **********************************************************************************
  */
 
 static void
-GrowIfNeeded(_ZnList	  *list,
-	     unsigned int min_size)
+GrowIfNeeded(_ZnList      *list,
+             unsigned int min_size)
 {
   if (list->used_size+min_size <= list->alloc_size) {
     return;
@@ -130,28 +119,28 @@ GrowIfNeeded(_ZnList	  *list,
     }
     else {
       /* Case of a list made by ZnListFromArray. If we try to make
-	 it grow we need to reallocate and copy. */
-      char	*new_list;
+         it grow we need to reallocate and copy. */
+      char      *new_list;
 
       list->alloc_size = list->used_size+min_size;
       new_list = ZnMalloc(list->alloc_size*list->elem_size);
       memcpy(new_list,
-	     list->list,
-	     list->used_size*list->elem_size);
+             list->list,
+             list->used_size*list->elem_size);
       list->list = new_list;
     }
   }
   else {
     list->alloc_size = MAX(MIN(list->alloc_size*2, MAX_CHUNCK_SIZE),
-			   list->alloc_size+min_size);
+                           list->alloc_size+min_size);
     
     list->list = ZnRealloc(list->list,
-			   list->alloc_size*list->elem_size);
+                           list->alloc_size*list->elem_size);
   }
   
   memset(list->list+(list->used_size*list->elem_size),
-	 0,
-	 (list->alloc_size-list->used_size)*list->elem_size);
+         0,
+         (list->alloc_size-list->used_size)*list->elem_size);
 }
 
 
@@ -159,16 +148,16 @@ GrowIfNeeded(_ZnList	  *list,
  **********************************************************************************
  *
  * ZnListNew --
- *	Return a new empty list 'initial_size' large.
+ *      Return a new empty list 'initial_size' large.
  *
  **********************************************************************************
  */
 
 ZnList
-ZnListNew(unsigned int	initial_size,
-	  unsigned int	element_size)
+ZnListNew(unsigned int  initial_size,
+          unsigned int  element_size)
 {
-  _ZnList	*new_list;
+  _ZnList       *new_list;
 
   if (element_size == 0) {
     element_size = 1;
@@ -198,16 +187,16 @@ ZnListNew(unsigned int	initial_size,
  **********************************************************************************
  *
  * ZnListDuplicate --
- *	Return a copy of the list given as parameter.
+ *      Return a copy of the list given as parameter.
  *
  **********************************************************************************
  */
 
 ZnList
-ZnListDuplicate(ZnList	list)
+ZnListDuplicate(ZnList  list)
 {
-  _ZnList	*cur_list = (_ZnList *) list;
-  _ZnList	*new_list;
+  _ZnList       *cur_list = (_ZnList *) list;
+  _ZnList       *new_list;
 
   new_list = ZnMalloc(sizeof(_ZnList));
 
@@ -240,15 +229,15 @@ ZnListDuplicate(ZnList	list)
  **********************************************************************************
  *
  * ZnListEmpty --
- *	Clear out a list, kkeping its allocated size.
+ *      Clear out a list, kkeping its allocated size.
  *
  **********************************************************************************
  */
 
 void
-ZnListEmpty(ZnList	list)
+ZnListEmpty(ZnList      list)
 {
-  _ZnList	*cur_list = (_ZnList *) list;
+  _ZnList       *cur_list = (_ZnList *) list;
 
   cur_list->used_size = 0;
 }
@@ -258,17 +247,17 @@ ZnListEmpty(ZnList	list)
  **********************************************************************************
  *
  * ZnListFromArray --
- *	Return a list filled from the given array.
+ *      Return a list filled from the given array.
  *
  **********************************************************************************
  */
 
 ZnList
-ZnListFromArray(void		*array,
-		unsigned int	array_size,
-		unsigned int	element_size)
+ZnListFromArray(void            *array,
+                unsigned int    array_size,
+                unsigned int    element_size)
 {
-  _ZnList	*new_list;
+  _ZnList       *new_list;
 
   new_list = (_ZnList *) ZnListNew(0, element_size);
   new_list->list = array;
@@ -281,15 +270,15 @@ ZnListFromArray(void		*array,
  **********************************************************************************
  *
  * ZnListArray --
- *	Return a pointer to the array containing the list.
+ *      Return a pointer to the array containing the list.
  *
  **********************************************************************************
  */
 
 void *
-ZnListArray(ZnList	list)
+ZnListArray(ZnList      list)
 {
-  _ZnList	*cur_list = (_ZnList *) list;
+  _ZnList       *cur_list = (_ZnList *) list;
 
   return (void *) cur_list->list;
 }
@@ -299,17 +288,17 @@ ZnListArray(ZnList	list)
  **********************************************************************************
  *
  * ZnListFree --
- *	Delete a list and free its memory. The entries
- *	still in the list are lost but no further deallocation
- *	is attempted.
+ *      Delete a list and free its memory. The entries
+ *      still in the list are lost but no further deallocation
+ *      is attempted.
  *
  **********************************************************************************
  */
 
 void
-ZnListFree(ZnList	list)
+ZnListFree(ZnList       list)
 {
-  _ZnList	*cur_list = (_ZnList *) list;
+  _ZnList       *cur_list = (_ZnList *) list;
 
   if (cur_list->list != NULL && cur_list->alloc_size != 0) {
     ZnFree(cur_list->list);
@@ -323,13 +312,13 @@ ZnListFree(ZnList	list)
  **********************************************************************************
  *
  * ZnListSize --
- *	Return the current number of entries kept in list.
+ *      Return the current number of entries kept in list.
  *
  **********************************************************************************
  */
 
 unsigned int
-ZnListSize(ZnList	list)
+ZnListSize(ZnList       list)
 {
   return ((_ZnList *)list)->used_size;
 }
@@ -339,16 +328,16 @@ ZnListSize(ZnList	list)
  **********************************************************************************
  *
  * ZnListAssertSize --
- *	Set the list length to size.
+ *      Set the list length to size.
  *
  **********************************************************************************
  */
 
 void
-ZnListAssertSize(ZnList		list,
-		 unsigned int	size)
+ZnListAssertSize(ZnList         list,
+                 unsigned int   size)
 {
-  _ZnList	*cur_list = (_ZnList *) list;
+  _ZnList       *cur_list = (_ZnList *) list;
 
   if (cur_list->used_size < size) {
     GrowIfNeeded(cur_list, size - cur_list->used_size);
@@ -361,19 +350,19 @@ ZnListAssertSize(ZnList		list,
  **********************************************************************************
  *
  * ZnListCopy --
- *	Destructively copy 'from' into 'to' starting at the first
- *	position. It is the same as saying ZnListEmpty and then
- *	ZnListAppend.
+ *      Destructively copy 'from' into 'to' starting at the first
+ *      position. It is the same as saying ZnListEmpty and then
+ *      ZnListAppend.
  *
  **********************************************************************************
  */
 
 void
-ZnListCopy(ZnList	to,
-	   ZnList	from)
+ZnListCopy(ZnList       to,
+           ZnList       from)
 {
-  _ZnList	*to_list = (_ZnList *) to;
-  _ZnList	*from_list = (_ZnList *) from;
+  _ZnList       *to_list = (_ZnList *) to;
+  _ZnList       *from_list = (_ZnList *) from;
 
   if (from_list->elem_size != to_list->elem_size) {
     return;
@@ -382,8 +371,8 @@ ZnListCopy(ZnList	to,
   to_list->used_size = 0;
   GrowIfNeeded(to_list, from_list->used_size);
   memcpy(to_list->list,
-	 from_list->list,
-	 from_list->used_size*from_list->elem_size);
+         from_list->list,
+         from_list->used_size*from_list->elem_size);
   to_list->used_size = from_list->used_size;
 }
 
@@ -392,17 +381,17 @@ ZnListCopy(ZnList	to,
  **********************************************************************************
  *
  * ZnListAppend --
- *	Append 'from' at the end of 'to' which is enlarged as needed.
+ *      Append 'from' at the end of 'to' which is enlarged as needed.
  *
  **********************************************************************************
  */
 
 void
-ZnListAppend(ZnList	to,
-	     ZnList	from)
+ZnListAppend(ZnList     to,
+             ZnList     from)
 {
-  _ZnList	*to_list = (_ZnList *) to;
-  _ZnList	*from_list = (_ZnList *) from;
+  _ZnList       *to_list = (_ZnList *) to;
+  _ZnList       *from_list = (_ZnList *) from;
 
   if (from_list->elem_size != to_list->elem_size) {
     return;
@@ -410,8 +399,8 @@ ZnListAppend(ZnList	to,
 
   GrowIfNeeded(to_list, from_list->used_size);
   memcpy(to_list->list+(to_list->used_size*to_list->elem_size),
-	 from_list->list,
-	 from_list->used_size*from_list->elem_size);
+         from_list->list,
+         from_list->used_size*from_list->elem_size);
   to_list->used_size += from_list->used_size;
 }
 
@@ -420,30 +409,30 @@ ZnListAppend(ZnList	to,
  **********************************************************************************
  *
  * ZnListAdd --
- *	Add a new entry 'value' in the list before
- *	'index'. 'index' can be the position of a
- *	previous entry or the special values ZnListHead,
- *	ZnListTail. The entries have positions
- *	starting at 0.
+ *      Add a new entry 'value' in the list before
+ *      'index'. 'index' can be the position of a
+ *      previous entry or the special values ZnListHead,
+ *      ZnListTail. The entries have positions
+ *      starting at 0.
  *
  **********************************************************************************
  */
 
 void
-ZnListAdd(ZnList	list,
-	  void		*value,
-	  unsigned int	index)
+ZnListAdd(ZnList        list,
+          void          *value,
+          unsigned int  index)
 {
   _ZnList *cur_list = (_ZnList *) list;
-  int	  i;
+  int     i;
 
   GrowIfNeeded(cur_list, 1);
 
   if (index < cur_list->used_size) {
     for (i = cur_list->used_size-1; i >= (int) index; i--) {
       memcpy(cur_list->list+((i+1)*cur_list->elem_size),
-	     cur_list->list+(i*cur_list->elem_size),
-	     cur_list->elem_size);
+             cur_list->list+(i*cur_list->elem_size),
+             cur_list->elem_size);
     }
   }
   else if (index > cur_list->used_size) {
@@ -451,8 +440,8 @@ ZnListAdd(ZnList	list,
   }
   
   memcpy(cur_list->list+(index*cur_list->elem_size),
-	 (char *) value,
-	 cur_list->elem_size);
+         (char *) value,
+         cur_list->elem_size);
 
   (cur_list->used_size)++;
 }
@@ -462,16 +451,16 @@ ZnListAdd(ZnList	list,
  **********************************************************************************
  *
  * ZnListAt --
- *	Return the entry at 'index'. Indices start at 0.
- *	Indices out of the current range are constrained
- *	to fit in the range.
+ *      Return the entry at 'index'. Indices start at 0.
+ *      Indices out of the current range are constrained
+ *      to fit in the range.
  *
  **********************************************************************************
  */
 
 void *
-ZnListAt(ZnList		list,
-	 unsigned int	index)
+ZnListAt(ZnList         list,
+         unsigned int   index)
 {
   if (!((_ZnList *) list)->used_size) {
     return NULL;
@@ -488,17 +477,17 @@ ZnListAt(ZnList		list,
  **********************************************************************************
  *
  * ZnListAtPut --
- *	Set the entry at 'index' to 'value'.
- *	Indices start at 0. Indices out of the current
- *	range are constrained to fit in the range.
+ *      Set the entry at 'index' to 'value'.
+ *      Indices start at 0. Indices out of the current
+ *      range are constrained to fit in the range.
  *
  **********************************************************************************
  */
 
 void
-ZnListAtPut(ZnList	 list,
-	    void	 *value,
-	    unsigned int index)
+ZnListAtPut(ZnList       list,
+            void         *value,
+            unsigned int index)
 {
   if (!((_ZnList *) list)->used_size) {
     return;
@@ -508,8 +497,8 @@ ZnListAtPut(ZnList	 list,
   }
   
   memcpy(((_ZnList *) list)->list+(index*((_ZnList *) list)->elem_size),
-	 (char *) value,
-	 ((_ZnList *) list)->elem_size);
+         (char *) value,
+         ((_ZnList *) list)->elem_size);
 }
 
 
@@ -517,18 +506,18 @@ ZnListAtPut(ZnList	 list,
  **********************************************************************************
  *
  * ZnListDelete --
- *	Suppress the entry matching value, searching from position 
- *	'index'. If value is NULL suppress entry at index.
+ *      Suppress the entry matching value, searching from position 
+ *      'index'. If value is NULL suppress entry at index.
  *
  **********************************************************************************
  */
 
 void
-ZnListDelete(ZnList		list,
-	     unsigned int	index)
+ZnListDelete(ZnList             list,
+             unsigned int       index)
 {
-  _ZnList	*cur_list = (_ZnList *) list;
-  unsigned int	i;
+  _ZnList       *cur_list = (_ZnList *) list;
+  unsigned int  i;
 
   if (!((_ZnList *) list)->used_size) {
     return;
@@ -539,8 +528,8 @@ ZnListDelete(ZnList		list,
 
   for (i = index; i < cur_list->used_size-1; i++) {
     memcpy(cur_list->list+(i*cur_list->elem_size),
-	   cur_list->list+((i+1)*cur_list->elem_size),
-	   cur_list->elem_size);
+           cur_list->list+((i+1)*cur_list->elem_size),
+           cur_list->elem_size);
   }
   (cur_list->used_size)--;
 }
@@ -549,16 +538,16 @@ ZnListDelete(ZnList		list,
  **********************************************************************************
  *
  * ZnListTruncate --
- *	Suppress the entries from position 'index' inclusive to the end.
+ *      Suppress the entries from position 'index' inclusive to the end.
  *
  **********************************************************************************
  */
 
 void
-ZnListTruncate(ZnList		list,
-	       unsigned int	index)
+ZnListTruncate(ZnList           list,
+               unsigned int     index)
 {
-  _ZnList	*cur_list = (_ZnList *) list;
+  _ZnList       *cur_list = (_ZnList *) list;
 
   if (index >= ((_ZnList *) list)->used_size) {
     return;

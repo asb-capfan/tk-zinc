@@ -1,26 +1,15 @@
 /*
  * Icon.c -- Implementation of Icon item.
  *
- * Authors		: Patrick LECOANET
- * Creation date	: Sat Mar 25 13:53:39 1995
+ * Authors              : Patrick LECOANET
+ * Creation date        : Sat Mar 25 13:53:39 1995
  */
 
 /*
- *  Copyright (c) 1993 - 1999 CENA, Patrick Lecoanet --
+ *  Copyright (c) 1993 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
@@ -34,7 +23,7 @@
 #include "tkZinc.h"
 
 
-static const char rcsid[] = "$Id: Icon.c,v 1.40 2004/04/30 14:49:22 lecoanet Exp $";
+static const char rcsid[] = "$Id: Icon.c,v 1.45 2005/05/10 07:59:48 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -46,22 +35,22 @@ static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__
  **********************************************************************************
  */
 typedef struct _IconItemStruct {
-  ZnItemStruct	header;
+  ZnItemStruct  header;
 
   /* Public data */
-  ZnPoint	pos;
-  ZnImage	image;
-  Tk_Anchor	anchor;
-  Tk_Anchor	connection_anchor;
-  ZnGradient	*color; /* Used only if the image is a bitmap (in GL alpha part
-			 * is always meaningful). */
+  ZnPoint       pos;
+  ZnImage       image;
+  Tk_Anchor     anchor;
+  Tk_Anchor     connection_anchor;
+  ZnGradient    *color; /* Used only if the image is a bitmap (in GL alpha part
+                         * is always meaningful). */
   
   /* Private data */
-  ZnPoint	dev[4];
+  ZnPoint       dev[4];
 } IconItemStruct, *IconItem;
 
 
-static ZnAttrConfig	icon_attrs[] = {
+static ZnAttrConfig     icon_attrs[] = {
   { ZN_CONFIG_ANCHOR, "-anchor", NULL,
     Tk_Offset(IconItemStruct, anchor), 0, ZN_COORDS_FLAG, False },
   { ZN_CONFIG_GRADIENT, "-color", NULL,
@@ -111,12 +100,12 @@ static ZnAttrConfig	icon_attrs[] = {
  **********************************************************************************
  */
 static int
-Init(ZnItem		item,
-     int		*argc __unused,
-     Tcl_Obj *CONST	*args[] __unused)
+Init(ZnItem             item,
+     int                *argc,
+     Tcl_Obj *CONST     *args[])
 {
-  ZnWInfo	*wi = item->wi;
-  IconItem	icon = (IconItem) item;
+  ZnWInfo       *wi = item->wi;
+  IconItem      icon = (IconItem) item;
 
   /*printf("size of an icon(header) = %d(%d)\n",
     sizeof(IconItemStruct), sizeof(ZnItemStruct));*/
@@ -147,9 +136,9 @@ Init(ZnItem		item,
  **********************************************************************************
  */
 static void
-Clone(ZnItem	item)
+Clone(ZnItem    item)
 {
-  IconItem	icon = (IconItem) item;
+  IconItem      icon = (IconItem) item;
   
   if (icon->image != ZnUnspecifiedImage) {
     icon->image = ZnGetImageByValue(icon->image, ZnUpdateItemImage, item);
@@ -166,9 +155,9 @@ Clone(ZnItem	item)
  **********************************************************************************
  */
 static void
-Destroy(ZnItem	item)
+Destroy(ZnItem  item)
 {
-  IconItem	icon = (IconItem) item;
+  IconItem      icon = (IconItem) item;
 
   if (icon->image != ZnUnspecifiedImage) {
     ZnFreeImage(icon->image, ZnUpdateItemImage, item);
@@ -186,16 +175,16 @@ Destroy(ZnItem	item)
  **********************************************************************************
  */
 static int
-Configure(ZnItem	item,
-	  int		argc,
-	  Tcl_Obj *CONST argv[],
-	  int		*flags)
+Configure(ZnItem        item,
+          int           argc,
+          Tcl_Obj *CONST argv[],
+          int           *flags)
 {
-  ZnItem	old_connected;
+  ZnItem        old_connected;
 
   old_connected = item->connected_item;
   if (ZnConfigureAttributes(item->wi, item, item, icon_attrs,
-			    argc, argv, flags) == TCL_ERROR) {
+                            argc, argv, flags) == TCL_ERROR) {
     return TCL_ERROR;
   }  
 
@@ -205,8 +194,8 @@ Configure(ZnItem	item,
      * to the old one.
      */
     if ((item->connected_item == ZN_NO_ITEM) ||
-	(ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
-	 (item->parent == item->connected_item->parent))) {
+        (ISSET(item->connected_item->class->flags, ZN_CLASS_HAS_ANCHORS) &&
+         (item->parent == item->connected_item->parent))) {
       ZnITEM.UpdateItemDependency(item, old_connected);
     }
     else {
@@ -226,9 +215,9 @@ Configure(ZnItem	item,
  **********************************************************************************
  */
 static int
-Query(ZnItem		item,
-      int		argc __unused,
-      Tcl_Obj *CONST	argv[])
+Query(ZnItem            item,
+      int               argc,
+      Tcl_Obj *CONST    argv[])
 {
   if (ZnQueryAttribute(item->wi->interp, item, icon_attrs, argv[0]) == TCL_ERROR) {
     return TCL_ERROR;
@@ -239,6 +228,57 @@ Query(ZnItem		item,
 
 
 /*
+ * Compute the transformation to be used and the origin
+ * of the icon (upper left point in item coordinates).
+ */
+static ZnTransfo *
+ComputeTransfoAndOrigin(ZnItem    item,
+                        ZnPoint   *origin)
+{
+  IconItem icon = (IconItem) item;
+  int       w, h;
+  ZnTransfo *t;
+
+  ZnSizeOfImage(icon->image, &w, &h);
+
+  /*
+   * The connected item support anchors, this is checked by configure.
+   */
+  if (item->connected_item != ZN_NO_ITEM) {
+    ZnTransfo inv;
+
+    item->connected_item->class->GetAnchor(item->connected_item,
+                                           icon->connection_anchor,
+                                           origin);
+
+    /* GetAnchor return a position in device coordinates not in
+     * the item coordinate space. To compute the icon origin
+     * (upper left corner), we must apply the inverse transform
+     * to the ref point before calling anchor2origin.
+     */
+    ZnTransfoInvert(item->transfo, &inv);
+    ZnTransformPoint(&inv, origin, origin);
+    /*
+     * The relevant transform in case of an attachment is the item
+     * transform alone. This is case of local coordinate space where
+     * only the translation is a function of the whole transform
+     * stack, scale and rotation are reset.
+     */
+    t = item->transfo;
+  }
+  else {
+    origin->x = origin->y = 0;
+    t = item->wi->current_transfo;
+  }
+
+  ZnAnchor2Origin(origin, (ZnReal) w, (ZnReal) h, icon->anchor, origin);
+  //origin->x = ZnNearestInt(origin->x);
+  //origin->y = ZnNearestInt(origin->y);
+
+  return t;
+}
+
+/*
  **********************************************************************************
  *
  * ComputeCoordinates --
@@ -246,13 +286,14 @@ Query(ZnItem		item,
  **********************************************************************************
  */
 static void
-ComputeCoordinates(ZnItem	item,
-		   ZnBool	force __unused)
+ComputeCoordinates(ZnItem       item,
+                   ZnBool       force)
 {
-  ZnWInfo	*wi = item->wi;
-  IconItem	icon = (IconItem) item;
-  int		width, height, i;
-  ZnPoint	pos, quad[4];
+  //ZnWInfo   *wi = item->wi;
+  IconItem  icon = (IconItem) item;
+  int       width, height, i;
+  ZnPoint   quad[4];
+  ZnTransfo *t;
   
   ZnResetBBox(&item->item_bounding_box);
 
@@ -263,34 +304,16 @@ ComputeCoordinates(ZnItem	item,
     return;
   }
     
-  if (icon->image != ZnUnspecifiedImage) {
-    ZnSizeOfImage(icon->image, &width, &height);
-  }
+  ZnSizeOfImage(icon->image, &width, &height);
+  t = ComputeTransfoAndOrigin(item, quad);
 
-
-  /*
-   * The connected item support anchors, this is checked by
-   * configure.
-   */
-  if (item->connected_item != ZN_NO_ITEM) {
-    ZnTransfo t;
-    
-    item->connected_item->class->GetAnchor(item->connected_item,
-					   icon->connection_anchor, quad);
-    ZnTransfoInvert(wi->current_transfo, &t);
-    ZnTransformPoint(&t, quad, &pos);
-  }
-  else {
-    pos.x = pos.y = 0;
-  }
-  ZnAnchor2Origin(&pos, (ZnReal) width, (ZnReal) height, icon->anchor, quad);
   quad[1].x = quad[0].x;
   quad[1].y = quad[0].y + height;
   quad[2].x = quad[0].x + width;
   quad[2].y = quad[1].y;
   quad[3].x = quad[2].x;
   quad[3].y = quad[0].y;
-  ZnTransformPoints(wi->current_transfo, quad, icon->dev, 4);
+  ZnTransformPoints(t, quad, icon->dev, 4);
   
   for (i = 0; i < 4; i++) {
     icon->dev[i].x = ZnNearestInt(icon->dev[i].x);
@@ -313,16 +336,16 @@ ComputeCoordinates(ZnItem	item,
  **********************************************************************************
  *
  * ToArea --
- *	Tell if the object is entirely outside (-1),
- *	entirely inside (1) or in between (0).
+ *      Tell if the object is entirely outside (-1),
+ *      entirely inside (1) or in between (0).
  *
  **********************************************************************************
  */
 static int
-ToArea(ZnItem	item,
-       ZnToArea	ta)
+ToArea(ZnItem   item,
+       ZnToArea ta)
 {
-  IconItem	icon = (IconItem) item;
+  IconItem      icon = (IconItem) item;
   
   if (icon->image == ZnUnspecifiedImage) {
     return -1;
@@ -340,17 +363,17 @@ ToArea(ZnItem	item,
  **********************************************************************************
  */
 static void
-Draw(ZnItem	item)
+Draw(ZnItem     item)
 {
-  ZnWInfo	*wi = item->wi;
-  IconItem	icon = (IconItem) item;
-  XGCValues  	values;
-  unsigned int	gc_mask = 0;
-  int		w, h;
-  ZnBBox	box, inter, *clip_box;
-  TkRegion	clip_region, photo_region, clip;
-  ZnBool	simple;
-  Pixmap	pixmap;
+  ZnWInfo       *wi = item->wi;
+  IconItem      icon = (IconItem) item;
+  XGCValues     values;
+  unsigned int  gc_mask = 0;
+  int           w, h;
+  ZnBBox        box, inter, *clip_box;
+  TkRegion      clip_region, photo_region, clip;
+  ZnBool        simple;
+  Pixmap        pixmap;
   
   if (icon->image == ZnUnspecifiedImage) {
     return;
@@ -379,65 +402,65 @@ Draw(ZnItem	item)
        * on the image size.
        */
       if (photo_region == NULL) {
-	XRectangle rect;
-	rect.x = rect.y = 0;
-	rect.width = w;
-	rect.height = h;
-	TkUnionRectWithRegion(&rect, clip, clip);
+        XRectangle rect;
+        rect.x = rect.y = 0;
+        rect.width = w;
+        rect.height = h;
+        TkUnionRectWithRegion(&rect, clip, clip);
       }
       else {
-	ZnUnionRegion(clip, photo_region, clip);
+        ZnUnionRegion(clip, photo_region, clip);
       }
       ZnOffsetRegion(clip, (int) icon->dev->x, (int) icon->dev->y);
       TkIntersectRegion(clip_region, clip, clip);
       TkSetRegion(wi->dpy, wi->gc, clip);
       XCopyArea(wi->dpy, pixmap, wi->draw_buffer, wi->gc,
-		(int) (box.orig.x-icon->dev->x),
-		(int) (box.orig.y-icon->dev->y),
-		(unsigned int) (box.corner.x-box.orig.x),
-		(unsigned int) (box.corner.y-box.orig.y),
-		(int) box.orig.x,
-		(int) box.orig.y);
+                (int) (box.orig.x-icon->dev->x),
+                (int) (box.orig.y-icon->dev->y),
+                (unsigned int) (box.corner.x-box.orig.x),
+                (unsigned int) (box.corner.y-box.orig.y),
+                (int) box.orig.x,
+                (int) box.orig.y);
       values.clip_x_origin = values.clip_y_origin = 0;
       XChangeGC(wi->dpy, wi->gc, GCClipXOrigin|GCClipYOrigin, &values);
       TkSetRegion(wi->dpy, wi->gc, clip_region);
       TkDestroyRegion(clip);
     }
     else {
-      ZnPoint	    box[4];
-      int	    i;
-      XImage	    *dest_im, *src_im;
-      XImage	    *dest_mask, *src_mask;
-      Pixmap	    drw, mask;
+      ZnPoint       box[4];
+      int           i;
+      XImage        *dest_im, *src_im;
+      XImage        *dest_mask, *src_mask;
+      Pixmap        drw, mask;
       unsigned int  dest_im_width, dest_im_height;
       unsigned int  max_width, max_height;
-      GC	    gc, mask_gc;
-      TkRegion	    current_clip;
-      ZnBBox	    *current_clip_box;
+      GC            gc, mask_gc;
+      TkRegion      current_clip;
+      ZnBBox        *current_clip_box;
 
       dest_im_width = (unsigned int) (item->item_bounding_box.corner.x -
-				      item->item_bounding_box.orig.x);
+                                      item->item_bounding_box.orig.x);
       max_width = MAX(dest_im_width, (unsigned int) w);
       dest_im_height = (unsigned int) (item->item_bounding_box.corner.y -
-				       item->item_bounding_box.orig.y);
+                                       item->item_bounding_box.orig.y);
       max_height = MAX(dest_im_height, (unsigned int) h);
 
       mask = Tk_GetPixmap(wi->dpy, wi->draw_buffer, max_width, max_height, 1);
 
       drw = Tk_GetPixmap(wi->dpy, wi->draw_buffer, max_width, max_height,
-			 Tk_Depth(wi->win));
+                         Tk_Depth(wi->win));
       mask_gc = XCreateGC(wi->dpy, mask, 0, NULL);
       gc = XCreateGC(wi->dpy, drw, 0, NULL);
       dest_mask = XCreateImage(wi->dpy, Tk_Visual(wi->win), 1,
-			     XYPixmap, 0, NULL, dest_im_width, dest_im_height,
-			     8, 0);
+                             XYPixmap, 0, NULL, dest_im_width, dest_im_height,
+                             8, 0);
       dest_mask->data = ZnMalloc(dest_mask->bytes_per_line * dest_mask->height);
       memset(dest_mask->data, 0, dest_mask->bytes_per_line * dest_mask->height);
       XSetForeground(wi->dpy, mask_gc, 0);
       XFillRectangle(wi->dpy, mask, mask_gc, 0, 0, max_width, max_height);
       dest_im = XCreateImage(wi->dpy, Tk_Visual(wi->win), Tk_Depth(wi->win),
-			     ZPixmap, 0, NULL, dest_im_width, dest_im_height,
-			     32, 0);
+                             ZPixmap, 0, NULL, dest_im_width, dest_im_height,
+                             32, 0);
       dest_im->data = ZnMalloc(dest_im->bytes_per_line * dest_im->height);
       memset(dest_im->data, 0, dest_im->bytes_per_line * dest_im->height);
 
@@ -451,14 +474,14 @@ Draw(ZnItem	item)
        * on the image size.
        */
       if (photo_region == NULL) {
-	XRectangle rect;
-	rect.x = rect.y = 0;
-	rect.width = w;
-	rect.height = h;
-	TkUnionRectWithRegion(&rect, clip, clip);
+        XRectangle rect;
+        rect.x = rect.y = 0;
+        rect.width = w;
+        rect.height = h;
+        TkUnionRectWithRegion(&rect, clip, clip);
       }
       else {
-	ZnUnionRegion(clip, photo_region, clip);
+        ZnUnionRegion(clip, photo_region, clip);
       }
       XSetForeground(wi->dpy, mask_gc, 1);
       TkSetRegion(wi->dpy, mask_gc, clip);
@@ -472,10 +495,10 @@ Draw(ZnItem	item)
       box[2] = icon->dev[3];
       box[3] = icon->dev[2];
       for (i = 0; i < 4; i++) {
-	box[i].x -= item->item_bounding_box.orig.x;
-	box[i].y -= item->item_bounding_box.orig.y;
-	box[i].x = ZnNearestInt(box[i].x);
-	box[i].y = ZnNearestInt(box[i].y);
+        box[i].x -= item->item_bounding_box.orig.x;
+        box[i].y -= item->item_bounding_box.orig.y;
+        box[i].x = ZnNearestInt(box[i].x);
+        box[i].y = ZnNearestInt(box[i].y);
       }
 
       ZnMapImage(src_mask, dest_mask, box);
@@ -484,20 +507,20 @@ Draw(ZnItem	item)
       ZnCurrentClip(wi, &current_clip, &current_clip_box, NULL);
       TkSetRegion(wi->dpy, mask_gc, current_clip);
       XSetClipOrigin(wi->dpy, mask_gc,
-		     (int) -item->item_bounding_box.orig.x, (int) -item->item_bounding_box.orig.y);
+                     (int) -item->item_bounding_box.orig.x, (int) -item->item_bounding_box.orig.y);
       TkPutImage(NULL, 0,wi->dpy, mask, mask_gc, dest_mask,
-		 0, 0, 0, 0, dest_im_width, dest_im_height);
+                 0, 0, 0, 0, dest_im_width, dest_im_height);
       TkPutImage(NULL, 0, wi->dpy, drw, gc, dest_im,
-		0, 0, 0, 0, dest_im_width, dest_im_height);
+                0, 0, 0, 0, dest_im_width, dest_im_height);
 
       XSetClipMask(wi->dpy, gc, mask);
       XSetClipOrigin(wi->dpy, gc,
-		     (int) item->item_bounding_box.orig.x,
-		     (int) item->item_bounding_box.orig.y);
+                     (int) item->item_bounding_box.orig.x,
+                     (int) item->item_bounding_box.orig.y);
       XCopyArea(wi->dpy, drw, wi->draw_buffer, gc,
-		0, 0, dest_im_width, dest_im_height,
-		(int) item->item_bounding_box.orig.x,
-		(int) item->item_bounding_box.orig.y);
+                0, 0, dest_im_width, dest_im_height,
+                (int) item->item_bounding_box.orig.x,
+                (int) item->item_bounding_box.orig.y);
 
       XFreeGC(wi->dpy, gc);
       XFreeGC(wi->dpy, mask_gc);
@@ -522,8 +545,8 @@ Draw(ZnItem	item)
     if (ZnTransfoIsTranslation(item->wi->current_transfo)) {
       ZnCurrentClip(wi, NULL, &clip_box, &simple);
       if (simple) {
-	ZnIntersectBBox(&box, clip_box, &inter);
-	box = inter;
+        ZnIntersectBBox(&box, clip_box, &inter);
+        box = inter;
       }
       values.fill_style = FillStippled;
       values.stipple = pixmap;
@@ -533,25 +556,25 @@ Draw(ZnItem	item)
       gc_mask |= GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground;
       XChangeGC(wi->dpy, wi->gc, gc_mask, &values);
       XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,
-		     (int) box.orig.x,
-		     (int) box.orig.y,
-		     (unsigned int) (box.corner.x-box.orig.x),
-		     (unsigned int) (box.corner.y-box.orig.y));
+                     (int) box.orig.x,
+                     (int) box.orig.y,
+                     (unsigned int) (box.corner.x-box.orig.x),
+                     (unsigned int) (box.corner.y-box.orig.y));
     }
     else {
-      ZnPoint	    box[4];
-      int	    i;
-      XImage	    *dest_im, *src_im;
-      Pixmap	    drw;
+      ZnPoint       box[4];
+      int           i;
+      XImage        *dest_im, *src_im;
+      Pixmap        drw;
       unsigned int  dest_im_width, dest_im_height;
       unsigned int  max_width, max_height;
-      GC	    gc;
+      GC            gc;
 
       dest_im_width = (unsigned int) (item->item_bounding_box.corner.x -
-				      item->item_bounding_box.orig.x);
+                                      item->item_bounding_box.orig.x);
       max_width = MAX(dest_im_width, (unsigned int) w);
       dest_im_height = (unsigned int) (item->item_bounding_box.corner.y -
-				       item->item_bounding_box.orig.y);
+                                       item->item_bounding_box.orig.y);
       max_height = MAX(dest_im_height, (unsigned int) h);
       
       drw = Tk_GetPixmap(wi->dpy, wi->draw_buffer, max_width, max_height, 1);
@@ -559,8 +582,8 @@ Draw(ZnItem	item)
       XSetForeground(wi->dpy, gc, 0);
       XFillRectangle(wi->dpy, drw, gc, 0, 0, max_width, max_height);
       dest_im = XCreateImage(wi->dpy, Tk_Visual(wi->win), 1,
-			     XYPixmap, 0, NULL, dest_im_width, dest_im_height,
-			     8, 0);
+                             XYPixmap, 0, NULL, dest_im_width, dest_im_height,
+                             8, 0);
       dest_im->data = ZnMalloc(dest_im->bytes_per_line * dest_im->height);
       memset(dest_im->data, 0, dest_im->bytes_per_line * dest_im->height);
 
@@ -580,16 +603,16 @@ Draw(ZnItem	item)
       box[2] = icon->dev[3];
       box[3] = icon->dev[2];
       for (i = 0; i < 4; i++) {
-	box[i].x -= item->item_bounding_box.orig.x;
-	box[i].y -= item->item_bounding_box.orig.y;
-	box[i].x = ZnNearestInt(box[i].x);
-	box[i].y = ZnNearestInt(box[i].y);
+        box[i].x -= item->item_bounding_box.orig.x;
+        box[i].y -= item->item_bounding_box.orig.y;
+        box[i].x = ZnNearestInt(box[i].x);
+        box[i].y = ZnNearestInt(box[i].y);
       }
 
       ZnMapImage(src_im, dest_im, box);
 
       TkPutImage(NULL, 0,wi->dpy, drw, gc, dest_im,
-		 0, 0, 0, 0, dest_im_width, dest_im_height);
+                 0, 0, 0, 0, dest_im_width, dest_im_height);
 
       values.foreground = ZnGetGradientPixel(icon->color, 0.0);
       values.stipple = drw;
@@ -597,12 +620,12 @@ Draw(ZnItem	item)
       values.ts_y_origin = (int) item->item_bounding_box.orig.y;
       values.fill_style = FillStippled;
       XChangeGC(wi->dpy, wi->gc,
-		GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground,
-		&values);
+                GCFillStyle|GCStipple|GCTileStipXOrigin|GCTileStipYOrigin|GCForeground,
+                &values);
       XFillRectangle(wi->dpy, wi->draw_buffer, wi->gc,
-		     (int) item->item_bounding_box.orig.x,
-		     (int) item->item_bounding_box.orig.y,
-		     (int) dest_im_width, (int) dest_im_height);
+                     (int) item->item_bounding_box.orig.x,
+                     (int) item->item_bounding_box.orig.y,
+                     (int) dest_im_width, (int) dest_im_height);
 
       XFreeGC(wi->dpy, gc);
       Tk_FreePixmap(wi->dpy, drw);
@@ -622,19 +645,19 @@ Draw(ZnItem	item)
  */
 #ifdef GL
 static void
-Render(ZnItem	item)
+Render(ZnItem   item)
 {
-  ZnWInfo	*wi = item->wi;
-  IconItem	icon = (IconItem) item;
+  ZnWInfo       *wi = item->wi;
+  IconItem      icon = (IconItem) item;
   
   if (icon->image != ZnUnspecifiedImage) {
     ZnRenderImage(wi, icon->image, icon->color, icon->dev,
-		  ZnImageIsBitmap(icon->image));
+                  ZnImageIsBitmap(icon->image));
   }
 }
 #else
 static void
-Render(ZnItem	item __unused)
+Render(ZnItem   item)
 {
 }
 #endif
@@ -648,11 +671,11 @@ Render(ZnItem	item __unused)
  **********************************************************************************
  */
 static ZnBool
-IsSensitive(ZnItem	item,
-	    int		item_part __unused)
+IsSensitive(ZnItem      item,
+            int         item_part)
 {
   return (ISSET(item->flags, ZN_SENSITIVE_BIT) &&
-	  item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
+          item->parent->class->IsSensitive(item->parent, ZN_NO_PART));
 }
 
 
@@ -664,17 +687,17 @@ IsSensitive(ZnItem	item,
  **********************************************************************************
  */
 static double
-Pick(ZnItem	item,
-     ZnPick	ps)
+Pick(ZnItem     item,
+     ZnPick     ps)
 {
-  IconItem	icon = (IconItem) item;
-  ZnWInfo	*wi = item->wi;
-  double	dist;
-  double	off_dist = MAX(1, wi->pick_aperture+1);
-  int		x, y, width, height;
-  ZnPoint	p;
-  ZnBBox	bbox;
-  ZnTransfo	t;
+  IconItem      icon = (IconItem) item;
+  ZnWInfo       *wi = item->wi;
+  double        dist;
+  double        off_dist = MAX(1, wi->pick_aperture+1);
+  int           x, y, width, height;
+  ZnPoint       p;
+  ZnBBox        bbox;
+  ZnTransfo     t;
 
   if (icon->image == ZnUnspecifiedImage) {
     return 1.0e40;
@@ -705,17 +728,17 @@ Pick(ZnItem	item,
     dist = 0.0;
     if (icon->image != ZnUnspecifiedImage) {
       if (ZnPointInImage(icon->image, x, y)) {
-	/*
-	 * The point is actually on the image shape.
-	 */
-	return dist;
+        /*
+         * The point is actually on the image shape.
+         */
+        return dist;
       }
       else {
-	/*
-	 * The point is not on the shape but still
-	 * inside the image's bounding box.
-	 */
-	return off_dist;
+        /*
+         * The point is not on the shape but still
+         * inside the image's bounding box.
+         */
+        return off_dist;
       }
     }
     else {
@@ -737,10 +760,49 @@ Pick(ZnItem	item,
  *
  **********************************************************************************
  */
-static void
-PostScript(ZnItem	item __unused,
-	   ZnBool	prepass __unused)
+static int
+PostScript(ZnItem item,
+           ZnBool prepass,
+           ZnBBox *area)
 {
+  ZnWInfo       *wi = item->wi;
+  IconItem      icon = (IconItem) item;
+  int           w, h, result;
+  ZnPoint       origin;
+  char          path[500];
+
+  if (prepass || (icon->image == ZnUnspecifiedImage)) {
+    return TCL_OK;
+  }
+  
+  ZnSizeOfImage(icon->image, &w, &h);
+
+  ComputeTransfoAndOrigin(item, &origin);
+  
+  sprintf(path, "/InitialTransform load setmatrix\n"
+          "[%.15g %.15g %.15g %.15g %.15g %.15g] concat\n"
+          "1 -1 scale\n"
+          "%.15g %.15g translate\n",
+          wi->current_transfo->_[0][0], wi->current_transfo->_[0][1], 
+          wi->current_transfo->_[1][0], wi->current_transfo->_[1][1], 
+          wi->current_transfo->_[2][0], wi->current_transfo->_[2][1],
+          origin.x, origin.y - h);
+  Tcl_AppendResult(wi->interp, path, NULL);
+  
+  if (ZnImageIsBitmap(icon->image)) {
+    if (Tk_PostscriptColor(wi->interp, wi->ps_info,
+                           ZnGetGradientColor(icon->color, 0.0, NULL)) != TCL_OK) {
+      return TCL_ERROR;
+    }
+    result = ZnPostscriptBitmap(wi->interp, wi->win, wi->ps_info,
+                                icon->image, 0, 0, w, h);
+  }
+  else {
+    result = Tk_PostscriptImage(ZnImageTkImage(icon->image), wi->interp, wi->win,
+                                wi->ps_info, 0, 0, w, h, prepass);
+  }
+  
+  return result;
 }
 
 
@@ -752,11 +814,11 @@ PostScript(ZnItem	item __unused,
  **********************************************************************************
  */
 static void
-GetAnchor(ZnItem	item,
-	  Tk_Anchor	anchor,
-	  ZnPoint	*p)
+GetAnchor(ZnItem        item,
+          Tk_Anchor     anchor,
+          ZnPoint       *p)
 {
-  IconItem	icon = (IconItem) item;
+  IconItem      icon = (IconItem) item;
   
   if (icon->image == ZnUnspecifiedImage) {
     *p = *icon->dev;
@@ -776,17 +838,17 @@ GetAnchor(ZnItem	item,
  **********************************************************************************
  *
  * GetClipVertices --
- *	Get the clipping shape.
- *	Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
+ *      Get the clipping shape.
+ *      Never ever call ZnTriFree on the tristrip returned by GetClipVertices.
  *
  **********************************************************************************
  */
 static ZnBool
-GetClipVertices(ZnItem		item,
-		ZnTriStrip	*tristrip)
+GetClipVertices(ZnItem          item,
+                ZnTriStrip      *tristrip)
 {
-  IconItem	icon = (IconItem) item;
-  ZnPoint	*points;
+  IconItem      icon = (IconItem) item;
+  ZnPoint       *points;
   
   ZnListAssertSize(ZnWorkPoints, 4);
   points = ZnListArray(ZnWorkPoints);
@@ -804,32 +866,32 @@ GetClipVertices(ZnItem		item,
  **********************************************************************************
  *
  * Coords --
- *	Return or edit the item origin. This doesn't take care of
- *	the possible attachment. The change will be effective at the
- *	end of the attachment.
+ *      Return or edit the item origin. This doesn't take care of
+ *      the possible attachment. The change will be effective at the
+ *      end of the attachment.
  *
  **********************************************************************************
  */
 static int
-Coords(ZnItem		item,
-       int		contour __unused,
-       int		index __unused,
-       int		cmd,
-       ZnPoint		**pts,
-       char		**controls __unused,
-       unsigned int	*num_pts)
+Coords(ZnItem           item,
+       int              contour,
+       int              index,
+       int              cmd,
+       ZnPoint          **pts,
+       char             **controls,
+       unsigned int     *num_pts)
 {
-  IconItem	icon = (IconItem) item;
+  IconItem      icon = (IconItem) item;
   
   if ((cmd == ZN_COORDS_ADD) || (cmd == ZN_COORDS_ADD_LAST) || (cmd == ZN_COORDS_REMOVE)) {
     Tcl_AppendResult(item->wi->interp,
-		     " icons can't add or remove vertices", NULL);
+                     " icons can't add or remove vertices", NULL);
     return TCL_ERROR;
   }
   else if ((cmd == ZN_COORDS_REPLACE) || (cmd == ZN_COORDS_REPLACE_ALL)) {
     if (*num_pts == 0) {
       Tcl_AppendResult(item->wi->interp,
-		       " coords command need 1 point on icons", NULL);
+                       " coords command need 1 point on icons", NULL);
       return TCL_ERROR;
     }
     icon->pos = (*pts)[0];
@@ -854,7 +916,7 @@ static ZnItemClassStruct ICON_ITEM_CLASS = {
   "icon",
   sizeof(IconItemStruct),
   icon_attrs,
-  0,			/* num_parts */
+  0,                    /* num_parts */
   ZN_CLASS_HAS_ANCHORS|ZN_CLASS_ONE_COORD, /* flags */
   Tk_Offset(IconItemStruct, pos),
   Init,
@@ -862,25 +924,25 @@ static ZnItemClassStruct ICON_ITEM_CLASS = {
   Destroy,
   Configure,
   Query,
-  NULL,			/* GetFieldSet */
+  NULL,                 /* GetFieldSet */
   GetAnchor,
   GetClipVertices,
-  NULL,			/* GetContours */
+  NULL,                 /* GetContours */
   Coords,
-  NULL,			/* InsertChars */
-  NULL,			/* DeleteChars */
-  NULL,			/* Cursor */
-  NULL,			/* Index */
-  NULL,			/* Part */
-  NULL,			/* Selection */
-  NULL,			/* Contour */
+  NULL,                 /* InsertChars */
+  NULL,                 /* DeleteChars */
+  NULL,                 /* Cursor */
+  NULL,                 /* Index */
+  NULL,                 /* Part */
+  NULL,                 /* Selection */
+  NULL,                 /* Contour */
   ComputeCoordinates,
   ToArea,
   Draw,
   Render,
   IsSensitive,
   Pick,
-  NULL,			/* PickVertex */
+  NULL,                 /* PickVertex */
   PostScript
 };
 

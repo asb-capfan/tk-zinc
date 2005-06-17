@@ -1,28 +1,17 @@
 /*
  * Group.h -- Header for Group items.
  *
- * Authors		: Patrick Lecoanet.
- * Creation date	:
+ * Authors              : Patrick Lecoanet.
+ * Creation date        :
  *
- * $Id: Group.h,v 1.3 2003/04/16 09:49:22 lecoanet Exp $
+ * $Id: Group.h,v 1.5 2005/04/27 07:32:03 lecoanet Exp $
  */
 
 /*
- *  Copyright (c) 2002 CENA, Patrick Lecoanet --
+ *  Copyright (c) 2002 - 2005 CENA, Patrick Lecoanet --
  *
- * This code is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this code; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * See the file "Copyright" for information on usage and redistribution
+ * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  */
 
