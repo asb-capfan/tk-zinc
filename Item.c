@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        : 
  *
- * $Id: Item.c,v 1.91 2005/05/31 09:16:14 lecoanet Exp $
+ * $Id: Item.c,v 1.93 2005/11/25 15:40:28 lecoanet Exp $
  */
 
 /*
@@ -38,7 +38,7 @@
 #include <string.h>
 
 
-static const char rcsid[] = "$Id: Item.c,v 1.91 2005/05/31 09:16:14 lecoanet Exp $";
+static const char rcsid[] = "$Id: Item.c,v 1.93 2005/11/25 15:40:28 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -727,12 +727,25 @@ ZnConfigureAttributes(ZnWInfo           *wi,
         }
         break;
       }
+    case ZN_CONFIG_ANGLE:
+      {
+        double angle;
+        int    int_angle;
+        if (Tcl_GetDoubleFromObj(wi->interp, args[i+1], &angle) == TCL_ERROR) {
+          return TCL_ERROR;
+        }
+        int_angle = (int) angle;
+        int_angle = int_angle % 360;
+        if (int_angle != *((int *) valp)) {
+          *((int *) valp) = int_angle;
+          *flags |= desc->flags;
+        }
+        break;
+      }
     case ZN_CONFIG_DIM:
       {
-        ZnDim dim;
+        double dim;
         if (Tcl_GetDoubleFromObj(wi->interp, args[i+1], &dim) == TCL_ERROR) {
-          Tcl_AppendResult(wi->interp, " dimension expected for attribute \"",
-                           Tcl_GetString(args[i+1]), "\"", NULL);
           return TCL_ERROR;
         }
         if (dim != *((ZnDim *) valp)) {
@@ -899,23 +912,13 @@ ZnConfigureAttributes(ZnWInfo           *wi,
       }
     case ZN_CONFIG_INT:
     case ZN_CONFIG_UINT:
-    case ZN_CONFIG_ANGLE:
       {
         int integer;
         if (Tcl_GetIntFromObj(wi->interp, args[i+1], &integer) == TCL_ERROR) {
           return TCL_ERROR;
         }
-        switch (desc->type) {
-        case ZN_CONFIG_ANGLE:
-          if ((integer > 360) || (integer < -360)) {
-            integer = integer % 360;
-          }
-          break;
-        case ZN_CONFIG_UINT:
-          if (integer < 0) {
+        if ((desc->type == ZN_CONFIG_UINT) &&  (integer < 0)) {
             integer = 0;
-          }
-          break;
         }
         if (integer != *((int *) valp)) {
           *((int *) valp) = integer;
@@ -1212,8 +1215,9 @@ AttributeToObj(Tcl_Interp       *interp,
   case ZN_CONFIG_UINT:
     return Tcl_NewIntObj(*((unsigned int *) valp));
   case ZN_CONFIG_INT:
-  case ZN_CONFIG_ANGLE:
     return Tcl_NewIntObj(*((int *) valp));
+  case ZN_CONFIG_ANGLE:
+    return Tcl_NewDoubleObj(*((int *) valp));
   case ZN_CONFIG_DIM:
     return Tcl_NewDoubleObj(*((ZnDim *) valp));
   case ZN_CONFIG_ALIGNMENT:

@@ -3,9 +3,10 @@ Tk::Zinc - another Canvas which proposes many new functions, some based on openG
 Tk::Zinc for Perl/Tk is available for Linux, Windows and MacOSX. 
 the easiest way could be to use he CPAN. However new releases are usually 
 first available on www.tkzinc.org
+To build it you need:
 
-
-* On a Linux system, you need Perl (>= 5.6) and perl-tk (800 or 804) packages.
+* On a Linux system, you need Perl (>= 5.6) and perl-tk (800 or 804) as well as
+  perl-tk developpement packages.
 
 * On MacOSX you need:
   - fink with tk-pm package and its dependencies (http://fink.sf.net)

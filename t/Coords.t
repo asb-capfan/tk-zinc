@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Coords.t,v 1.6 2004/05/24 19:56:23 mertz Exp $
+# $Id: Coords.t,v 1.7 2005/06/23 15:32:39 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -9,8 +9,7 @@
 
 BEGIN {
     if (!eval q{
-#        use Test::More qw(no_plan);
-        use Test::More tests => 21;
+        use Test::More tests => 26;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";
@@ -80,6 +79,43 @@ is_deeply([ $zinc->coords($curve,0,0) ],
 is_deeply([ $zinc->coords($curve,0,1) ],
 	  [ 40,50,'c' ],
 	  "coords of a control point of a curve contour is list of three elements");
+
+
+
+## testing empty curves, and adding/removing contours
+my $emptyCurve = $zinc->add('curve', 1, [ ]);
+
+is_deeply([ $zinc->coords($emptyCurve) ],
+	  [  ],
+	  "coords of an empty curve is an empty list");
+
+# adding a contour
+$zinc->contour($emptyCurve, 'add', 0, [ [1,1], [100,100], [200,100] ]);
+is_deeply([ $zinc->coords($emptyCurve) ],
+	  [  [1,1], [100,100], [200,100] ],
+	  "coords of a no more empty curve");
+
+$zinc->contour($emptyCurve, 'add', 0, [ [80,90], [-100,-100], [-200,100] ]);
+is_deeply([ $zinc->coords($emptyCurve, 1) ],
+	  [  [80,90], [-100,-100], [-200,100] ],
+	  "coords of a second contour in a curve");
+
+# removing first contour (which can be the second one!!
+$zinc->contour($emptyCurve, 'remove', 0);
+is_deeply([ $zinc->coords($emptyCurve, 0) ],
+	  [  [1,1], [100,100], [200,100] ],   # contours order is re-organised by tkzinc!!
+#	  [  [80,90], [-100,-100], [-200,100] ],
+	  "coords of remaining contour in the curve");
+
+# removing the last contour
+$zinc->contour($emptyCurve, 'remove', 0);
+is_deeply([ $zinc->coords($emptyCurve, 0) ],
+	  [   ],
+	  "coords of contour in the curve which is now empty");
+
+
+
+
 
 my $text = $zinc->add('text', 1, -position => [10,20], -text => 'test');
 

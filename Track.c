@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        :
  *
- * $Id: Track.c,v 1.85 2005/05/10 07:59:48 lecoanet Exp $
+ * $Id: Track.c,v 1.88 2006/02/14 09:01:07 lecoanet Exp $
  */
 
 /*
@@ -30,7 +30,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Track.c,v 1.85 2005/05/10 07:59:48 lecoanet Exp $";
+static const char rcsid[] = "$Id: Track.c,v 1.88 2006/02/14 09:01:07 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 /*
@@ -95,7 +95,7 @@ typedef struct _TrackItemStruct {
   unsigned short flags;
   ZnImage       symbol;                 /* item symbol                  */
   ZnGradient    *symbol_color;
-  int           label_angle;            /* Label angle from track. */
+  int           label_angle;            /* Label angle from track (degree). */
   ZnDim         label_distance;         /* Label distance from track. */
   ZnDim         label_dx;               /* Label dx/dy from track.      */
   ZnDim         label_dy;
@@ -703,8 +703,8 @@ ComputeCoordinates(ZnItem       item,
   ZnBBox        bbox;
   ZnPoint       *points;
   unsigned int  num_points, num_acc_pos, i;
-  int           alignment;
-  int           w2=0, h2=0, w=0, h=0;
+  int           alignment, w_int, h_int;
+  ZnReal        w2=0.0, h2=0.0, w=0.0, h=0.0;
   
   ZnResetBBox(&item->item_bounding_box);
   old_label_pos = field_set->label_pos;
@@ -718,14 +718,14 @@ ComputeCoordinates(ZnItem       item,
   track->dev.y = ZnNearestInt(track->dev.y);
   /*printf("track pos %g %g --> %g %g\n", track->pos.x, track->pos.y, track->dev.x, track->dev.y);*/
   if (track->symbol != ZnUnspecifiedImage) {
-    ZnSizeOfImage(track->symbol, &w, &h);
+    ZnSizeOfImage(track->symbol, &w_int, &h_int);
     /*printf("taille symbole %d %d\n", w, h);*/
-    w2 = (w+1)/2;
-    h2 = (h+1)/2;
+    w2 = (w_int+1.0)/2.0;
+    h2 = (h_int+1.0)/2.0;
     bbox.orig.x = track->dev.x - w2;
     bbox.orig.y = track->dev.y - h2;
-    bbox.corner.x = bbox.orig.x + w;
-    bbox.corner.y = bbox.orig.y + h;
+    bbox.corner.x = track->dev.x + w2;
+    bbox.corner.y = track->dev.y + h2;
     
     ZnAddBBoxToBBox(&item->item_bounding_box, &bbox);
   }
@@ -745,8 +745,7 @@ ComputeCoordinates(ZnItem       item,
                             wi->track_visible_history_size : 0);
 
     ZnResetBBox(&bbox);
-    w = (int) track->history_width;
-        w2 = (w+1)/2;
+    w2 = (track->history_width+1.0)/2.0;
     num_acc_pos = ZnListSize(track->history);
     hist = ZnListArray(track->history);
     for (i = 0; i < num_acc_pos; i++) {
@@ -754,8 +753,8 @@ ComputeCoordinates(ZnItem       item,
       if ((i < visible_history_size) && (hist[i].visible)) {
         bbox.orig.x = hist[i].dev.x - w2;
         bbox.orig.y = hist[i].dev.y - w2;
-        bbox.corner.x = bbox.orig.x + w;
-        bbox.corner.y = bbox.orig.y + w;
+        bbox.corner.x = hist[i].dev.x + w2;
+        bbox.corner.y = hist[i].dev.y + w2;
         ZnAddBBoxToBBox(&item->item_bounding_box, &bbox);
       }
     }
@@ -771,7 +770,7 @@ ComputeCoordinates(ZnItem       item,
     track->speed_vector_dev.x = ZnNearestInt(track->speed_vector_dev.x);
     track->speed_vector_dev.y = ZnNearestInt(track->speed_vector_dev.y);
     if (ISSET(track->flags, SV_MARK_BIT)) {
-      int w = (int) track->speed_vector_width + 1;
+      w = track->speed_vector_width + 1.0;
       ZnAddPointToBBox(&item->item_bounding_box,
                        track->speed_vector_dev.x - w,
                        track->speed_vector_dev.y - w);
@@ -789,8 +788,11 @@ ComputeCoordinates(ZnItem       item,
    * Take care of the connection between items.
    */
   c_item = item->connected_item;
-  if ((c_item != ZN_NO_ITEM) && (track->connection_width > 0)) {
-    w2 = (int) track->connection_width/2;
+  if ((c_item != ZN_NO_ITEM) && (track->connection_width > 0.0)) {
+    w2 = track->connection_width/2.0;
+    //printf("%d connected to %d, %g %g and %g %g\n", c_item->id, item->id,
+    //       ((TrackItem)c_item)->dev.x, ((TrackItem)c_item)->dev.y,
+    //       track->dev.x, track->dev.y);
     ZnAddPointToBBox(&item->item_bounding_box, track->dev.x-w2, track->dev.y-w2);
     ZnAddPointToBBox(&item->item_bounding_box, ((TrackItem)c_item)->dev.x+w2,
                      ((TrackItem)c_item)->dev.y+w2);
@@ -818,7 +820,7 @@ ComputeCoordinates(ZnItem       item,
   /* Compute the new label bounding box. */
   if (field_set->label_format && field_set->num_fields) {
     ZnDim       bb_width, bb_height;
-    ZnReal      rho, dist;
+    ZnReal      rho, theta, dist;
     ZnPoint     leader_end;
     int it;
 
@@ -827,6 +829,9 @@ ComputeCoordinates(ZnItem       item,
      * Compute the label position.
      */
     if (ISSET(track->flags, POLAR_BIT)) {
+      /*
+       * Update label_dx, label_dy from label_distance, label_angle
+       */
       rho = track->label_distance;
       /*
        * Compute heading after applying the transform.
@@ -836,6 +841,10 @@ ComputeCoordinates(ZnItem       item,
         ZnProjectionToAngle(track->speed_vector.x, track->speed_vector.y),
         track->label_angle);*/
       rotation = ZnProjectionToAngle(track->speed_vector.x, track->speed_vector.y)-rotation;
+      /*
+       * Adjust the distance to match the requested label_distance
+       * whatever the label_angle.
+       */
       it = 0;
       while (1) {
         ZnPointPolarToCartesian(rotation, rho, (ZnReal) track->label_angle,
@@ -857,6 +866,15 @@ ComputeCoordinates(ZnItem       item,
       }
     }
     else {
+      /*
+       * Update label_angle following the change in label_dx, label_dy.
+       * label_distance is not updated.
+       */
+      ZnTransfoDecompose(wi->current_transfo, NULL, NULL, &rotation, NULL);
+      rotation = ZnProjectionToAngle(track->speed_vector.x, track->speed_vector.y) - rotation;
+      ZnPointCartesianToPolar(rotation, &dist, &theta, track->label_dx, track->label_dy); 
+      track->label_angle = (int) theta;  
+    
       field_set->label_pos.x = track->dev.x + track->label_dx;
       field_set->label_pos.y = track->dev.y - track->label_dy;
       ZnAnchor2Origin(&field_set->label_pos, bb_width, bb_height,
@@ -1753,8 +1771,7 @@ Pick(ZnItem     item,
     }
   }
 
-  /* printf("track %d reporting part %d, distance %lf\n",
-     item->id, best_part, dist); */
+  //printf("track %d reporting part %d, distance %lf\n", item->id, best_part, dist);
   ps->a_part = best_part;
   return dist;
 }

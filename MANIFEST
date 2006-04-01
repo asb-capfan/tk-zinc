@@ -87,12 +87,15 @@ README
 Rectangle.c
 Reticle.c
 t/AnimatedGradient.t
+t/Bbox-curve-multi-contour.t
 t/Bbox.t
 t/Coords.t
 t/find.t
 t/Images.t
 t/Import.t
+t/Maps.t
 t/PreviousKnownBugs.t
+t/Scale_clipped_group.t
 t/test-methods.pl
 t/test-no-crash.pl
 t/Test/Builder.pm

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Bbox.t,v 1.7 2004/11/16 20:46:14 mertz Exp $
+# $Id: Bbox.t,v 1.9 2006/02/14 09:42:40 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -137,7 +137,7 @@ my $wpt = $zinc->add('waypoint', 1, 0, -position => [561, 781]);
 #print "wpt bbox=(", join(',', $zinc->bbox($wpt)),")\n";
 ok(&similarFlatArray ([ $zinc->bbox($wpt) ],
                       [ 561,781,  561,781],
-                      [4,4,   4,4],
+                      [5,5,   5,5],
                       ),
    "coords of a waypoint without label");
 

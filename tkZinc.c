@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        : Mon Feb  1 12:13:24 1999
  *
- * $Id: tkZinc.c,v 1.116 2005/05/25 08:27:27 lecoanet Exp $
+ * $Id: tkZinc.c,v 1.121 2005/11/25 15:23:07 lecoanet Exp $
  */
 
 /*
@@ -25,7 +25,7 @@
  *
  */
 
-static const char rcs_id[]="$Id: tkZinc.c,v 1.116 2005/05/25 08:27:27 lecoanet Exp $";
+static const char rcs_id[]="$Id: tkZinc.c,v 1.121 2005/11/25 15:23:07 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 static const char * const zinc_version = "zinc-version-" VERSION;
 
@@ -400,7 +400,7 @@ static Tk_OptionSpec option_specs[] = {
   {TK_OPTION_BOOLEAN, "-confine", "confine", "Confine",
      "1", -1, Tk_Offset(ZnWInfo, confine), 0, NULL, CONFIG_SET_ORIGIN},
   {TK_OPTION_CURSOR, "-cursor", "cursor", "Cursor",
-     "", -1, Tk_Offset(ZnWInfo, cursor), TK_CONFIG_NULL_OK, NULL, 0},
+     "", -1, Tk_Offset(ZnWInfo, cursor), TK_OPTION_NULL_OK, NULL, 0},
   {TK_OPTION_INT, "-debug", "debug", "Debug",
      "0", -1, Tk_Offset(ZnWInfo, debug), 0, NULL, 0},
   {TK_OPTION_FONT, "-font", "font", "Font",
@@ -430,7 +430,7 @@ static Tk_OptionSpec option_specs[] = {
 #ifdef ATC
   {TK_OPTION_STRING, "-mapdistancesymbol", "mapDistanceSymbol", "MapDistanceSymbol",
      "AtcSymbol19", Tk_Offset(ZnWInfo, map_symbol_obj), -1,
-     TK_CONFIG_NULL_OK, NULL, CONFIG_MAP_SYMBOL|CONFIG_INVALIDATE_MAPS},
+     TK_OPTION_NULL_OK, NULL, CONFIG_MAP_SYMBOL|CONFIG_INVALIDATE_MAPS},
   {TK_OPTION_FONT, "-maptextfont", "mapTextFont", "MapTextFont",
      "-adobe-helvetica-bold-r-normal--*-120-*-*-*-*-*-*",
      -1, Tk_Offset(ZnWInfo, map_text_font), 0, NULL, CONFIG_MAP_FONT},
@@ -447,7 +447,7 @@ static Tk_OptionSpec option_specs[] = {
      "1", -1, Tk_Offset(ZnWInfo, reshape), 0, NULL, 0},
   {TK_OPTION_STRING, "-scrollregion", "scrollRegion", "ScrollRegion",
      "", Tk_Offset(ZnWInfo, region), -1,
-     TK_CONFIG_NULL_OK, NULL, CONFIG_SET_ORIGIN|CONFIG_SCROLL_REGION},
+     TK_OPTION_NULL_OK, NULL, CONFIG_SET_ORIGIN|CONFIG_SCROLL_REGION},
   {TK_OPTION_CUSTOM, "-selectbackground", "selectBackground", "Foreground",
      "#a0a0a0", -1, Tk_Offset(ZnWInfo, text_info.sel_color), 0, &gradientOption, 0},
 #ifdef ATC
@@ -456,9 +456,9 @@ static Tk_OptionSpec option_specs[] = {
      0, NULL, CONFIG_INVALIDATE_TRACKS},
 #endif
   {TK_OPTION_STRING, "-takefocus", "takeFocus", "TakeFocus",
-     NULL, Tk_Offset(ZnWInfo, take_focus), -1, TK_CONFIG_NULL_OK, NULL, 0},
+     NULL, Tk_Offset(ZnWInfo, take_focus), -1, TK_OPTION_NULL_OK, NULL, 0},
   {TK_OPTION_STRING, "-tile", "tile", "Tile",
-     "", Tk_Offset(ZnWInfo, tile_obj), -1, TK_CONFIG_NULL_OK, NULL, CONFIG_TILE|CONFIG_DAMAGE_ALL},
+     "", Tk_Offset(ZnWInfo, tile_obj), -1, TK_OPTION_NULL_OK, NULL, CONFIG_TILE|CONFIG_DAMAGE_ALL},
 #ifdef ATC
   {TK_OPTION_INT, "-trackvisiblehistorysize", "trackVisibleHistorySize", "TrackVisibleHistorySize",
      "6", -1, Tk_Offset(ZnWInfo, track_visible_history_size), 0, NULL, CONFIG_INVALIDATE_TRACKS},
@@ -473,19 +473,19 @@ static Tk_OptionSpec option_specs[] = {
      "10c", -1, Tk_Offset(ZnWInfo, opt_width), 0, NULL, CONFIG_DAMAGE_ALL|CONFIG_REQUEST_GEOM},
 #ifdef PTK
   {TK_OPTION_CALLBACK, "-xscrollcommand", "xScrollCommand", "ScrollCommand",
-     "", -1, Tk_Offset(ZnWInfo, x_scroll_cmd), TK_CONFIG_NULL_OK, NULL, 0},
+     "", -1, Tk_Offset(ZnWInfo, x_scroll_cmd), TK_OPTION_NULL_OK, NULL, 0},
 #else
   {TK_OPTION_STRING, "-xscrollcommand", "xScrollCommand", "ScrollCommand",
-     "", Tk_Offset(ZnWInfo, x_scroll_cmd), -1, TK_CONFIG_NULL_OK, NULL, 0},
+     "", Tk_Offset(ZnWInfo, x_scroll_cmd), -1, TK_OPTION_NULL_OK, NULL, 0},
 #endif
   {TK_OPTION_PIXELS, "-xscrollincrement", "xScrollIncrement", "ScrollIncrement",
      "0", -1, Tk_Offset(ZnWInfo, x_scroll_incr), 0, NULL, 0},
 #ifdef PTK
   {TK_OPTION_CALLBACK, "-yscrollcommand", "yScrollCommand", "ScrollCommand",
-     "", -1, Tk_Offset(ZnWInfo, y_scroll_cmd), TK_CONFIG_NULL_OK, NULL, 0},
+     "", -1, Tk_Offset(ZnWInfo, y_scroll_cmd), TK_OPTION_NULL_OK, NULL, 0},
 #else
   {TK_OPTION_STRING, "-yscrollcommand", "yScrollCommand", "ScrollCommand",
-     "", Tk_Offset(ZnWInfo, y_scroll_cmd), -1, TK_CONFIG_NULL_OK, NULL, 0},
+     "", Tk_Offset(ZnWInfo, y_scroll_cmd), -1, TK_OPTION_NULL_OK, NULL, 0},
 #endif
   {TK_OPTION_PIXELS, "-yscrollincrement", "yScrollIncrement",  "ScrollIncrement",
      "0", -1, Tk_Offset(ZnWInfo, y_scroll_incr), 0, NULL, 0},
@@ -521,7 +521,7 @@ static int      Configure _ANSI_ARGS_((Tcl_Interp *interp, ZnWInfo *wi,
                                        int argc, Tcl_Obj *CONST args[]));
 #endif
 static void     Redisplay _ANSI_ARGS_((ClientData client_data));
-static void     Destroy _ANSI_ARGS_((char *mem_ptr));
+static void     Destroy _ANSI_ARGS_((ZnWInfo *wi));
 static void     InitZinc _ANSI_ARGS_((Tcl_Interp *interp));
 static void     Focus _ANSI_ARGS_((ZnWInfo *wi, ZnBool got_focus));
 static void     Update _ANSI_ARGS_((ZnWInfo     *wi));
@@ -1322,6 +1322,9 @@ ZincObjCmd(ClientData           client_data,    /* Main window associated with
   wi->relief = ZN_RELIEF_FLAT;
   wi->opt_width = None;
   wi->opt_height = None;
+#ifdef GL
+  wi->font_tfi = NULL;
+#endif
   wi->font = 0;
 #ifdef ATC
   wi->track_visible_history_size = 0;
@@ -1329,7 +1332,6 @@ ZincObjCmd(ClientData           client_data,    /* Main window associated with
   wi->speed_vector_length = 0;
   wi->map_text_font = 0;
 #  ifdef GL
-  wi->font_tfi = NULL;
   wi->map_font_tfi = NULL;
 #  endif
   wi->map_distance_symbol = ZnUnspecifiedImage;
@@ -5537,7 +5539,12 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
         }
         
       }
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
@@ -5584,7 +5591,12 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
                          "scale tagOrIdOrTransform xFactor yFactor ?centerX centerY?");
         goto error;
       }
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
@@ -5753,7 +5765,12 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
         Tcl_WrongNumArgs(interp, 1, args, "skew tagOrIdOrTransform xSkewAngle ySkewAngle");
         goto error;
       }
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
@@ -5835,7 +5852,12 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
         argc--;
       }
       
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[3]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
@@ -5851,7 +5873,12 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
         t = item->transfo;
       }
 
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         to = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
@@ -5945,7 +5972,12 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
           goto err_tget;
         }
       }
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
@@ -6011,6 +6043,10 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
          * Setup the source transform.
          */
         tag = Tcl_GetString(args[2]);
+        if (strlen(tag) == 0) {
+          Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+          goto error;
+        }
         if (strcmp(tag, "device") == 0) {
           from_t = &t1;
           ZnTransfoSetIdentity(from_t);
@@ -6039,6 +6075,10 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
        * Setup the destination transform
        */
       tag = Tcl_GetString(args[argc-2]);
+      if (strlen(tag) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
       if (strcmp(tag, "device") == 0) {
         to_t = &t2;
         ZnTransfoSetIdentity(to_t);
@@ -6121,10 +6161,15 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
       ZnBool abs = False;
 
       if ((argc != 5) && (argc != 6)) {
-        Tcl_WrongNumArgs(interp, 1, args, "translate tagOrIdorTransform xAmount yAmount ?abs?");
+        Tcl_WrongNumArgs(interp, 1, args, "translate tagOrIdOrTransform xAmount yAmount ?abs?");
         goto error;
       }
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
@@ -6167,7 +6212,12 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
         Tcl_WrongNumArgs(interp, 1, args, "treset tagOrIdOrTransform");
         goto error;
       }
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         t = (ZnTransfo *) Tcl_GetHashValue(entry);
       }
@@ -6290,7 +6340,12 @@ WidgetObjCmd(ClientData         client_data,    /* Information about the widget.
         }
         new._[i/2][i%2] = (float) d;
       }
-      entry = Tcl_FindHashEntry(wi->t_table, Tcl_GetString(args[2]));
+      str = Tcl_GetString(args[2]);
+      if (strlen(str) == 0) {
+        Tcl_AppendResult(interp, " must provide a valid tagOrIdOrTransform", NULL);
+        goto error;
+      }
+      entry = Tcl_FindHashEntry(wi->t_table, str);
       if (entry != NULL) {
         t = (ZnTransfo *) Tcl_GetHashValue(entry);
         *t = new;
@@ -6880,7 +6935,7 @@ Configure(Tcl_Interp            *interp,/* Used for error reporting. */
         Tcl_AppendResult(interp, "Incorrect bitmap \"",
                          Tcl_GetString(wi->track_symbol_obj), "\"", (char *) NULL);
         continue;
-        
+ 
       }
     }
 #endif
@@ -7267,19 +7322,7 @@ Event(ClientData client_data,   /* Information about widget. */
    * pending Redisplay and eventually free the widget's memory.
    */
   else if (event->type == DestroyNotify) {
-    if (wi->win != NULL) {
-      wi->win = NULL;
-      CLEAR(wi->flags, ZN_REALIZED);
-#ifdef PTK
-      Lang_DeleteWidget(wi->interp, wi->cmd);
-#else 
-      Tcl_DeleteCommandFromToken(wi->interp, wi->cmd);
-#endif
-    }
-    if (ISSET(wi->flags, ZN_UPDATE_PENDING)) {
-      Tcl_CancelIdleCall(Redisplay, (ClientData) wi);
-    }
-    Tcl_EventuallyFree((ClientData) wi, Destroy);
+    Destroy(wi);
   }
   else if (event->type == FocusIn) {
     if (event->xfocus.detail != NotifyInferior) {
@@ -7434,9 +7477,7 @@ DoEvent(ZnWInfo *wi,
   /*
    * Invoke the binding system.
    */
-  if (wi->win != NULL) {
-    Tk_BindEvent(wi->binding_table, event, wi->win, (int) num, its);
-  }
+  Tk_BindEvent(wi->binding_table, event, wi->win, (int) num, its);
   if (its != items) {
     ZnFree(its);
   }
@@ -7972,7 +8013,6 @@ CmdDeleted(ClientData client_data) /* Pointer to widget record for widget. */
 
   if (wi->win != NULL) {
     Tk_DestroyWindow(wi->win);
-    wi->win = NULL;
   }
 }
 
@@ -7995,9 +8035,8 @@ CmdDeleted(ClientData client_data) /* Pointer to widget record for widget. */
  *----------------------------------------------------------------------
  */
 static void
-Destroy(char *mem_ptr)          /* Info about the widget. */
+Destroy(ZnWInfo *wi)
 {
-  ZnWInfo       *wi = (ZnWInfo *) mem_ptr;
   unsigned int  num;
   Tcl_HashSearch search;
   Tcl_HashEntry *entry;
@@ -8007,13 +8046,27 @@ Destroy(char *mem_ptr)          /* Info about the widget. */
   ZnWInfo       **wip;
 #endif
 
-  /*printf("Destroy begining\n");*/
+  //printf("Destroy begining\n");
   /*
    * This procedure could be invoked either because the window was
    * destroyed and the command was then deleted (in which case win
    * is NULL) or because the command was deleted, and then this procedure
    * destroys the widget.
    */
+  CLEAR(wi->flags, ZN_REALIZED);
+#ifdef PTK
+  Lang_DeleteWidget(wi->interp, wi->cmd);
+#else 
+  Tcl_DeleteCommandFromToken(wi->interp, wi->cmd);
+#endif
+  /*
+   * Remove the redisplay scheduled by the cleanup.
+   * It will fire when the widget will be gone and
+   * will corrupt memory.
+   */
+  if (ISSET(wi->flags, ZN_UPDATE_PENDING)) {
+    Tcl_CancelIdleCall(Redisplay, (ClientData) wi);
+  }
   /*
    * Unregister form the overlap manager.
    */
@@ -8031,14 +8084,6 @@ Destroy(char *mem_ptr)          /* Info about the widget. */
   /*fprintf(stderr, "Item count before cleanup: %d\n", wi->num_items);*/
   ZnITEM.DestroyItem(wi->top_group);
   /*fprintf(stderr, "Remaining item count: %d\n", wi->num_items);*/
-  /*
-   * Remove the redisplay scheduled by the cleanup.
-   * It will fire when the widget will be gone and
-   * will corrupt memory.
-   */
-  if (ISSET(wi->flags, ZN_UPDATE_PENDING)) {
-    Tcl_CancelIdleCall(Redisplay, (ClientData) wi);
-  }
 
   for (num = 0; num < ZN_NUM_ALPHA_STEPS; num++) {
     if (wi->alpha_stipples[num] != None) {
@@ -8202,7 +8247,8 @@ Destroy(char *mem_ptr)          /* Info about the widget. */
   ZnFreeChrono(wi->this_draw_chrono);
 #endif
 
-  ZnFree(wi);
+  wi->win = NULL;
+  Tcl_EventuallyFree((ClientData) wi, TCL_DYNAMIC);
   /*printf("Destroy ending\n");*/
 }
 
@@ -8326,6 +8372,16 @@ Update(ZnWInfo  *wi)
  *
  **********************************************************************************
  */
+#if defined (_WIN32)
+#define START \
+  QueryPerformanceCounter(&start)
+
+#define STOP_PRINT(text) \
+    QueryPerformanceCounter(&stop); \
+    printf(text##" : %g ms\n", \
+           ((double) (stop.QuadPart - start.QuadPart)) * 1000.0 / ((double) sw_freq.QuadPart))
+#endif
+
 static void
 Repair(ZnWInfo  *wi)
 {
@@ -8334,11 +8390,15 @@ Repair(ZnWInfo  *wi)
   ZnTriStrip    tristrip;
 #ifdef GL
   XColor        *color;
+  int           darea_x1, darea_x2, darea_y1, darea_y2;
   ZnGLContextEntry *ce;
 #endif
   int           int_width = Tk_Width(wi->win);
   int           int_height = Tk_Height(wi->win);
-
+  //LARGE_INTEGER start, stop, sw_freq;
+  
+  //QueryPerformanceFrequency(&sw_freq);
+  //START;
   /*SET(wi->flags, ZN_CONFIGURE_EVENT);*/
   if (wi->render) {
 #ifdef GL
@@ -8377,6 +8437,7 @@ Repair(ZnWInfo  *wi)
     color = ZnGetGradientColor(wi->back_color, 0.0, NULL);
     glClearColor((GLfloat) color->red/65536, (GLfloat) color->green/65536,
                  (GLfloat) color->blue/65536, 0.0);
+    glDrawBuffer(GL_BACK);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -8385,50 +8446,45 @@ Repair(ZnWInfo  *wi)
      */
     wi->alpha = 100;
     
-    glViewport(0, 0, (GLsizei) int_width, int_height);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, (GLfloat) int_width, (GLfloat) int_height, 0.0, -1.0, 1.0);
-    glMatrixMode(GL_MODELVIEW);
-    
 #ifdef GL_DAMAGE
     if (ISCLEAR(wi->flags, ZN_CONFIGURE_EVENT)) {
-      glEnable(GL_SCISSOR_TEST);
-      
       /*
-       * Set the damaged area as the scissor area.
+       * Set the damaged area as the viewport area.
        */
-      wi->damaged_area.orig.x = ZnNearestInt(wi->damaged_area.orig.x);
-      wi->damaged_area.orig.y = ZnNearestInt(wi->damaged_area.orig.y);
-      wi->damaged_area.corner.x = ZnNearestInt(wi->damaged_area.corner.x);
-      wi->damaged_area.corner.y = ZnNearestInt(wi->damaged_area.corner.y);
-      glScissor((int) wi->damaged_area.orig.x,
-                int_height - (int) wi->damaged_area.corner.y,
-                (int) (wi->damaged_area.corner.x - wi->damaged_area.orig.x),
-                (int) (wi->damaged_area.corner.y - wi->damaged_area.orig.y));
+      darea_x1 = (int) ZnNearestInt(wi->damaged_area.orig.x);
+      darea_y1 = (int) ZnNearestInt(wi->damaged_area.orig.y);
+      darea_x2 = (int) ZnNearestInt(wi->damaged_area.corner.x);
+      darea_y2 = (int) ZnNearestInt(wi->damaged_area.corner.y);
     }
     else {
-      glDisable(GL_SCISSOR_TEST);
-      wi->damaged_area.orig.x = wi->damaged_area.orig.y = wi->inset;
-      wi->damaged_area.corner.x = int_width-wi->inset;
-      wi->damaged_area.corner.y = int_height-wi->inset;
+      darea_x1 = darea_y1 = wi->damaged_area.orig.x = wi->damaged_area.orig.y = 0;
+      darea_x2 = wi->damaged_area.corner.x = int_width;
+      darea_y2 = wi->damaged_area.corner.y = int_height;
     }
 #else
     /*
      * We do not use the damaged area set it to the whole area.
      */
-    wi->damaged_area.orig.x = wi->damaged_area.orig.y = wi->inset;
-    wi->damaged_area.corner.x = int_width-wi->inset;
-    wi->damaged_area.corner.y = int_height-wi->inset;
+    darea_x1 = darea_y1 = wi->damaged_area.orig.x = wi->damaged_area.orig.y = 0;
+    darea_x2 = wi->damaged_area.corner.x = int_width;
+    darea_y2 = wi->damaged_area.corner.y = int_height;
 #endif
+    //
+    // glViewport and glOrtho must always be used together with
+    // matching parameters to keep the mapping straight (no distorsion).
+    glViewport(darea_x1, int_height - darea_y2, darea_x2 - darea_x1, darea_y2 - darea_y1);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(darea_x1, darea_x2, darea_y2, darea_y1, -1.0, 1.0);
+    glMatrixMode(GL_MODELVIEW);
 
     /*
      * Clear the GL buffers.
      */
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glClear(GL_STENCIL_BUFFER_BIT);
 
     /*
-     * Setup the background tile if needed.
+     * Setup the background tile or the background color.
      */
     if (wi->tile != ZnUnspecifiedImage) {
       ZnBBox bbox;
@@ -8436,8 +8492,17 @@ Repair(ZnWInfo  *wi)
       bbox.orig.x = bbox.orig.y = 0.0;
       bbox.corner.x = int_width;
       bbox.corner.y = int_height;
-      
       ZnRenderTile(wi, wi->tile, NULL, NULL, NULL, (ZnPoint *) &bbox);
+    }
+    else {
+      color = ZnGetGradientColor(wi->back_color, 0.0, NULL);
+      glColor4us(color->red, color->green, color->blue, 65535);
+      glBegin(GL_QUAD_STRIP);
+      glVertex2d(wi->damaged_area.orig.x, wi->damaged_area.orig.y);
+      glVertex2d(wi->damaged_area.orig.x, wi->damaged_area.corner.y);
+      glVertex2d(wi->damaged_area.corner.x, wi->damaged_area.orig.y);
+      glVertex2d(wi->damaged_area.corner.x, wi->damaged_area.corner.y);
+      glEnd();
     }
 
     wi->top_group->class->Render(wi->top_group);
@@ -8446,9 +8511,11 @@ Repair(ZnWInfo  *wi)
       unsigned short alpha;
 
 #ifdef GL_DAMAGE
-      if (ISCLEAR(wi->flags, ZN_CONFIGURE_EVENT)) {
-        glDisable(GL_SCISSOR_TEST);
-      }
+      glViewport(0, 0, int_width, int_height);
+      glMatrixMode(GL_PROJECTION);
+      glLoadIdentity();
+      glOrtho(0.0, int_width, int_height, 0.0, -1.0, 1.0);
+      glMatrixMode(GL_MODELVIEW);
 #endif
       if (wi->highlight_width > 0) {
         color = ZnGetGradientColor(ISSET(wi->flags, ZN_GOT_FOCUS)?wi->highlight_color:
@@ -8497,21 +8564,22 @@ Repair(ZnWInfo  *wi)
           glEnd();
         }
       }
-
-      CLEAR(wi->flags, ZN_CONFIGURE_EVENT);
     }
+    CLEAR(wi->flags, ZN_CONFIGURE_EVENT);
 
     /* Switch the GL buffers. */
-    /* The scissor test might be needed under windows, should be tested.
-     * Symptom: when moving the window, the buffer switch results in a
-     * shifted display all around the damaged area.
-     */
-#ifdef GL_DAMAGE
-    if (ISCLEAR(wi->flags, ZN_CONFIGURE_EVENT)) {
-      glEnable(GL_SCISSOR_TEST);
-    }
-#endif
+#if 0
+    glDisable(GL_BLEND);
+    glDisable(GL_STENCIL_TEST);
+    glDrawBuffer(GL_FRONT);
+    glReadBuffer(GL_BACK);
+    glRasterPos2i(darea_x1, darea_y2);
+    glCopyPixels(darea_x1, int_height-darea_y2, darea_x2 - darea_x1, darea_y2 - darea_y1,
+                 GL_COLOR);
+    glFlush();
+#else
     ZnGLSwapBuffers(ce, wi);
+#endif
 
     /*
      * Wait the end of GL update if we need to synchronize
@@ -8522,12 +8590,14 @@ Repair(ZnWInfo  *wi)
     }
 
     ZnGLReleaseContext(ce);
+    //STOP_PRINT("Total GL");
 #endif
   }
   else {
     XRectangle  r, rs[4];
     ZnBBox      merge;
 
+    //START;
     ClampDamageArea(wi);
     /*
 m     * Merge the damaged area with the exposed area.
@@ -8640,6 +8710,7 @@ m     * Merge the damaged area with the exposed area.
       rs[3].height = int_height;
       XFillRectangles(wi->dpy, Tk_WindowId(wi->win), wi->gc, rs, 4);
     }
+    //STOP_PRINT("Total GDI");
   }
 }
 

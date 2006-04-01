@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: Images.t,v 1.5 2004/05/12 12:33:33 mertz Exp $
+# $Id: Images.t,v 1.8 2006/02/12 09:40:55 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -43,10 +43,20 @@ BEGIN {
 }
 
 
-$zinc = $mw->Zinc(-render => 0,
+$zinc = $mw->Zinc(-render => 1,
 		  -width => 400, -height => 400)->pack;
 
 like  ($zinc, qr/^Tk::Zinc=HASH/ , "zinc has been created");
+
+##  test cannot be run directly since $zinc->update does not work properly 
+##  when not in a  mainloop
+##  so I use a timer to trigger tests after entering the mainloop
+
+$zinc->after(10, \&testExecute);  
+
+Tk::MainLoop;
+
+sub testExecute {
 
 #### creating different images, bitmaps and pixmaps...
 my $photoMickey = $zinc->Photo('mickey.gif', -file => Tk->findINC("demos/images/mickey.gif"));
@@ -63,7 +73,7 @@ $zinc->configure(-tile => $xpm);
 if ($Tk::VERSION < 804) {
   is ($zinc->cget(-tile), "QuitPB.xpm", "verifying Tk::Zinc -tile option value");
 } else {
-    is ($zinc->cget(-tile), $xpm, "verifying Tk::Zinc -tile option value");
+  is ($zinc->cget(-tile), $xpm, "verifying Tk::Zinc -tile option value");
 }
 
 &wait ("-tile of Tk::Zinc with QuitPB.xpm");
@@ -98,11 +108,23 @@ my $rect1 = $zinc->add('rectangle', 1, [10,10,190,190], -filled => 1);
 
 
 $zinc->itemconfigure($rect1, -tile => $xpm);
-is ($zinc->itemcget($rect1, -tile), "QuitPB.xpm", "verifying rectangle -tile option value");
+
+if ($Tk::Zinc::VERSION < 3.302) {
+  is ($zinc->itemcget($rect1, -tile), "QuitPB.xpm", "verifying rectangle -tile option value");
+} else {
+  # cget return an image object since release 3.3.2
+  is ($zinc->itemcget($rect1, -tile), $xpm, "verifying rectangle -tile option value");
+}
 &wait ("-tile of rectangle with QuitPB.xpm");
 
 $zinc->itemconfigure($rect1, -tile => $photoMickey);
-is ($zinc->itemcget($rect1, -tile), "mickey.gif", "verifying rectangle -tile option value");
+if ($Tk::Zinc::VERSION < 3.302) {
+  is ($zinc->itemcget($rect1, -tile), "mickey.gif", "verifying rectangle -tile option value");
+} else {
+  # cget return an image object since release 3.3.2
+  is ($zinc->itemcget($rect1, -tile), $photoMickey, "verifying rectangle -tile option value");
+}
+
 &wait ("-tile of rectangle with mickey");
 
 # modifying the Tk::Photo to see if the rectangle -tile changes
@@ -159,11 +181,21 @@ SKIP: {
     $zinc->itemconfigure($icon2, -image => $bitmap);
 
     &wait ("displaying an icon with -image as a Tk::Bitmap");
-    is ($zinc->itemcget($icon2, -image), 'file.xbm', "verifying icon -image option value as file.xbm");
-    $zinc->itemconfigure($icon2, -image => "");
+    if ($Tk::Zinc::VERSION < 3.302) {
+      is ($zinc->itemcget($icon2, -image), 'file.xbm', "verifying icon -image option value as file.xbm");
+    } else {
+      # cget return an image object since release 3.3.2
+      is ($zinc->itemcget($icon2, -image), $bitmap, "verifying icon -image option value as file.xbm");
+    }
+$zinc->itemconfigure($icon2, -image => "");
 
     $zinc->itemconfigure($icon2, -image => '@'.Tk->findINC("openfile.xbm"));
-    is ($zinc->itemcget($icon2, -image), '@'.Tk->findINC("openfile.xbm"),"verifying icon -image option value as @/path/openfile.xbm");
+    if ($Tk::Zinc::VERSION < 3.302) {
+      is ($zinc->itemcget($icon2, -image), '@'.Tk->findINC("openfile.xbm"),"verifying icon -image option value as @/path/openfile.xbm");
+    } else {
+      # cget return an image object since release 3.3.2
+      is ($zinc->itemcget($icon2, -image), undef,"verifying icon -image option value as @/path/openfile.xbm");
+    }
     &wait ("displaying an icon with -image as a \@filename.xbm");
 }
 $zinc->remove($icon2);
@@ -190,6 +222,11 @@ $zinc->remove($icon3);
 # We should also test that changing the content of a Tk::Photo should change the display of an icon
 
 
+diag("############## Images test");
+exit;
+
+}
+
 
 sub wait {
     $zinc->update;
@@ -209,4 +246,3 @@ sub wait {
 
 
 
-diag("############## Images test");

@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        : 
  *
- * $Id: Transfo.c,v 1.16 2005/04/27 07:32:03 lecoanet Exp $
+ * $Id: Transfo.c,v 1.17 2005/09/12 13:18:42 Lecoanet Exp $
  */
 
 /*
@@ -240,7 +240,7 @@ ZnTransfoCompose(ZnTransfo      *res,
     }
   }
   else if (t2 == NULL) {
-    if (res != t2) {
+    if (res != t1) {
       *res = *t1;
     }
   }

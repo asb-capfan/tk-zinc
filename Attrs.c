@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        : Fri Dec 31 10:03:34 1999
  *
- * $Id: Attrs.c,v 1.13 2005/04/27 07:32:03 lecoanet Exp $
+ * $Id: Attrs.c,v 1.14 2005/10/18 09:32:23 lecoanet Exp $
  */
 
 /*
@@ -27,7 +27,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Attrs.c,v 1.13 2005/04/27 07:32:03 lecoanet Exp $";
+static const char rcsid[] = "$Id: Attrs.c,v 1.14 2005/10/18 09:32:23 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -709,12 +709,12 @@ ZnLFCreate(Tcl_Interp   *interp,
     if (num_tok != 4) {
       goto lf_error_syn;
     }
-    if (width < 0) {
-      width = 0;
-    }
-    if (height < 0) {
-      height = 0;
-    }
+    //if (width < 0) {
+    //  width = 0;
+    //}
+    //if (height < 0) {
+    //  height = 0;
+    //}
     field_struct.x_dim = CharToDim(x_char);
     field_struct.y_dim = CharToDim(y_char);
 

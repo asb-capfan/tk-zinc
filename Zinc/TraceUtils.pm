@@ -1,7 +1,7 @@
 package Tk::Zinc::TraceUtils;
 
 use vars qw( $VERSION );
-($VERSION) = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+($VERSION) = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 use Tk;
 use Tk::Font;
@@ -42,19 +42,23 @@ sub Item {
 	return "'$value'";
     } elsif ($ref eq '') {  # scalar 
 	if (defined $value) {
-	    if ($value =~ /^-?\d+(\.\d*(e[+-]?\d+)?)?$/ or # -1. or 1.0
-		$value =~ /^-[a-zA-Z]([\w])*$/ # -option1 or -option-1
-		) {
-		return $value;
-	    } elsif ($value eq ''
-		     or $value =~ /\s/
-		     or $value =~ /^[a-zA-Z]/
-		     or $value =~ /^[\W]/
-		     ) {
-		return "'$value'";
-	    } else {
-		return $value;
-	    }
+          if ($value =~ /^-[a-zA-Z]([\w])*$/) { # -option1 or -option-1
+            return $value;
+          } elsif ($value =~ /^-?\d+(\.\d*(e[+-]?\d+)?)?$/) { # -1. or 1.0 or -1.2e+22  or 1.02e+034
+            if ($value =~ /(.*[-+]e)0+(\d+)/) {   # removing the 0 after e+ or e-
+              return $1.$2;
+            } else {
+              return $value;
+            }
+          } elsif ($value eq ''
+                   or $value =~ /\s/
+                   or $value =~ /^[a-zA-Z]/
+                   or $value =~ /^[\W]/
+                  ) {
+            return "'$value'";
+          } else {
+            return $value;
+          }
 	} else {
 	    return "_undef";
 	}

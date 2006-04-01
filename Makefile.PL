@@ -8,7 +8,7 @@ use strict;
 my $TkLibDir = $Tk::library;
 my $platform = $Tk::platform;
 
-my $VERSION = 3.302;
+my $VERSION = 3.303;
 
 
 if (!$TkLibDir)
@@ -95,7 +95,7 @@ WriteMakefile(
 sub get_flags {
     my %DEF_FLAGS = ('GL'        => 1,
 		     'SHAPE'     => 1,
-		     'GL_DAMAGE' => 1,
+		     'GL_DAMAGE' => 0,
 		     'ATC'        => 1
 		     );
     

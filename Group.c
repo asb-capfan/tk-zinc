@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        : Wed Jun 23 10:09:20 1999
  *
- * $Id: Group.c,v 1.55 2005/05/10 07:59:48 lecoanet Exp $
+ * $Id: Group.c,v 1.57 2005/10/05 14:28:05 lecoanet Exp $
  */
 
 /*
@@ -28,7 +28,7 @@
 #endif
 
 
-static const char rcsid[] = "$Id: Group.c,v 1.55 2005/05/10 07:59:48 lecoanet Exp $";
+static const char rcsid[] = "$Id: Group.c,v 1.57 2005/10/05 14:28:05 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -693,9 +693,9 @@ ComputeCoordinates(ZnItem       item,
   ZnBBox        *clip_box;
 
   PushTransform(item);
-  /*  printf("Group.c\n");
-    ZnPrintTransfo(item->wi->current_transfo);    
-    printf("\n");*/
+  //printf("Entering Group: %d\n", item->id);
+  //ZnPrintTransfo(item->wi->current_transfo);    
+  //printf("\n");
 
   force |= ISSET(item->inv_flags, ZN_TRANSFO_FLAG);
 
@@ -741,6 +741,7 @@ ComputeCoordinates(ZnItem       item,
      * Skip as well items with a dependency, they will
      * be updated later.
      */
+    //printf("Trying to update: %d\n", current_item->id);
     if ((current_item == group->clip) ||
         (current_item->connected_item != ZN_NO_ITEM)) {
       continue;
@@ -749,11 +750,11 @@ ComputeCoordinates(ZnItem       item,
         ISSET(current_item->inv_flags, ZN_COORDS_FLAG) ||
         ISSET(current_item->inv_flags, ZN_TRANSFO_FLAG)) {
       if (current_item->class != ZnGroup) {
-        /*printf("calling cc on item %d\n", current_item->id);*/
+        //printf("Updating item %d\n", current_item->id);
         CallRegularCC(current_item);
       }
       else {
-        /*printf("calling cc on group %d\n", current_item->id);*/
+        //printf("Updating group %d\n", current_item->id);
         current_item->class->ComputeCoordinates(current_item, force);
       }
     }
@@ -772,7 +773,7 @@ ComputeCoordinates(ZnItem       item,
           ISSET(current_item->inv_flags, ZN_COORDS_FLAG) ||
           ISSET(current_item->inv_flags, ZN_TRANSFO_FLAG) ||
           ISSET(current_item->connected_item->flags, ZN_UPDATE_DEPENDENT_BIT)) {        
-        /*printf("Updating dependent: %d\n", current_item->id);*/       
+        //printf("Updating dependent: %d\n", current_item->id);       
         CallRegularCC(current_item);
       }
     }
@@ -805,6 +806,8 @@ ComputeCoordinates(ZnItem       item,
 
   PopClip(group, False);
   PopTransform(item);
+
+  //printf("Leaving Group: %d\n", item->id);
 }
 
 
@@ -1505,9 +1508,11 @@ ZnGroupRemoveClip(ZnItem        group,
  **********************************************************************************
  */
 void
-ZnInsertDependentItem(ZnItem    item)
+ZnInsertDependentItem(ZnItem item)
 {
-  GroupItem     group = (GroupItem) item->parent;
+  GroupItem    group = (GroupItem) item->parent;
+  ZnItem       *dep_list;
+  unsigned int i, num_deps;
 
   if (!group) {
     return;
@@ -1515,7 +1520,20 @@ ZnInsertDependentItem(ZnItem    item)
   if (!group->dependents) {
     group->dependents = ZnListNew(2, sizeof(ZnItem));
   }
-  ZnListAdd(group->dependents, &item, ZnListTail);
+  dep_list = (ZnItem *) ZnListArray(group->dependents);
+  num_deps = ZnListSize(group->dependents);
+  //
+  // Insert the farther possible but not past an item
+  // dependent on this item.
+  for (i = 0; i < num_deps; i++) {
+    if (dep_list[i]->connected_item == item) {
+      //printf("item %d depends on %d inserting before\n",
+      //       dep_list[i]->id, item->id);
+      break;
+    }
+  }
+  //printf("adding %d at position %d\n", item->id, i);
+  ZnListAdd(group->dependents, &item, i);
 }
 
 

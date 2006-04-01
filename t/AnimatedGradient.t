@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: AnimatedGradient.t,v 1.1 2004/09/20 20:07:06 mertz Exp $
+# $Id: AnimatedGradient.t,v 1.2 2005/12/02 20:59:27 mertz Exp $
 # Author: Christophe Mertz  mertz@intuilab.com
 #
 
@@ -38,6 +38,13 @@ my $zinc = $mw->Zinc(-width => 200, -height => 200, -backcolor => "white",
                      -render => 1)->pack;
 
 like  ($zinc, qr/^Tk::Zinc=HASH/ , "zinc has been created");
+
+
+$zinc->after(10, \&proceedTests);
+
+Tk::MainLoop;
+
+sub proceedTests {
 
 $zinc->add('text', 1, -position => [10,5], -text => 
 "the gradient fills a rectangle 
@@ -172,4 +179,8 @@ for (1..4) {
     $zinc->update;
   }
   pass("fade out/in in 400 steps");
+}
+
+exit;
+
 }

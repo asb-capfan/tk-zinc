@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        :
  *
- * $Id: Geo.h,v 1.20 2005/04/27 07:32:03 lecoanet Exp $
+ * $Id: Geo.h,v 1.21 2005/10/19 10:58:11 lecoanet Exp $
  */
 
 /*
@@ -267,6 +267,13 @@ ZnBool
 ZnPointInAngle(int      start_angle,
                int      angle_extent,
                ZnPoint  *p);
+
+void
+ZnPointCartesianToPolar(ZnReal heading,
+                        ZnReal *rho,
+                        ZnReal *theta,
+                        ZnReal delta_x,
+                        ZnReal delta_y);
 
 void
 ZnPointPolarToCartesian(ZnReal  heading,

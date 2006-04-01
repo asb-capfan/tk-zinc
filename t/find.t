@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: find.t,v 1.4 2004/09/01 09:00:44 mertz Exp $
+# $Id: find.t,v 1.5 2005/06/23 18:10:34 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -139,13 +139,13 @@ my @list;
 ##   reported by D. Etienne the 11th June 04
 $zinc->itemconfigure($g2, -atomic => 1);
 @list = $zinc->find('overlapping', 20,20,110,110);
-print "overlapping17 (",join (',', @list),")   \$g2=$g2\n";
+#print "overlapping17 (",join (',', @list),")   \$g2=$g2\n";
 &ok (&eq_array (\@list ,
 		[ $g2 ]),
      "find overlapping when group becomes atomic, without specifying starting group");
 
 @list = $zinc->find('overlapping', 20,20,110,110,1);
-print "overlapping18 (",join (',', @list),")   \$g2=$g2\n";
+#print "overlapping18 (",join (',', @list),")   \$g2=$g2\n";
 &ok (&eq_array (\@list ,
 		[ $g2 ]),
      "find overlapping when group becomes atomic, starting from group 1");
@@ -158,19 +158,19 @@ print "overlapping18 (",join (',', @list),")   \$g2=$g2\n";
 
 ## testing enclosing find with atomic group
 @list = $zinc->find('enclosed', 0,0,200,200);
-print "enclosing20 (",join (',', @list),")   \$g2=$g2\n";
+#print "enclosing20 (",join (',', @list),")   \$g2=$g2\n";
 &ok (&eq_array (\@list ,
 		[ $g2 ]),
      "find enclosed when group becomes atomic, without specifying starting group");
 
 @list = $zinc->find('enclosed', 0,0,200,200,  1);
-print "enclosing21 (",join (',', @list),")   \$g2=$g2\n";
+#print "enclosing21 (",join (',', @list),")   \$g2=$g2\n";
 &ok (&eq_array (\@list ,
 		[ $g2 ]),
      "find enclosed when group becomes atomic, starting from group 1");
 
 @list = $zinc->find('enclosed', 0,2,200,200,  1,1);
-print "enclosing22 (",join (',', @list),")   \$g2=$g2\n";
+#print "enclosing22 (",join (',', @list),")   \$g2=$g2\n";
 &ok (&eq_array (\@list ,
 		[ $g2 ]),
      "find enclosed when group becomes atomic, recursively, starting from group 1");

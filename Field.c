@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        : 
  *
- * $Id: Field.c,v 1.30 2005/05/25 08:25:08 lecoanet Exp $
+ * $Id: Field.c,v 1.33 2005/10/18 09:32:23 lecoanet Exp $
  */
 
 /*
@@ -27,7 +27,7 @@
 #include <stdlib.h>
 
 
-static const char rcsid[] = "$Id: Field.c,v 1.30 2005/05/25 08:25:08 lecoanet Exp $";
+static const char rcsid[] = "$Id: Field.c,v 1.33 2005/10/18 09:32:23 lecoanet Exp $";
 static const char compile_id[]="$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -76,7 +76,7 @@ typedef struct _FieldStruct {
  * -filled attributes set the ZN_COORDS_FLAG to update
  * the leader that might protude if not clipped by the text.
  */
-ZnAttrConfig    field_attrs[] = {
+static ZnAttrConfig field_attrs[] = {
   { ZN_CONFIG_ALIGNMENT, "-alignment", NULL,
     Tk_Offset(FieldStruct, alignment), 0, ZN_DRAW_FLAG, False },
   { ZN_CONFIG_AUTO_ALIGNMENT, "-autoalignment", NULL,
@@ -207,6 +207,9 @@ ComputeFieldAttachment(ZnFieldSet       field_set,
         real_width = text_width < real_width ? real_width : text_width;
       }
       real_width += (ZnDim) width_spec;
+      if (real_width < 0) {
+        real_width = 0;
+      }
       break;
     }
   case ZN_LF_DIM_LABEL:
@@ -247,6 +250,9 @@ ComputeFieldAttachment(ZnFieldSet       field_set,
         real_height = text_height < real_height ? real_height : text_height;
       }
       real_height += (ZnDim) height_spec;
+      if (real_height < 0) {
+        real_height = 0;
+      }
       break;
     }
   case ZN_LF_DIM_LABEL:
@@ -603,7 +609,7 @@ ComputeFieldTextLocation(Field          fptr,
     text_bbox->orig.x = bbox->corner.x - w - 2;
     break;
   default:
-    text_bbox->orig.x = (bbox->orig.x + bbox->corner.x - w) / 2.0;
+    text_bbox->orig.x = ZnNearestInt((bbox->orig.x + bbox->corner.x - w) / 2.0);
     break;
   }
   text_bbox->corner.x = text_bbox->orig.x + w;

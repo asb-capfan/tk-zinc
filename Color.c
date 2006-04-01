@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        : Thu Dec 16 15:41:53 1999
  *
- * $Id: Color.c,v 1.35 2005/06/03 09:03:34 lecoanet Exp $
+ * $Id: Color.c,v 1.37 2005/12/02 13:35:39 lecoanet Exp $
  */
 
 /*
@@ -511,7 +511,7 @@ ReduceGradient(Tk_Window        tkwin,
   int        i, j, first_color, last_color;
   ZnBool     interpolate_first, interpolate_last;
 
-  //printf("In ReduceGradient\n");
+  //printf("In ReduceGradient %d\n", grad->num_colors_in);
   dx = grad->e.x - grad->p.x;
   dy = grad->e.y - grad->p.y;
   len = sqrt(dx*dx+dy*dy);
@@ -649,22 +649,23 @@ ReduceGradient(Tk_Window        tkwin,
   }
 
   grad->actual_colors = ZnMalloc(grad->num_actual_colors*sizeof(ZnGradientColor));
+  //printf("allocating %d colors\n", grad->num_actual_colors);
   j = 0;
   if (interpolate_first) {
     //printf("Interpolate first color, index: %d\n", first_color);
     InterpolateGradientColor(tkwin,
                              &grad->colors_in[first_color-1],
                              &grad->colors_in[first_color],
-                             &grad->actual_colors[j],
+                             &grad->actual_colors[0],
                              NULL,
                              minx100, minx100, span100);
     j++;
   }
   else if ((first_color == 0) && (grad->type != ZN_RADIAL_GRADIENT)) {
-    grad->actual_colors[j] = grad->colors_in[0];
-    grad->actual_colors[j].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[0].rgb);
+    grad->actual_colors[0] = grad->colors_in[0];
+    grad->actual_colors[0].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[0].rgb);
     if (grad->colors_in[0].mid_rgb) {
-      grad->actual_colors[j].mid_rgb = Tk_GetColorByValue(tkwin, grad->colors_in[0].mid_rgb);
+      grad->actual_colors[0].mid_rgb = Tk_GetColorByValue(tkwin, grad->colors_in[0].mid_rgb);
     }
     grad->actual_colors[0].position = 0;
     grad->actual_colors[0].control = 50;
@@ -672,8 +673,8 @@ ReduceGradient(Tk_Window        tkwin,
     /*printf("adding a color at start\n");*/
   }
 
-  /*printf("first color: %d, last color: %d, num colors: %d\n",
-    first_color, last_color, grad->num_actual_colors);*/
+  //printf("j: %d, first color: %d, last color: %d, num colors: %d\n",
+    //     j, first_color, last_color, grad->num_actual_colors);
   for (i = first_color; i <= last_color; i++, j++) {
     grad->actual_colors[j] = grad->colors_in[i];
     grad->actual_colors[j].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[i].rgb);
@@ -681,13 +682,12 @@ ReduceGradient(Tk_Window        tkwin,
       grad->actual_colors[j].mid_rgb = Tk_GetColorByValue(tkwin, grad->colors_in[i].mid_rgb);
     }
     grad->actual_colors[j].position = (grad->colors_in[i].position-minx100)*100/span100;
-    grad->actual_colors[j].control = grad->colors_in[i].control;
     /*printf("i: %d, j: %d, minx: %d, span: %d, position av: %d position ap: %d\n",
       i, j, minx100, span100, grad->colors_in[i].position, grad->actual_colors[j].position);*/
   }
 
   if (interpolate_last) {
-    //printf("Interpolate last color\n");
+    //printf("Interpolate last color: %d, j :%d\n", last_color, j);
     InterpolateGradientColor(tkwin,
                              &grad->colors_in[last_color],
                              &grad->colors_in[last_color+1],
@@ -697,6 +697,7 @@ ReduceGradient(Tk_Window        tkwin,
   }
   else if (last_color == ((int) grad->num_colors_in)-1) {
     i = grad->num_colors_in-1;
+    //printf("i: %d, j: %d\n", i, j);
     grad->actual_colors[j] = grad->colors_in[i];
     grad->actual_colors[j].rgb = Tk_GetColorByValue(tkwin, grad->colors_in[i].rgb);
     if (grad->colors_in[i].mid_rgb) {
@@ -704,8 +705,7 @@ ReduceGradient(Tk_Window        tkwin,
     }
     /*printf("adding a color at end\n");*/
   }
-  grad->actual_colors[j].position = 100;
-  //for (i=0; i<grad->num_actual_colors; i++) printf("control %d: %d\n", i, grad->actual_colors[i].control);
+  grad->actual_colors[grad->num_actual_colors-1].position = 100;
   //printf("Out of ReduceGradient\n");
 }
 

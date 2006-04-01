@@ -1,5 +1,5 @@
 # $Id: Zinc.pm,v 1.30 2005/05/16 12:27:51 lecoanet Exp $
-# $Name: cpan_3_302 $
+# $Name: cpan_3_0_3 $
 
 package Tk::Zinc;
 
@@ -14,7 +14,7 @@ Construct Tk::Widget 'Zinc';
 use vars qw($VERSION $REVISION);
 
 $REVISION = q$Revision: 1.30 $ ;  # this line is automagically modified by CVS
-$VERSION = 3.302;
+$VERSION = 3.303;
 
 
 bootstrap Tk::Zinc $Tk::VERSION;

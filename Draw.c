@@ -4,7 +4,7 @@
  * Authors              : Patrick Lecoanet.
  * Creation date        : Sat Dec 10 12:51:30 1994
  *
- * $Id: Draw.c,v 1.63 2005/05/25 08:22:38 lecoanet Exp $
+ * $Id: Draw.c,v 1.64 2005/09/12 13:19:13 Lecoanet Exp $
  */
 
 /*
@@ -1154,7 +1154,7 @@ ZnRenderPolyline(ZnWInfo        *wi,
    * of GL_SMOOTH_LINE_WIDTH_RANGE and GL_SMOOTH_POINT_SIZE_RANGE
    * with a mix of anti-aliased lines and points. The curves that
    * are thicker are drawn using regular polygons.
-   * BUG: The joints are drawn only rounded.
+   * TODO: The joints are drawn only rounded.
    * The caps can be either round or butt (but not projecting).
    */
   thin = ((line_width <= ce->max_line_width) &&
@@ -1166,7 +1166,7 @@ ZnRenderPolyline(ZnWInfo        *wi,
   ZnSetLineStyle(wi, line_style);
   glLineWidth((GLfloat) line_width);
   /*
-   * Do not use joints under this transparency value.
+   * Do not use AA under this transparency value.
    */
   transparent = alpha < (65535 * 0.8);
   if (thin && transparent) {

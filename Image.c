@@ -29,7 +29,7 @@
 #endif
 
 
-static const char rcsid[] = "$Id: Image.c,v 1.50 2005/05/25 08:25:59 lecoanet Exp $";
+static const char rcsid[] = "$Id: Image.c,v 1.51 2005/10/18 09:31:01 lecoanet Exp $";
 static const char compile_id[] = "$Compile: " __FILE__ " " __DATE__ " " __TIME__ " $";
 
 
@@ -1055,8 +1055,8 @@ ZnImageTex(ZnImage      image,
     glBindTexture(GL_TEXTURE_2D, this->i.texobj);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glGetError();
     if (is_bmap) {
       glTexImage2D(GL_TEXTURE_2D, 0, GL_INTENSITY4,
@@ -1529,8 +1529,8 @@ ZnTexFontTex(ZnTexFontInfo      tfi)
     glBindTexture(GL_TEXTURE_2D, this->texobj);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glGetError();
     /*printf("Demande texture de %d x %d\n", txf->tex_width, txf->tex_height);*/
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, txf->tex_width,

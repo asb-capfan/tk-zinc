@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# $Id: traceutils.t,v 1.2 2004/05/07 16:53:43 mertz Exp $
+# $Id: traceutils.t,v 1.4 2005/06/25 07:45:53 mertz Exp $
 # Author: Christophe Mertz
 #
 
@@ -13,7 +13,7 @@ use strict;
 BEGIN {
     if (!eval q{
 #        use Test::More qw(no_plan);
-        use Test::More tests => 14;
+        use Test::More tests => 15;
         1;
     }) {
         print "# tests only work properly with installed Test::More module\n";
@@ -65,8 +65,11 @@ $arg = "(-1, -2, -3, -4)";
 is (&List (eval $arg), $arg, $arg);
 
 $arg = "(1.2, -2, .01, -1.2e+22, 1.02e+34)";
-
 is (&List (eval $arg), ($arg =~ s/\.01/0.01/ , $arg ), $arg);
+
+$arg = "(1.2, -2, .01, -1.2e+022, 1.02e+034)";
+my $correctedArg = "(1.2, -2, 0.01, -1.2e+22, 1.02e+34)";
+is (&List (eval $arg), $correctedArg, $arg);
 
 $arg = "('-1aa' => -2, '-a b', -1.2)";
 is (&List (eval $arg), $arg, $arg);
