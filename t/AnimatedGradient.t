@@ -65,11 +65,11 @@ $zinc->remove($circle1);
 $zinc->remove($circle2);
 
 my $gradient;
-  for (my $i = 0; $i <=360; $i++) {
-    $gradient = "=axial $i | red | white 50 | blue";
-    $zinc->itemconfigure($curve, -fillcolor => $gradient); 
-    $zinc->update;
-  }
+for (my $i = 0; $i <=360; $i++) {
+  $gradient = "=axial $i | red | white 50 | blue";
+  $zinc->itemconfigure($curve, -fillcolor => $gradient); 
+  $zinc->update;
+}
 pass("turning gradient one side");
 
 for (1..100) {
