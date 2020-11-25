@@ -8,7 +8,7 @@ use strict;
 my $TkLibDir = $Tk::library;
 my $platform = $Tk::platform;
 
-my $VERSION = 3.303;
+my $VERSION = 3.304;
 
 
 if (!$TkLibDir)
@@ -76,11 +76,14 @@ if ($] >= 5.008000) {
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
-              'ABSTRACT'        => 'a canvas offering groups, tranformations, transparency, color gradient...',
+          'ABSTRACT'        => 'a canvas offering groups, tranformations, transparency, color gradient...',
 	      'AUTHOR'          => 'Patrick Lecoanet <lecoanet@cena.fr>',
-	      'NAME'		=> 'Tk::Zinc',
+	      'NAME'			=> 'Tk::Zinc',
 	      'VERSION'	        => $VERSION,
-	      'PREREQ_PM'	=> $WIN ? {Tk => 8.004} : {Tk => 8.0},
+	      'PREREQ_PM'		=> {
+			  'Tk' => 8.004,
+			  'ExtUtils::MakeMaker' => '6.98',
+		  },
 	      'LIBS'		=> $NeededLibs, 
 	      'DEFINE'		=> &get_flags,
 	      'INC'             => $INC,
@@ -90,7 +93,13 @@ WriteMakefile(
 	      'linkext'         => {LINKTYPE => 'dynamic'},
 	      'depend'          => {$ZincObj => '$(O_FILES) Zinc.c'},
 	      'LDFROM'		=> "\$(O_FILES) $ZincObj",
-	      );
+		  'MIN_PERL_VERSION'  => 5.006,
+		  'META_MERGE'     	=> {
+			'resources' 	=> {
+				'repository' => 'https://github.com/asb-capfan/TkZinc',
+			},
+		  },
+);
 
 sub get_flags {
     my %DEF_FLAGS = ('GL'        => 1,

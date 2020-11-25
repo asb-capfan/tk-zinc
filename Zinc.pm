@@ -1,5 +1,5 @@
 # $Id: Zinc.pm,v 1.30 2005/05/16 12:27:51 lecoanet Exp $
-# $Name: cpan_3_0_3 $
+# $Name: cpan_3_0_4 $
 
 package Tk::Zinc;
 
@@ -14,7 +14,7 @@ Construct Tk::Widget 'Zinc';
 use vars qw($VERSION $REVISION);
 
 $REVISION = q$Revision: 1.30 $ ;  # this line is automagically modified by CVS
-$VERSION = 3.303;
+$VERSION = 3.304;
 
 
 bootstrap Tk::Zinc $Tk::VERSION;
@@ -86,6 +86,8 @@ sub coords0 {
 
 __END__
 
+=encoding utf8
+
 =head1 NAME
 
 Tk::Zinc - TkZinc is another Canvas which proposes many new functions, some based on openGL
@@ -123,8 +125,7 @@ TkZinc with small examples.
 
 =head1 WHERE CAN I FIND TkZinc?
 
-TkZinc is available as source in tar.gz format or as Debian or RedHat/Mandrake
-packages at http://www.tkzinc.org/ or http://freshmeat.net/projects/zincisnotcanvas/
+TkZinc is available as source on GitHub: https://github.com/asb-capfan/TkZinc
 
 TkZinc is also available on CPAN since v3.294 (a kind of 3.2.94)
 
@@ -152,7 +153,7 @@ API for Texture Mapped Text' and is copyrighted by Mark Kilgard under an open so
 
 =head1 SEE ALSO
 
-L<Tk(1)>, L<zinc-demos(1)>.
+L<Tk(1)>, L<zinc-demos(1)>
 
 =cut
 
