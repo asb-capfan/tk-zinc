@@ -14,7 +14,7 @@ Construct Tk::Widget 'Zinc';
 use vars qw($VERSION $REVISION);
 
 $REVISION = q$Revision: 1.30 $ ;  # this line is automagically modified by CVS
-$VERSION = 3.304;
+$VERSION = 3.305;
 
 
 bootstrap Tk::Zinc $Tk::VERSION;
