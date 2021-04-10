@@ -9,19 +9,13 @@
 
 #use Tk::Zinc::TraceUtils;
 use strict;
-use Test::More tests => 15;
+use Test::More;
 
-BEGIN {
-    if (!eval q{
-	use Tk::Zinc::TraceUtils;
- 	1;
-    }) {
-        print "unable to load Tk::Zinc::TraceUtils";
-        print "1..1\n";
-        print "ok 1\n";
-        exit;
-    }
-}
+eval "use Tk::Zinc::TraceUtils";
+plan skip_all => "unable to load Tk::Zinc::TraceUtils" if $@;
+
+# otherwise, plan & run tests
+plan tests => 15;
 
 
 
