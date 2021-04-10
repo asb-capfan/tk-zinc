@@ -101,6 +101,9 @@ WriteMakefile(
         'resources'     => {
             'repository' => 'https://github.com/asb-capfan/TkZinc',
         },
+        'configure_requires' => {
+            'Tk' => 0,
+        },
     },
 );
 
